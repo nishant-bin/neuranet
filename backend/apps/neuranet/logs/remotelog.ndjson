@@ -1,0 +1,59 @@
+{"ts":"2023:03:23:03:03:52","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:23:03:07:18","level":"error","message":"[192.168.1.6] Error in fetching https://192.168.1.6:9090/apps/neuranet/gettotpsec for request {\"id\":\"thecompany@tekmonks.com\"} of type GET due to 500: "}
+{"ts":"2023:03:23:03:40:57","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:23:03:50:57","level":"warning","message":"[192.168.1.6] Bad password for thecompany@tekmonks.com."}
+{"ts":"2023:03:23:03:51:05","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:23:04:25:06","level":"info","message":"[192.168.1.6] Registration succeeded thecompany@tekmonks.com."}
+{"ts":"2023:03:23:04:39:29","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:24:01:59:04","level":"warning","message":"[192.168.1.6] Bad password for thecompany@tekmonks.com."}
+{"ts":"2023:03:24:01:59:11","level":"warning","message":"[192.168.1.6] Bad OTP given for thecompany@tekmonks.com."}
+{"ts":"2023:03:24:02:00:20","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:24:04:29:24","level":"error","message":"[192.168.1.6] Error in fetching https://192.168.1.6:9090/apps/neuranet/convertsql for request {\"request\":\"fewfewfwe\"} of type POST due to 404: "}
+{"ts":"2023:03:24:04:29:24","level":"error","message":"[192.168.1.6] Conversion failed due to backend internal issues."}
+{"ts":"2023:03:24:04:29:41","level":"error","message":"[192.168.1.6] Error in fetching https://192.168.1.6:9090/apps/neuranet/convertsql for request {\"request\":\"fewfewfwe\"} of type POST due to 404: "}
+{"ts":"2023:03:24:04:29:41","level":"error","message":"[192.168.1.6] Conversion failed due to backend internal issues."}
+{"ts":"2023:03:24:04:37:00","level":"error","message":"[192.168.1.6] Conversion failed due to AI failure."}
+{"ts":"2023:03:24:16:47:49","level":"info","message":"[192.168.71.117] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:24:16:50:27","level":"error","message":"[192.168.71.117] Error in fetching https://192.168.71.117:9090/apps/neuranet/convertsql for request {\"request\":\"SELECT * from users;\",\"dbfrom\":\"db2\",\"dbto\":\"oracle\",\"id\":\"></neuranet-sql>\\n</div>\\n\\n<span id=\"} of type POST due to 403: "}
+{"ts":"2023:03:24:16:50:27","level":"error","message":"[192.168.71.117] Conversion failed due to backend internal issues."}
+{"ts":"2023:03:24:16:50:59","level":"error","message":"[192.168.71.117] Error in fetching https://192.168.71.117:9090/apps/neuranet/convertsql for request {\"request\":\"SELECT * from users;\",\"dbfrom\":\"db2\",\"dbto\":\"oracle\",\"id\":\"></neuranet-sql>\\n</div>\\n\\n<span id=\"} of type POST due to 403: "}
+{"ts":"2023:03:24:16:50:59","level":"error","message":"[192.168.71.117] Conversion failed due to backend internal issues."}
+{"ts":"2023:03:25:17:35:39","level":"info","message":"[192.168.71.117] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:25:18:35:55","level":"error","message":"[192.168.71.117] Error in fetching https://192.168.71.117:9090/apps/neuranet/convertsql for request {\"request\":\"SELECT product_id, DECODE (warehouse_id, 1, 'Southlake', 2, 'San Francisco', 'Unknown') FROM inventories;\",\"dbfrom\":\"oracle\",\"dbto\":\"singlestore\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 403: "}
+{"ts":"2023:03:25:18:36:07","level":"error","message":"[192.168.71.117] Conversion failed due to backend internal issues."}
+{"ts":"2023:03:25:18:36:38","level":"error","message":"[192.168.71.117] Error in fetching https://192.168.71.117:9090/apps/neuranet/convertsql for request {\"request\":\"SELECT product_id, DECODE (warehouse_id, 1, 'Southlake', 2, 'San Francisco', 'Unknown') FROM inventories;\",\"dbfrom\":\"oracle\",\"dbto\":\"singlestore\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 403: "}
+{"ts":"2023:03:25:18:36:40","level":"error","message":"[192.168.71.117] Conversion failed due to backend internal issues."}
+{"ts":"2023:03:25:18:36:49","level":"error","message":"[192.168.71.117] Error in fetching https://192.168.71.117:9090/apps/neuranet/convertsql for request {\"request\":\"SELECT product_id, DECODE (warehouse_id, 1, 'Southlake', 2, 'San Francisco', 'Unknown') FROM inventories;\",\"dbfrom\":\"oracle\",\"dbto\":\"singlestore\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 403: "}
+{"ts":"2023:03:25:18:36:49","level":"error","message":"[192.168.71.117] Conversion failed due to backend internal issues."}
+{"ts":"2023:03:25:18:45:00","level":"info","message":"[192.168.71.117] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:25:18:46:36","level":"error","message":"[192.168.71.117] Conversion failed due to AI failure."}
+{"ts":"2023:03:25:18:51:33","level":"info","message":"[192.168.71.117] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:25:19:01:02","level":"info","message":"[192.168.71.117] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:25:19:18:20","level":"info","message":"[192.168.71.117] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:25:19:20:33","level":"error","message":"[192.168.71.117] Error in fetching https://192.168.71.117:9090/apps/neuranet/convertsql for request {\"request\":\"SELECT product_id, DECODE (warehouse_id, 1, 'Southlake', 2, 'San Francisco', 'Unknown') FROM inventories;\\n\",\"dbfrom\":\"oracle\",\"dbto\":\"singlestore\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:03:25:19:20:33","level":"error","message":"[192.168.71.117] Conversion failed due to backend internal issues."}
+{"ts":"2023:03:25:19:35:34","level":"info","message":"[192.168.71.117] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:25:19:36:16","level":"error","message":"[192.168.71.117] Conversion failed due to AI failure."}
+{"ts":"2023:03:25:19:43:54","level":"info","message":"[192.168.71.117] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:25:19:44:25","level":"error","message":"[192.168.71.117] Conversion failed due to AI failure."}
+{"ts":"2023:03:25:19:46:37","level":"info","message":"[192.168.71.117] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:25:19:46:50","level":"error","message":"[192.168.71.117] Conversion failed due to AI failure."}
+{"ts":"2023:03:26:02:30:08","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:26:02:32:58","level":"error","message":"[192.168.1.6] Conversion failed due to AI failure."}
+{"ts":"2023:03:26:03:43:35","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:26:03:53:45","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:26:03:58:26","level":"error","message":"[192.168.1.6] Conversion failed due to AI failure."}
+{"ts":"2023:03:26:03:59:40","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:26:03:59:55","level":"error","message":"[192.168.1.6] Error in fetching https://192.168.1.6:9090/apps/neuranet/convertsql for request {\"request\":\"SELECT product_id FROM INVENTORIES MINUS SELECT product_id FROM order_items;\",\"dbfrom\":\"oracle\",\"dbto\":\"mysql\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:03:26:03:59:55","level":"error","message":"[192.168.1.6] Conversion failed due to backend internal issues."}
+{"ts":"2023:03:26:04:01:41","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:27:04:09:53","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:27:04:10:55","level":"error","message":"[192.168.1.6] Error in fetching https://192.168.1.6:9090/apps/neuranet/convertsql for request {\"request\":\"This is a bad query!\",\"dbfrom\":\"oracle\",\"dbto\":\"postgresql\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:03:27:04:10:55","level":"error","message":"[192.168.1.6] Conversion failed due to backend internal issues."}
+{"ts":"2023:03:27:04:12:25","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:27:04:12:46","level":"error","message":"[192.168.1.6] Error in fetching https://192.168.1.6:9090/apps/neuranet/convertsql for request {\"request\":\"This is a bad query!\",\"dbfrom\":\"oracle\",\"dbto\":\"mysql\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:03:27:04:12:46","level":"error","message":"[192.168.1.6] Conversion failed due to backend internal issues."}
+{"ts":"2023:03:27:04:13:41","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:27:04:14:25","level":"error","message":"[192.168.1.6] Error in conversion, due to bad input SQL.\n$SyntaxError: Expected &quot;#&quot;, &quot;--&quot;, &quot;&#x2F;*&quot;, &quot;:=&quot;, &quot;=&quot;, or [ \\t\\n\\r] but &quot;f&quot; found.\nFound at: Line:$1, Column:$10."}
+{"ts":"2023:03:27:04:19:26","level":"error","message":"[192.168.1.6] Error in conversion, due to bad input SQL.\nSyntaxError: Expected &quot;#&quot;, &quot;--&quot;, &quot;&#x2F;*&quot;, &quot;:=&quot;, &quot;=&quot;, or [ \\t\\n\\r] but &quot;f&quot; found.\nFound at: Line:1, Column:10."}
+{"ts":"2023:03:27:04:20:02","level":"error","message":"[192.168.1.6] Error in conversion, due to bad input SQL.\n\nSyntaxError: Expected &quot;#&quot;, &quot;--&quot;, &quot;&#x2F;*&quot;, &quot;:=&quot;, &quot;=&quot;, or [ \\t\\n\\r] but &quot;f&quot; found.\n\nFound at: Line:1, Column:10."}

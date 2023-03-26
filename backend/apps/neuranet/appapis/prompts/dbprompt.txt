@@ -1,0 +1,6 @@
+---- Translate this SQL from {{{dbfrom}}} to {{{dbto}}}
+--- {{{dbfrom}}}
+
+{{{request}}}
+
+--- {{{dbto}}}

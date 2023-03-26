@@ -1,0 +1,210 @@
+<!-- 
+(C) 2020 TekMonks. All rights reserved.
+-->
+<style>
+@import url('./fonts/appfonts.css');
+
+body::-webkit-scrollbar {
+    width: 0.5em !important;
+    height: 0.5em !important;
+    scroll-behavior: smooth !important;
+}
+
+body::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
+    margin: 5em;
+    border-radius: 1em !important;
+}
+
+body::-webkit-scrollbar-thumb {
+    background-color: darkgrey !important;
+    border-radius: 1em !important;
+    background-clip: padding-box;
+}
+
+body, html {
+	margin: 0;
+	padding: 0;
+	font-family: 'Red Hat Text';
+	min-width: 880px;
+	min-height: 640px;
+	overflow: overlay;
+}
+
+body::after {
+	content: "";
+	background: url(./img/logob.png);
+	background-size: auto 100%;
+	width: 100%;
+	height: 120%;
+	top: -20%;
+	left: -10%;
+	background-repeat: no-repeat;
+	opacity: 0.05;
+	position: absolute;
+	z-index: -1;
+	bottom: 0;
+}
+
+span#desktopheader {
+	color: #4FB4ED;
+	user-select: none;
+    overflow: hidden;
+    white-space: nowrap;
+	height: 5em;
+    display: inline-flex;
+    align-items: center;
+	justify-content: space-between;
+    width: calc(100% - 4em);
+	margin: 1em 2em 0 2em;
+}
+
+img#textlogo {height: 2.2em !important; cursor: pointer;}
+
+dialog-box#dialog {
+	z-index: 51;
+	position: absolute;
+}
+
+span#desktopheader > span#rightheader {
+	height: 100%;
+    display: inline-flex;
+	flex-direction: row;
+    align-items: center;
+	width: 100%;
+    justify-content: space-between;
+	z-index: 50;
+}
+
+span#desktopheader > span#rightheader > span#signoff > img,  span#desktopheader > span#rightheader > span#refresh > img, 
+	span#desktopheader > span#rightheader > img { height: 2em; }
+
+span#desktopheader > span#rightheader > span#greeting {
+	display: flex;
+    align-items: center;
+}
+span#desktopheader > span#rightheader > span#greeting > span-with-menu#status {
+	border-radius: 50%;
+	box-shadow: 1px 1px 20px -3px #41cf70;
+}
+span#desktopheader > span#rightheader > span#greeting > span-with-menu#status.working {box-shadow: 1px 1px 20px -3px #41cf70}
+span#desktopheader > span#rightheader > span#greeting > span-with-menu#status.break {box-shadow: 1px 1px 20px -3px #bdbd00}
+span#desktopheader > span#rightheader > span#greeting > span-with-menu#status.offline {box-shadow: 1px 1px 20px -3px #cc0000}
+span#desktopheader > span#rightheader > span#greeting > span#name {margin-left: 1.5em;}
+
+div#maincontent {
+	background-color: transparent;
+	height: calc(100% - 7em);
+    margin: 1em 1em 0em 1em;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+}
+
+div#lowercontent {
+	height: 43%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+	justify-content: space-between;
+}
+
+span#mobilefooter {
+	width: 100%;
+    height: 4em;
+    position: fixed;
+    bottom: 0;
+    background: #4FB4ED;
+    border-radius: 0.2em 0.2em 0 0;
+	display: none;
+	flex-direction: row;
+	align-items: center;
+    padding: 1em;
+    box-sizing: border-box;
+    justify-content: space-between;
+}
+
+span#mobilefooter > img {
+	width: 2.5em;
+	height: 2.5em;
+}
+
+neuranet-sql#nueranetsql {
+	width: 100%;
+	height: 100%;
+}
+</style>
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_START}}}
+	body, html {min-width: 0; min-height: 0;}
+	span#desktopheader {display: none;}
+	span#rightheader {width: 100% !important;}
+	img#textlogo, span#greeting, span-with-menu#gear, span#signoff {display: none !important;}
+	div#maincontent {height: calc(100% - 5em);; margin: 0; padding: 1em 1em 0em 1em;}
+	div#lowercontent {height: auto; flex-direction: column-reverse;}
+	span#mobilefooter {display: flex;}
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_END}}}
+
+<!doctype html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	{{{headers}}}
+
+	<link href="./img/favicon.ico" rel="icon" type="image/x-icon">
+
+	<script type="module">
+	import {main} from "./js/main.mjs"; monkshu_env.apps[APP_CONSTANTS.APP_NAME].main = main; 
+	window.addEventListener("DOMContentLoaded", _ => setTimeout(_=>main.showLoginMessages(), 200));
+	</script>
+		
+	<title>{{i18n.Title}}</title>
+</head>
+
+<body style="margin: 0%">
+<span id="desktopheader">
+	<span id="rightheader">
+	<img id="textlogo" src="./img/logomainpage.svg" onclick="window.open(APP_CONSTANTS.APP_ABOUT_URL, '_blank')">
+	<span id="greeting">
+	<span><img src="./img/person.svg"></span>
+	<span id="name">{{i18n.Hi}} {{#_org_monkshu_session}}username{{/_org_monkshu_session}}!</span>
+	</span>
+	<span id="refresh"><img src="./img/reload.svg" onclick="location.reload()"></span>
+	<span-with-menu id="gear" styleBody="url(./pages/menu.stylebody.css)"><img src="./img/settings.svg" style="height: 2em;width: 2em;vertical-align: middle;">
+		<menu-item onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.changePassword(this)" 
+			label="{{i18n.ChangePassword}}" icon="./img/changepassword_menu.svg"></menu-item>
+		<menu-item onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.showOTPQRCode(this)" 
+			label="{{i18n.ChangePhone}}" icon="./img/changephone_menu.svg"></menu-item>
+		<menu-item onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.changeProfile(this)" 
+			label="{{i18n.ChangeProfile}}" icon="./img/changeprofile_menu.svg"></menu-item>
+		{{#admin}}<menu-item onclick="monkshu_env.frameworklibs.router.navigate(APP_CONSTANTS.MANAGE_HTML)" 
+			label="{{i18n.ManageUsers}}" icon="./img/manageusers_menu.svg"></menu-item>{{/admin}}
+	</span-with-menu>
+	<span id="signoff"><img src="./img/poweroff.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.logoutClicked()"></span>
+	</span>
+</span>
+
+<div id="maincontent">
+	<neuranet-sql id="nueranetsql" backendurl="{{APP_CONSTANTS.BACKEND}}/apps/{{APP_CONSTANTS.APP_NAME}}"
+		user="{{#_org_monkshu_session}}{{APP_CONSTANTS.USERID}}{{/_org_monkshu_session}}"></neuranet-sql>
+</div>
+
+<span id="mobilefooter">
+	<img src="./img/mobilefooter_home.svg" onclick="monkshu_env.frameworklibs.router.navigate(APP_CONSTANTS.MAIN_HTML)">
+	<img src="./img/mobilefooter_reload.svg" onclick="location.reload()">
+	<span-with-menu id="gearmobile" bottommenu="true" styleBody="url(./pages/menu.stylebody.css)"><img src="./img/mobilefooter_settings.svg">
+		<menu-item onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.changePassword(this)" 
+			label="{{i18n.ChangePassword}}" icon="./img/changepassword_menu.svg"></menu-item>
+		<menu-item onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.showOTPQRCode(this)" 
+			label="{{i18n.ChangePhone}}" icon="./img/changephone_menu.svg"></menu-item>
+		<menu-item onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.changeProfile(this)" 
+			label="{{i18n.ChangeProfile}}" icon="./img/changeprofile_menu.svg"></menu-item>
+		{{#admin}}<menu-item onclick="monkshu_env.frameworklibs.router.navigate(APP_CONSTANTS.MANAGE_HTML)" 
+			label="{{i18n.ManageUsers}}" icon="./img/manageusers_menu.svg"></menu-item>{{/admin}}
+	</span-with-menu>
+	<img src="./img/mobilefooter_logout.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.logoutClicked()">
+</span>
+
+<dialog-box id="dialog"></dialog-box>
+</body>
+</html>

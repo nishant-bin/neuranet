@@ -1,0 +1,8 @@
+{
+    "db2": "IBM DB2",
+    "oracle": "Oracle",
+    "postgresql": "PostgreSQL",
+    "mysql": "MySQL",
+    "singlestore": "MySQL",
+    "mssql": "Microsoft SQL Server"
+}
