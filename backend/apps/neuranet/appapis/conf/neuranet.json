@@ -8,17 +8,19 @@
             "request":{ "model": "text-davinci-003", "temperature": 0, "stream": false, "logprobs": 0, "max_tokens": 1024, 
                 "echo": true, "best_of": 1, "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1, "stop":["///"],
                 "prompt": "${__ORG_NEURANET_PROMPT__}" },
-            "fakeresponse": "// This is a fake response",
-            "responsepath": "data.choices[0].message.content"
+            "responsepath": "data.choices[0].message.content",
+            "sample_ai_response": "codegen_ai_response.json",
+            "read_ai_response_from_samples": false
         },
         "sql-code-gen35": {
             "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
             "request":{ "model": "gpt-3.5-turbo", "temperature": 0, "stream": false, "max_tokens": 1024, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1, "stop":["---"], 
                 "messages":[{"role": "user", "content": "${__ORG_NEURANET_PROMPT__}"}] },
-            "fakeresponse": {"data":{"choices":[{"finish_reason": "stop", "message":{"content":"SELECT product_id FROM INVENTORIES EXCEPT SELECT product_id FROM order_items;"}}]}},
             "response_contentpath": "data.choices[0].message.content",
-            "response_finishreason": "data.choices[0].finish_reason"
+            "response_finishreason": "data.choices[0].finish_reason",
+            "sample_ai_response": "sql_ai_response.json",
+            "read_ai_response_from_samples": false
         }
     }
 }

@@ -1,0 +1,42 @@
+{
+"error": null,
+"data": {
+    "id": "chatcmpl-6ylbLQ66MISBmtVZDLdWpDaEmf2aq",
+    "object": "chat.completion",
+    "created": 1679940679,
+    "model": "gpt-3.5-turbo-0301",
+    "usage": {
+    "prompt_tokens": 28,
+    "completion_tokens": 5,
+    "total_tokens": 33
+    },
+    "choices": [
+        {
+            "message": {
+            "role": "assistant",
+            "content": "SELECT * FROM USERS;"
+        },
+        "finish_reason": "stop",
+        "index": 0
+        }
+    ]
+},
+"status": 200,
+"resHeaders": {
+    "date": "Mon, 27 Mar 2023 18:11:19 GMT",
+    "content-type": "application/json",
+    "content-length": "305",
+    "access-control-allow-origin": "*",
+    "cache-control": "no-cache, must-revalidate",
+    "openai-model": "gpt-3.5-turbo-0301",
+    "openai-organization": "tekmonks",
+    "openai-processing-ms": "755",
+    "openai-version": "2020-10-01",
+    "strict-transport-security": "max-age=15724800; includeSubDomains",
+    "x-ratelimit-limit-requests": "3500",
+    "x-ratelimit-remaining-requests": "3499",
+    "x-ratelimit-reset-requests": "17ms",
+    "x-request-id": "dd3bfbcf5fcca7582f7a7a1600ba2f74",
+    "status": 200
+}
+}

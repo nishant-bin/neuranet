@@ -15,8 +15,8 @@ exports.doService = async jsonReq => {
 	
 	LOG.debug(`Got SQL conversion request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
-	const sqlInputValidationResult = _validateSQL(jsonReq.request); if (!sqlInputValidationResult.isOK) 
-		return {reason: REASONS.BAD_INPUT_SQL, parser_error: sqlInputValidationResult.error, ...CONSTANTS.FALSE_RESULT};
+	const sqlInputValidationResult = _validateSQL(jsonReq.request, jsonReq.skipvalidation); 
+	if (!sqlInputValidationResult.isOK) return {reason: REASONS.BAD_INPUT_SQL, parser_error: sqlInputValidationResult.error, ...CONSTANTS.FALSE_RESULT};
 
 	const aiKey = crypt.decrypt(NEURANET_CONSTANTS.CONF.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
 		aiModelToUse = jsonReq.model || MODEL_DEFAULT,
@@ -39,7 +39,8 @@ exports.doService = async jsonReq => {
 	}
 }
 
-const _validateSQL = sql => { 
+const _validateSQL = (sql, skipValidation) => { 
+	if (skipValidation) return {isOK: true};
 	try { SQL_PARSER.parse(sql); return {isOK: true}; } catch (err) { return {isOK: false, error: err};}
 }
 

@@ -57,3 +57,14 @@
 {"ts":"2023:03:27:04:14:25","level":"error","message":"[192.168.1.6] Error in conversion, due to bad input SQL.\n$SyntaxError: Expected &quot;#&quot;, &quot;--&quot;, &quot;&#x2F;*&quot;, &quot;:=&quot;, &quot;=&quot;, or [ \\t\\n\\r] but &quot;f&quot; found.\nFound at: Line:$1, Column:$10."}
 {"ts":"2023:03:27:04:19:26","level":"error","message":"[192.168.1.6] Error in conversion, due to bad input SQL.\nSyntaxError: Expected &quot;#&quot;, &quot;--&quot;, &quot;&#x2F;*&quot;, &quot;:=&quot;, &quot;=&quot;, or [ \\t\\n\\r] but &quot;f&quot; found.\nFound at: Line:1, Column:10."}
 {"ts":"2023:03:27:04:20:02","level":"error","message":"[192.168.1.6] Error in conversion, due to bad input SQL.\n\nSyntaxError: Expected &quot;#&quot;, &quot;--&quot;, &quot;&#x2F;*&quot;, &quot;:=&quot;, &quot;=&quot;, or [ \\t\\n\\r] but &quot;f&quot; found.\n\nFound at: Line:1, Column:10."}
+{"ts":"2023:03:27:16:44:57","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:27:16:45:35","level":"error","message":"[192.168.1.6] Error in conversion, due to bad input SQL.\n\nSyntaxError: Expected &quot;#&quot;, &quot;(&quot;, &quot;--&quot;, &quot;.&quot;, &quot;&#x2F;*&quot;, &quot;:=&quot;, &quot;=&quot;, or [ \\t\\n\\r] but &quot;p&quot; found.\n\nFound at: Line:1, Column:15."}
+{"ts":"2023:03:27:23:04:25","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:27:23:42:22","level":"error","message":"[192.168.1.6] Error in conversion, sorry."}
+{"ts":"2023:03:27:23:53:34","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:27:23:55:32","level":"error","message":"[192.168.1.6] Error in conversion, sorry."}
+{"ts":"2023:03:28:00:06:46","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:28:00:11:51","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:28:00:12:02","level":"error","message":"[192.168.1.6] Error in conversion, due to bad input SQL.\n\nSyntaxError: Expected &quot;#&quot;, &quot;--&quot;, &quot;.&quot;, &quot;&#x2F;*&quot;, &quot;:=&quot;, &quot;=&quot;, [ \\t\\n\\r], or [A-Za-z0-9_$] but end of input found.\n\nFound at: Line:1, Column:7."}
+{"ts":"2023:03:28:00:12:56","level":"info","message":"[192.168.1.6] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:03:28:00:13:10","level":"error","message":"[192.168.1.6] Error in conversion, due to bad input SQL.\n\nSyntaxError: Expected &quot;#&quot;, &quot;(&quot;, &quot;--&quot;, &quot;.&quot;, &quot;&#x2F;*&quot;, &quot;:=&quot;, &quot;=&quot;, or [ \\t\\n\\r] but &quot;*&quot; found.\n\nFound at: Line:1, Column:15."}
