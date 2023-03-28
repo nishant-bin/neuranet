@@ -1,9 +1,17 @@
----- Translate this SQL from {{{dbfrom}}} to SingleStore DB. Please follow these important rules
----- Datacompression by default in SingleStore uses ROW. So that command would not be necessary for conversion.
----- If a table is specifying In-memory storage then that table must be created as a simple row-store table in SingleStore. As singlestore uses in-memory for row stored tables.
----- SingleStore uses column store clustering by default. So any command to cluster tables by column store can be omitted in the conversion.
----- The memory optimized directive can be skipped during translation.
----- Only respond with SQL code and no other text.
+---- Translate this SQL from Microsoft SQL Server to SingleStore.
+---- Please follow these important rules.
+--- The word NONCLUSTERED should never appear in the translation.
+--- The word GO should never appear in the translation.
+--- Datacompression by default in SingleStore uses ROW. So that command would not be necessary for conversion.
+--- Skip command CLUSTERED COLUMNSTORE if found in the translation.
+--- Do not specify clustered columnstore.
+--- Never output COLUMNSTORE or CLUSTERED COLUMNSTORE if found in the translation.
+--- Never output ENGINE command if found in the translation.
+--- The DURABILITY directive is not required for SingleStore.
+--- The memory optimized directive can be skipped during translation.
+--- Only respond with SQL code and no other text.
+--- Automatically assume a semicolon at the end of each valid SQL statement even if not provided.
+
 --- {{{dbfrom}}}
 
 {{{request}}}

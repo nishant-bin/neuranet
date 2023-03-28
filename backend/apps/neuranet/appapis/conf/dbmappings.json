@@ -1,9 +1,9 @@
 {
-    "db2": {"label":"IBM DB2", "promptfile": "generic_dbprompt.txt"},
-    "oracle": {"label":"Oracle", "promptfile": "generic_dbprompt.txt"},
-    "postgresql": {"label":"PostgreSQL","promptfile": "generic_dbprompt.txt"},
-    "mysql": {"label":"MySQL","promptfile": "generic_dbprompt.txt"},
-    "singlestore": {"label":"SingleStore DB","promptfile": "singlestore_dbprompt.txt"},
-    "mssql": {"label":"Microsoft SQL Server", "promptfile": "generic_dbprompt.txt"},
-    "default": {"label":"MySQL", "promptfile": "generic_dbprompt.txt"}
+    "db2": {"label":"IBM DB2", "promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
+    "oracle": {"label":"Oracle", "promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
+    "postgresql": {"label":"PostgreSQL","promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
+    "mysql": {"label":"MySQL","promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
+    "singlestore": {"label":"SingleStore DB","promptfile_sql": "singlestore_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
+    "mssql": {"label":"Microsoft SQL Server", "promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
+    "default": {"label":"MySQL", "promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"}
 }

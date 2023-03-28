@@ -1,5 +1,5 @@
 if (require.main === module) {
-    if (process.argv.length < 2) {console.err("Usage: nodeSQLParser <sql statement> [parser_to_use]"); process.exit(1);}
+    if (process.argv.length < 3) {console.error("Usage: nodeSQLParser <sql statement> [parser_to_use]"); process.exit(1);}
     
     const parser_to_use = process.argv[3]?.toLowerCase() || "nodesql";
     if (parser_to_use == "nodesql") node_sql_parse(process.argv[2]);
@@ -13,7 +13,7 @@ function node_sql_parse(sql, useflora) {
     const { Parser } = useflora?require('@florajs/sql-parser'):require('node-sql-parser');
     const parser = new Parser();
     try {
-        const {ast} = parser.parse(sql);
+        const ast = parser.astify(sql);
         console.log(ast); 
         process.exit(0);
     } catch (err) {

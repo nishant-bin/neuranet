@@ -27,7 +27,8 @@ exports.doService = async jsonReq => {
 	}
 	
 	const response = await aiLibrary.process({request: jsonReq.request, dbfrom: DB_MAPPINGS[jsonReq.dbfrom].label, 
-		dbto: DB_MAPPINGS[jsonReq.dbto].label}, `${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${_getPromptFile(jsonReq.dbfrom)}`, 
+		dbto: DB_MAPPINGS[jsonReq.dbto].label}, 
+		`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${_getPromptFile(jsonReq.request, jsonReq.dbto)}`, 
 		aiKey, aiModelToUse);
 
 	if (!response) {
@@ -42,10 +43,17 @@ exports.doService = async jsonReq => {
 
 const _validateSQL = (sql, skipValidation) => { 
 	if (skipValidation) return {isOK: true};
-	try { SQL_PARSER.parse(sql); return {isOK: true}; } catch (err) { return {isOK: false, error: err};}
+	try { SQL_PARSER.parse(sql); return {isOK: true}; } catch (err) { 
+		if (sql.match(/create[' '\t]+procedure/i) || sql.match(/create[' '\t]+table/i)) return {isOK: true};	// the parser grammar doesn't support create statements
+		return {isOK: false, error: err};
+	}
 }
 
-const _getPromptFile = dbType => DB_MAPPINGS[dbType].promptfile || DB_MAPPINGS[DEFAULT].promptfile;
+const _isStoredProcedure = sql => sql.match(/create[' '\t]+procedure/i);
+
+const _getPromptFile = (sql, dbType) => _isStoredProcedure(sql) ? 
+	(DB_MAPPINGS[dbType].promptfile_storedproc || DB_MAPPINGS[DEFAULT].promptfile_storedproc) :
+	(DB_MAPPINGS[dbType].promptfile_sql || DB_MAPPINGS[DEFAULT].promptfile_sql);
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.request && jsonReq.dbfrom && jsonReq.dbto &&
 	DB_MAPPINGS[jsonReq.dbfrom] && DB_MAPPINGS[jsonReq.dbto]);

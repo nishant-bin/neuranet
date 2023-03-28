@@ -27,8 +27,9 @@ async function convert(elementImg) {
 		dbto = conf.DB_BACKEND_ID_MAPPINGS[shadowRoot.querySelector("select#targetdb").value],
 		validate = shadowRoot.querySelector("input#validatesql").checked,
 		userid = host.getAttribute("user");
+	
 	if (requestSQL.trim() == "") {_showError(await i18n.get("NothingToConvert")); return;}
-	elementImg.src = `${COMPONENT_PATH}/img/spinner.svg`;
+	texteditorResponse.value = ""; elementImg.src = `${COMPONENT_PATH}/img/spinner.svg`;
 	const convertedResponse = dbfrom == dbto ? {sql: requestSQL, result: true} : await apiman.rest(
 		`${host.getAttribute("backendurl")}/${API_CONVERT}`, "POST", {request: requestSQL, dbfrom, dbto, id: userid, 
 			skipvalidation: validate}, true);

@@ -1,0 +1,9 @@
+---- Translate this SQL Stored Procedure from {{{dbfrom}}} to {{{dbto}}}.
+---- Please follow these important rules.
+---- Only respond with SQL code and no other text.
+
+--- {{{dbfrom}}}
+
+{{{request}}}
+
+--- {{{dbto}}}
