@@ -1,0 +1,11 @@
+---- Translate this SQL from {{{dbfrom}}} to SingleStore DB. Please follow these important rules
+---- Datacompression by default in SingleStore uses ROW. So that command would not be necessary for conversion.
+---- If a table is specifying In-memory storage then that table must be created as a simple row-store table in SingleStore. As singlestore uses in-memory for row stored tables.
+---- SingleStore uses column store clustering by default. So any command to cluster tables by column store can be omitted in the conversion.
+---- The memory optimized directive can be skipped during translation.
+---- Only respond with SQL code and no other text.
+--- {{{dbfrom}}}
+
+{{{request}}}
+
+--- {{{dbto}}}

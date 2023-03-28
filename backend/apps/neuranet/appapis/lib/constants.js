@@ -12,5 +12,5 @@ exports.APPROOT = APPROOT;
 exports.APIDIR = `${APPROOT}/appapis`;
 exports.CONFDIR = `${APPROOT}/appapis/conf`;
 exports.LIBDIR = `${APPROOT}/appapis/lib`;
-exports.PROMPTSDIR = `${APPROOT}/appapis/prompts`;
+exports.TRAININGPROMPTSDIR = `${APPROOT}/appapis/training_prompts`;
 exports.RESPONSESDIR = `${APPROOT}/appapis/sample_responses`;

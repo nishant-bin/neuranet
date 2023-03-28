@@ -1,8 +1,9 @@
 {
-    "db2": "IBM DB2",
-    "oracle": "Oracle",
-    "postgresql": "PostgreSQL",
-    "mysql": "MySQL",
-    "singlestore": "MySQL",
-    "mssql": "Microsoft SQL Server"
+    "db2": {"label":"IBM DB2", "promptfile": "generic_dbprompt.txt"},
+    "oracle": {"label":"Oracle", "promptfile": "generic_dbprompt.txt"},
+    "postgresql": {"label":"PostgreSQL","promptfile": "generic_dbprompt.txt"},
+    "mysql": {"label":"MySQL","promptfile": "generic_dbprompt.txt"},
+    "singlestore": {"label":"SingleStore DB","promptfile": "singlestore_dbprompt.txt"},
+    "mssql": {"label":"Microsoft SQL Server", "promptfile": "generic_dbprompt.txt"},
+    "default": {"label":"MySQL", "promptfile": "generic_dbprompt.txt"}
 }

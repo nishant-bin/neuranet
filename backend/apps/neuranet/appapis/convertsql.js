@@ -7,12 +7,12 @@ const sqlparser = require("node-sql-parser");
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const DB_MAPPINGS = require(`${NEURANET_CONSTANTS.CONFDIR}/dbmappings.json`); 
 
-const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", BAD_INPUT_SQL: "badinputsql"}, 
-	DBPROMPT = "dbprompt.txt", MODEL_DEFAULT = "sql-code-gen35", SQL_PARSER = new sqlparser.Parser();
+const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
+		BAD_INPUT_SQL: "badinputsql"}, MODEL_DEFAULT = "sql-code-gen35", SQL_PARSER = new sqlparser.Parser();
 
 exports.doService = async jsonReq => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
-	
+
 	LOG.debug(`Got SQL conversion request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
 	const sqlInputValidationResult = _validateSQL(jsonReq.request, jsonReq.skipvalidation); 
@@ -26,8 +26,9 @@ exports.doService = async jsonReq => {
 		return {reason: REASONS.BAD_MODEL, ...CONSTANTS.FALSE_RESULT};
 	}
 	
-	const response = await aiLibrary.process({request: jsonReq.request, dbfrom: DB_MAPPINGS[jsonReq.dbfrom], dbto: DB_MAPPINGS[jsonReq.dbto]}, 
-		`${NEURANET_CONSTANTS.PROMPTSDIR}/${DBPROMPT}`, aiKey, aiModelToUse);
+	const response = await aiLibrary.process({request: jsonReq.request, dbfrom: DB_MAPPINGS[jsonReq.dbfrom].label, 
+		dbto: DB_MAPPINGS[jsonReq.dbto].label}, `${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${_getPromptFile(jsonReq.dbfrom)}`, 
+		aiKey, aiModelToUse);
 
 	if (!response) {
 		LOG.error(`AI library error processing request ${JSON.stringify(jsonReq)}`); 
@@ -43,6 +44,8 @@ const _validateSQL = (sql, skipValidation) => {
 	if (skipValidation) return {isOK: true};
 	try { SQL_PARSER.parse(sql); return {isOK: true}; } catch (err) { return {isOK: false, error: err};}
 }
+
+const _getPromptFile = dbType => DB_MAPPINGS[dbType].promptfile || DB_MAPPINGS[DEFAULT].promptfile;
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.request && jsonReq.dbfrom && jsonReq.dbto &&
 	DB_MAPPINGS[jsonReq.dbfrom] && DB_MAPPINGS[jsonReq.dbto]);
