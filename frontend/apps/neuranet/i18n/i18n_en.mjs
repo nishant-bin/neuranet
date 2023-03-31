@@ -121,7 +121,7 @@ export const i18n = {
 "ErrorConvertingInternal": "Error in conversion, sorry.",
 "ErrorConvertingBadAIModel": "Error in conversion, due to an AI model mismatch, sorry.",
 "ErrorConvertingBadAPIRequest": "Error in conversion, due to network communication error, sorry.",
-"ErrorConvertingBadInputSQL": "Error in conversion, due to bad input SQL.\n\n{{message}}\n\nFound at: Line:{{line}}, Column:{{column}}.",
-"PossibleErrorConverting": "--- WARNING: Possibly bad SQL.\n--- {{message}}\n--- Found at: Line:{{line}}, Column:{{column}}.",
+"ErrorConvertingBadInputSQL": "Error in conversion, due to bad input SQL.\n\n{{#message}}{{message}}{{/message}}{{^message}}SQL parser failed to parse.{{/message}}\n\nFound at: Line:{{#line}}{{line}}{{/line}}{{^line}}0{{/line}}, Column:{{#column}}{{column}}{{/column}}{{^column}}0{{/column}}.",
+"PossibleErrorConverting": "--- WARNING: Possibly bad SQL.\n--- {{#message}}{{message}}{{/message}}{{^message}}SQL parser failed to parse.{{/message}}\n--- Found at: {{#line}}{{line}}{{/line}}{{^line}}0{{/line}}, Column:{{#column}}{{column}}{{/column}}{{^column}}0{{/column}}.",
 "InternalErrorConverting": "Internal error, please retry later."
 }

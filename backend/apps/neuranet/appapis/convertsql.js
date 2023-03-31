@@ -3,20 +3,22 @@
  * (C) 2022 TekMonks. All rights reserved.
  */
 
-const sqlparser = require("node-sql-parser");
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
+const sqlvalidator = require(`${NEURANET_CONSTANTS.LIBDIR}/sqlvalidator.js`);
 const DB_MAPPINGS = require(`${NEURANET_CONSTANTS.CONFDIR}/dbmappings.json`); 
 
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
-		BAD_INPUT_SQL: "badinputsql"}, MODEL_DEFAULT = "sql-code-gen35", SQL_PARSER = new sqlparser.Parser();
+		BAD_INPUT_SQL: "badinputsql"}, MODEL_DEFAULT = "sql-code-gen35";
 
 exports.doService = async jsonReq => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
 
 	LOG.debug(`Got SQL conversion request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
-	const sqlInputValidationResult = _validateSQL(jsonReq.request, jsonReq.skipvalidation); 
-	if (!sqlInputValidationResult.isOK) return {reason: REASONS.BAD_INPUT_SQL, parser_error: sqlInputValidationResult.error, ...CONSTANTS.FALSE_RESULT};
+	const sqlInputValidationResult = jsonReq.skipvalidation?{isOK:true}:
+		await sqlvalidator.validate(jsonReq.request, jsonReq.dbfrom, undefined, jsonReq.use_simple_validator); 
+	if (!sqlInputValidationResult.isOK) return {reason: REASONS.BAD_INPUT_SQL, 
+		parser_error: sqlInputValidationResult.errors, ...CONSTANTS.FALSE_RESULT};
 
 	const aiKey = crypt.decrypt(NEURANET_CONSTANTS.CONF.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
 		aiModelToUse = jsonReq.model || MODEL_DEFAULT,
@@ -35,17 +37,10 @@ exports.doService = async jsonReq => {
 		LOG.error(`AI library error processing request ${JSON.stringify(jsonReq)}`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 	} else {
-		const sql = response.airesponse; const validationResult = _validateSQL(sql);
+		const sql = response.airesponse; const validationResult = sqlvalidator.validate(sql, jsonReq.dbto, 
+			undefined, jsonReq.use_simple_validator);
 		return {sql, reason: REASONS.OK, possible_error: validationResult.isOK?undefined:true, 
-			parser_error: validationResult.isOK?undefined:validationResult.error, ...CONSTANTS.TRUE_RESULT};
-	}
-}
-
-const _validateSQL = (sql, skipValidation) => { 
-	if (skipValidation) return {isOK: true};
-	try { SQL_PARSER.parse(sql); return {isOK: true}; } catch (err) { 
-		if (sql.match(/create[' '\t]+procedure/i) || sql.match(/create[' '\t]+table/i)) return {isOK: true};	// the parser grammar doesn't support create statements
-		return {isOK: false, error: err};
+			parser_error: validationResult.isOK?undefined:validationResult.errors, ...CONSTANTS.TRUE_RESULT};
 	}
 }
 

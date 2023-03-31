@@ -14,3 +14,5 @@ exports.CONFDIR = `${APPROOT}/appapis/conf`;
 exports.LIBDIR = `${APPROOT}/appapis/lib`;
 exports.TRAININGPROMPTSDIR = `${APPROOT}/appapis/training_prompts`;
 exports.RESPONSESDIR = `${APPROOT}/appapis/sample_responses`;
+exports.TEMPDIR = `${APPROOT}/appapis/temp`;
+exports.THIRDPARTYDIR = `${APPROOT}/appapis/3p`;

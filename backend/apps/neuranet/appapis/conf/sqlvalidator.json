@@ -1,0 +1,10 @@
+{
+    "VALIDATOR_CMD": "parse \"__FILE__\" --dialect __DIALECT__",
+    "VALIDATOR_RE": "^.*PRS \\| Line (\\d+), Position (\\d+): (.*)$",
+    "VALIDATOR_RE_OPTIONS": "gm",
+    "VALIDATOR_EXEC": "sqlfluff",
+    "VALIDATOR_DIALECT_MAPPING": {
+        "ansi": "ansi", "db2": "db2", "mysql": "mysql", "oracle": "oracle", "postgresql": "postgres", 
+        "mssql": "tsql", "default": "ansi"
+    }
+}

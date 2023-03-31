@@ -20,7 +20,7 @@
             "response_contentpath": "data.choices[0].message.content",
             "response_finishreason": "data.choices[0].finish_reason",
             "sample_ai_response": "sql_ai_response.json",
-            "read_ai_response_from_samples": false
+            "read_ai_response_from_samples": true
         }
     }
 }

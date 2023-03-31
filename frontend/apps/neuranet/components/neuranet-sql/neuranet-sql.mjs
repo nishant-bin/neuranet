@@ -32,7 +32,7 @@ async function convert(elementImg) {
 	texteditorResponse.value = ""; elementImg.src = `${COMPONENT_PATH}/img/spinner.svg`;
 	const convertedResponse = dbfrom == dbto ? {sql: requestSQL, result: true} : await apiman.rest(
 		`${host.getAttribute("backendurl")}/${API_CONVERT}`, "POST", {request: requestSQL, dbfrom, dbto, id: userid, 
-			skipvalidation: validate}, true);
+			skipvalidation: validate, use_simple_validator: conf.SIMPLE_VALIDATOR}, true);
 	elementImg.src = `${COMPONENT_PATH}/img/bot.svg`;
 
 	if (!convertedResponse) {LOG.error("Conversion failed due to backend internal issues."); _showError(await i18n.get("InternalErrorConverting")); return;}
@@ -44,16 +44,16 @@ async function convert(elementImg) {
 			case "badinputsql": key = "BadInputSQL"; break;
 			default: key = "Internal"; break;
 		}
-		const err = mustache.render(await i18n.get(`ErrorConverting${key}`), convertedResponse.parser_error ?
-			{ message: `${convertedResponse.parser_error?.name}: ${convertedResponse.parser_error?.message}`, 
-				line: convertedResponse.parser_error.location?.start.line, column: convertedResponse.parser_error.location?.start.column } : {});
+		const err = mustache.render(await i18n.get(`ErrorConverting${key}`), convertedResponse.parser_error?.[0] ?
+			{ message: convertedResponse.parser_error[0].error, line: convertedResponse.parser_error[0].line, 
+				column: convertedResponse.parser_error[0].column } : {});
 		LOG.error(err); if (key == "BadInputSQL") _showErrorNoCenter(err); else _showError(err); return;
 	}
 
 	let sqlErrHeader = ""; if (convertedResponse.possibleError) {	// set the SQL with an error warning if needed
 		err = mustache.render(await i18n.get("PossibleErrorConverting"), convertedResponse.parser_error ?
-		{ message: `${convertedResponse.parser_error?.name}: ${convertedResponse.parser_error?.message}`, 
-			line: convertedResponse.parser_error.location?.start.line, column: convertedResponse.parser_error.location?.start.column } : {});
+		{ message: convertedResponse.parser_error[0].error, line: convertedResponse.parser_error[0].line, 
+			column: convertedResponse.parser_error[0].column } : {});
 	}; texteditorResponse.value = sqlErrHeader+convertedResponse.sql;
 }
 
