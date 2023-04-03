@@ -42,11 +42,11 @@ const main = async (desiredURL, desiredData) => {
 
 const interceptPageLoadData = _ => router.addOnLoadPageData("*", async (data, _url) => {
 	data.APP_CONSTANTS = APP_CONSTANTS; 
-	data.headers = await $$.requireText(APP_CONSTANTS.APP_PATH+"/conf/headers.html");
+	data.headers = await $$.requireText(APP_CONSTANTS.CONF_PATH+"/headers.html");
 });
 
 async function _readConfig() {
-	const conf = await(await fetch(`${APP_CONSTANTS.APP_PATH}/conf/app.json`)).json();
+	const conf = await(await fetch(`${APP_CONSTANTS.CONF_PATH}/loginapp.json`)).json();
 	for (const key of Object.keys(conf)) APP_CONSTANTS[key] = conf[key];
 }
 
@@ -54,7 +54,7 @@ const _registerComponents = async _ => { for (const component of APP_CONSTANTS.C
 	await import(`${APP_CONSTANTS.COMPONENTS_PATH}/${component}/${component}.mjs`); }
 
 async function _addPageLoadInterceptors() {
-	const interceptors = await(await fetch(`${APP_CONSTANTS.APP_PATH}/conf/pageLoadInterceptors.json`)).json();
+	const interceptors = await(await fetch(`${APP_CONSTANTS.CONF_PATH}/pageLoadInterceptors.json`)).json();
 	for (const interceptor of interceptors) {
 		const modulePath = interceptor.module, functionName = interceptor.function;
 		let module = await import(`${APP_CONSTANTS.APP_PATH}/${modulePath}`); module = module[Object.keys(module)[0]];

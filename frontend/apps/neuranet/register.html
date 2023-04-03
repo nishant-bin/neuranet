@@ -1,20 +1,20 @@
 <style>
 @import url('./fonts/appfonts.css');
 
-body::-webkit-scrollbar {
+::-webkit-scrollbar {
     width: 0.5em !important;
     height: 0.5em !important;
     scroll-behavior: smooth !important;
 }
 
-body::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
     -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
     box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
     margin: 5em;
     border-radius: 1em !important;
 }
 
-body::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
     background-color: darkgrey !important;
     border-radius: 1em !important;
     background-clip: padding-box;
@@ -197,7 +197,8 @@ div.lgbox > span {
 <div class="lgbox">
 	<span><br><br>{{i18n.RegisterMsg}}<br><br></span>
 	<register-box id="register" roles='["{{APP_CONSTANTS.GUEST_ROLE}}", "{{APP_CONSTANTS.USER_ROLE}}"]' 
-		routeOnSuccess="./main.html" type="register" minlength="{{APP_CONSTANTS.MIN_PASS_LENGTH}}"
+		routeOnSuccess="./main.html?view=&#x7B;&#x7B;#view&#x7D;&#x7D;&#x7B;&#x7B;view&#x7D;&#x7D;&#x7B;&#x7B;/view&#x7D;&#x7D;&#x7B;&#x7B;^view&#x7D;&#x7D;noview&#x7B;&#x7B;/view&#x7D;&#x7D;" 
+		type="register" minlength="{{APP_CONSTANTS.MIN_PASS_LENGTH}}"
 		dataOnSuccess='{"showDialog":{"message": "&#x7B;&#x7B;#needs_verification&#x7D;&#x7D;{{i18n.RegisterSuccessNeedsVerification}}&#x7B;&#x7B;/needs_verification&#x7D;&#x7D;&#x7B;&#x7B;^needs_verification&#x7D;&#x7D;{{i18n.RegisterSuccess}}&#x7B;&#x7B;/needs_verification}}"}}' 
 		routeOnNotApproved="./notapproved.html" 
 		mobileQueries='{"start": "{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_START}}", "end": "{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_END}}"}',

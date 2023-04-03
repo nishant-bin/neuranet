@@ -9,5 +9,6 @@
     "MOBILE_MEDIA_QUERY_PORTRAIT_END": "}</style>",
     "COMPONENTS": ["dialog-box", "login-box", "password-box", "register-box", "span-with-menu", 
         "user-manager", "context-menu", "editable-list", "neuranet-sql", "text-editor"],
-    "APP_ABOUT_URL": "https://tekmonks.com/"
+    "APP_ABOUT_URL": "https://tekmonks.com/",
+    "VIEWS": ["gencode", "search", "sqltranslate", "chat"]
 }

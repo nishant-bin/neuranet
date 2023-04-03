@@ -152,3 +152,14 @@
 {"ts":"2023:04:01:04:34:53","level":"error","message":"[192.168.1.12] Error in conversion, due to bad input SQL.\n\n.\n\nFound at: Line:., Column:.."}
 {"ts":"2023:04:01:04:35:41","level":"error","message":"[192.168.1.12] Error in conversion, due to bad input SQL.\n\n.\n\nFound at: Line:1, Column:.."}
 {"ts":"2023:04:01:04:37:09","level":"error","message":"[192.168.1.12] Error in conversion, due to bad input SQL.\n\nFound unparsable section: &#39; UNIQUE product&#39;\n\nFound at: Line:1, Column:7."}
+{"ts":"2023:04:03:02:43:18","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:03:02:44:00","level":"warning","message":"[192.168.1.12] Bad OTP given for thecompany@tekmonks.com."}
+{"ts":"2023:04:03:02:44:13","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:03:17:42:38","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:03:17:43:04","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:03:17:44:40","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:03:17:46:59","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:03:18:37:57","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:03:18:40:41","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:03:18:41:24","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:03:18:42:06","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}

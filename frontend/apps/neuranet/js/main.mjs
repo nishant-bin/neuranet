@@ -73,8 +73,13 @@ function showLoginMessages() {
 
 const logoutClicked = _ => loginmanager.logout();
 
-const interceptPageData = _ => router.addOnLoadPageData(APP_CONSTANTS.MAIN_HTML, async data => {   // set admin role if applicable
+const interceptPageData = _ => router.addOnLoadPageData(APP_CONSTANTS.MAIN_HTML, async (data, url) => {   // set admin role if applicable
     if (securityguard.getCurrentRole()==APP_CONSTANTS.ADMIN_ROLE) data.admin = true; 
+    const searchParams = new URL(url).searchParams, viewToLoad = searchParams.get("view") || APP_CONSTANTS.DEFAULT_VIEW;
+    const viewURL = `${APP_CONSTANTS.VIEW_PATH}/${viewToLoad}/main.html`; 
+    const views = []; for (const view of APP_CONSTANTS.VIEWS) views.push(
+        {viewicon: `${APP_CONSTANTS.VIEW_PATH}/${view}/img/icon.svg`, viewlabel: await i18n.get(`ViewLabel_${view}`)});
+    data.viewcontent = await router.loadHTML(viewURL, {...data, views});
 });
 
 async function _getTOTPQRCode(key) {

@@ -5,12 +5,14 @@
 const FRONTEND = "https://{{{hostname}}}";
 const BACKEND = "https://{{{hostname}}}:9090";
 const APP_NAME = "neuranet";
-const APP_PATH = `${FRONTEND}/apps/${APP_NAME}`;
 const API_PATH = `${BACKEND}/apps/${APP_NAME}`;
+const APP_PATH = `${FRONTEND}/apps/${APP_NAME}`;
+const CONF_PATH = `${FRONTEND}/apps/${APP_NAME}/conf`;
+
 const COMPONENTS_PATH = `${FRONTEND}/apps/${APP_NAME}/components`;
 
 export const APP_CONSTANTS = {
-    FRONTEND, BACKEND, APP_PATH, APP_NAME, COMPONENTS_PATH, API_PATH,
+    FRONTEND, BACKEND, APP_PATH, APP_NAME, COMPONENTS_PATH, API_PATH, CONF_PATH,
     MAIN_HTML: APP_PATH+"/main.html",
     LOGIN_HTML: APP_PATH+"/login.html",
     INDEX_HTML: APP_PATH+"/index.html",
@@ -20,6 +22,9 @@ export const APP_CONSTANTS = {
     MANAGE_HTML: APP_PATH+"/manage.html",
     VERIFY_HTML: APP_PATH+"/verify.html",
     DOWNLOAD_HTML: APP_PATH+"/download.html",
+    VIEW_PATH: APP_PATH+"/views",
+
+    DEFAULT_VIEW: "main",
 
     DIALOGS_PATH: APP_PATH+"/dialogs",
 
@@ -45,14 +50,22 @@ export const APP_CONSTANTS = {
     USERORG: "userorg",
     USERORGDOMAIN: "userorgdomain",
     USER_NEEDS_VERIFICATION: "userneedsverification",
+    USERVIEW: "userview",
 
     USER_ROLE: "user",
     GUEST_ROLE: "guest",
     ADMIN_ROLE: "admin",
     PERMISSIONS_MAP: {
-        user:[window.location.origin, APP_PATH+"/index.html", APP_PATH+"/download.html", APP_PATH+"/error.html", APP_PATH+"/verify.html", APP_PATH+"/main.html", APP_PATH+"/reset.html", APP_PATH+"/initiallogin.html", APP_PATH+"/register.html", APP_PATH+"/notapproved.html", APP_PATH+"/loginroom.html", APP_PATH+"/login.html", $$.MONKSHU_CONSTANTS.ERROR_HTML], 
-        admin:[window.location.origin, APP_PATH+"/index.html", APP_PATH+"/download.html", APP_PATH+"/error.html", APP_PATH+"/verify.html", APP_PATH+"/main.html", APP_PATH+"/reset.html", APP_PATH+"/initiallogin.html", APP_PATH+"/register.html", APP_PATH+"/notapproved.html", APP_PATH+"/loginroom.html", APP_PATH+"/login.html", APP_PATH+"/manage.html", $$.MONKSHU_CONSTANTS.ERROR_HTML],
-        guest:[window.location.origin, APP_PATH+"/index.html", APP_PATH+"/download.html", APP_PATH+"/error.html", APP_PATH+"/verify.html", APP_PATH+"/reset.html", APP_PATH+"/initiallogin.html", APP_PATH+"/register.html", APP_PATH+"/notapproved.html", APP_PATH+"/login.html", APP_PATH+"/loginroom.html", $$.MONKSHU_CONSTANTS.ERROR_HTML]
+        user:[window.location.origin, APP_PATH+"/index.html", APP_PATH+"/error.html", APP_PATH+"/verify.html", 
+            APP_PATH+"/main.html", APP_PATH+"/views/*.html", APP_PATH+"/reset.html", APP_PATH+"/initiallogin.html", 
+            APP_PATH+"/register.html", APP_PATH+"/notapproved.html", APP_PATH+"/login.html", $$.MONKSHU_CONSTANTS.ERROR_HTML], 
+        admin:[window.location.origin, APP_PATH+"/index.html", APP_PATH+"/error.html", APP_PATH+"/verify.html", 
+            APP_PATH+"/main.html", APP_PATH+"/views/*.html", APP_PATH+"/reset.html", APP_PATH+"/initiallogin.html", 
+            APP_PATH+"/register.html", APP_PATH+"/notapproved.html", APP_PATH+"/login.html", APP_PATH+"/manage.html", 
+            $$.MONKSHU_CONSTANTS.ERROR_HTML],
+        guest:[window.location.origin, APP_PATH+"/index.html", APP_PATH+"/error.html", APP_PATH+"/verify.html", 
+            APP_PATH+"/reset.html", APP_PATH+"/initiallogin.html", APP_PATH+"/register.html", 
+            APP_PATH+"/notapproved.html", APP_PATH+"/login.html", $$.MONKSHU_CONSTANTS.ERROR_HTML]
     },
 
     API_KEYS: {"*":"fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389"},

@@ -6,7 +6,6 @@ const mustache = require('mustache');
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const totp = require(`${APP_CONSTANTS.LIB_DIR}/totp.js`);
-const CONF = require(`${APP_CONSTANTS.CONF_DIR}/app.json`);
 const mailer = require(`${APP_CONSTANTS.LIB_DIR}/mailer.js`);
 const userid = require(`${APP_CONSTANTS.LIB_DIR}/userid.js`);
 const queueExecutor = require(`${CONSTANTS.LIBDIR}/queueExecutor.js`);
@@ -73,7 +72,7 @@ exports.addUser = async (jsonReq, servObject, byAdmin=false) => {
 	if (result.result) {
 		LOG.info(`User registered: ${jsonReq.name}, ID: ${jsonReq.id}, approval status is: ${result.approved==1?true:false}`); 
 		if (result.approved && (!byAdmin)) queueExecutor.add(userid.updateLoginStats, [jsonReq.id, Date.now(), 
-			utils.getClientIP(servObject.req)], true, CONF.login_update_delay||DEFAULT_QUEUE_DELAY);
+			utils.getClientIP(servObject.req)], true, APP_CONSTANTS.CONF.login_update_delay||DEFAULT_QUEUE_DELAY);
 		if (!result.approved) queueExecutor.add(_emailAdminNewRegistration, [result.id, result.name, result.org, jsonReq.lang], 
 			true, DEFAULT_QUEUE_DELAY);
 	}

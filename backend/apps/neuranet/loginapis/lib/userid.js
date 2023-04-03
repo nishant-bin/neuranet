@@ -6,12 +6,11 @@
 const util = require("util");
 const path = require("path");
 const bcryptjs = require("bcryptjs");
-const CONF = require(`${APP_CONSTANTS.CONF_DIR}/app.json`);
 const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
-const DB_PATH = path.resolve(`${APP_CONSTANTS.DB_DIR}/app.db`);
-const DB_CREATION_SQLS = require(`${APP_CONSTANTS.DB_DIR}/dbschema.json`);
 const getUserHash = async text => await (util.promisify(bcryptjs.hash))(text, 12);
+const DB_PATH = path.resolve(`${APP_CONSTANTS.DB_DIR}/${APP_CONSTANTS.CONF.db_file}`);
 const ID_BLACK_WHITE_LISTS = require(`${APP_CONSTANTS.CONF_DIR}/idblackwhitelists.json`)
+const DB_CREATION_SQLS = require(`${APP_CONSTANTS.DB_DIR}/${APP_CONSTANTS.CONF.db_schema_file}`);
 const db = require(`${CONSTANTS.LIBDIR}/db.js`).getDBDriver("sqlite", DB_PATH, DB_CREATION_SQLS);
 
 const idDeletionListeners = [];
@@ -38,9 +37,10 @@ exports.register = async (id, name, org, pwph, totpSecret, role, approved, verif
 		}
 	];
 	const registerResult = await db.runTransaction(commandsToInsert);
+	let view; if (registerResult) view = await exports.getViewForOrg(org);
 
 	return {result: registerResult, id, name, org, pwph: pwphHashed, totpsec: totpSecret, role, 
-		approved:approved?1:0, verified:verifyEmail?0:1, domain};
+		approved:approved?1:0, verified:verifyEmail?0:1, domain, view};
 }
 
 exports.delete = async id => {
@@ -79,7 +79,10 @@ exports.checkPWPH = async (id, pwph) => {
 
 exports.existsID = exports.getTOTPSec = async id => {
 	const rows = await db.getQuery("SELECT * FROM users WHERE id = ? COLLATE NOCASE", [id]);
-	if (rows && rows.length) return {result: true, ...(rows[0])}; else return {result: false};
+	if (rows && rows.length) {
+		const view = await exports.getViewForOrg(rows[0].org);
+		return {result: true, ...(rows[0]), view}; 
+	} else return {result: false};
 }
 
 exports.changepwph = async (id, pwph) => {
@@ -127,7 +130,7 @@ exports.deleteAllUnverifiedAndExpiredAccounts = async verificationExpiryInSecond
 exports.updateLoginStats = async (id, date, ip="unknown") => {
 	const rows = (await db.getQuery("SELECT * FROM users WHERE id = ? COLLATE NOCASE", [id]))[0];
 	const currentLoginsAndIPsJSON = JSON.parse(rows.loginsandips_json||"[]"); currentLoginsAndIPsJSON.unshift({date, ip});
-	const maxLoginsToRemember = CONF.max_logins_to_remember||100;
+	const maxLoginsToRemember = APP_CONSTANTS.CONF.max_logins_to_remember||100;
 	if (currentLoginsAndIPsJSON.length > maxLoginsToRemember) currentLoginsAndIPsJSONawait = currentLoginsAndIPsJSON.slice(0, maxLoginsToRemember);
 	await db.runCmd("UPDATE users SET lastlogin=?, lastip=?, loginsandips_json=? WHERE id=?", [date, ip, 
 		JSON.stringify(currentLoginsAndIPsJSON), id]);
@@ -144,9 +147,9 @@ exports.shouldAllowDomain = async domain => {
 		"domain", domain => domain.toLowerCase())[0];
 
 	// if in whitelist only mode activated so check if this domain or this org's main domain is whitelisted
-	if (CONF.id_whitelist_mode) return ID_BLACK_WHITE_LISTS.whitelist.includes(orgMainDomain||domain.toLowerCase());	
+	if (APP_CONSTANTS.CONF.id_whitelist_mode) return ID_BLACK_WHITE_LISTS.whitelist.includes(orgMainDomain||domain.toLowerCase());	
 	// blacklist check
-	if (CONF.id_blacklist_mode) return (!ID_BLACK_WHITE_LISTS.blacklist.includes(domain.toLowerCase()));	
+	if (APP_CONSTANTS.CONF.id_blacklist_mode) return (!ID_BLACK_WHITE_LISTS.blacklist.includes(domain.toLowerCase()));	
 	
 }
 
@@ -186,6 +189,15 @@ exports.addDomain = async (domain, org) => {
 
 exports.deleteDomain = async domain => {
 	return {result: await db.runCmd("DELETE FROM domain WHERE domain = ?", [domain]), domain};
+}
+
+exports.getViewForOrg = async org => {
+	const defaultView = await db.getQuery("SELECT view FROM views WHERE org='default' COLLATE NOCASE");
+	const orgView = await db.getQuery("SELECT view FROM views WHERE org=? COLLATE NOCASE", [org]);
+
+	const selectedView = orgView && orgView.length > 0 ? orgView[0].view : defaultView[0].view;
+
+	return selectedView;
 }
 
 function _flattenArray(results, columnName, functionToCall) { 

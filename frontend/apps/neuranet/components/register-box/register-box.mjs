@@ -75,8 +75,6 @@ async function registerOrUpdate(element) {
 	const passSelector = shadowRoot.querySelector("password-box#pass1"); const pass = passSelector.value;
 	const orgSelector = shadowRoot.querySelector("input#org"); const org = orgSelector.value;
 	const totpCodeSelector = shadowRoot.querySelector("input#otp"); const totpCode = totpCodeSelector.value && totpCodeSelector.value != ""?totpCodeSelector.value:null;
-	const routeOnSuccess = register_box.getHostElement(element).getAttribute("routeOnSuccess");
-	const routeOnNotApproved = register_box.getHostElement(element).getAttribute("routeOnNotApproved");
 
 	_showWait(shadowRoot);
 	const registerResult = await loginmanager.registerOrUpdate(id_old, name, id, pass, org, totpCode?memory.totpKey:null, totpCode);
@@ -84,6 +82,9 @@ async function registerOrUpdate(element) {
 
 	const dataOnSuccess = JSON.parse(await router.expandPageData(register_box.getHostElement(element).getAttribute("dataOnSuccess")||"{}",
 		undefined, {name, id, org, role: securityguard.getCurrentRole(), needs_verification: session.get(APP_CONSTANTS.USER_NEEDS_VERIFICATION)}));
+	const routeOnSuccess = await router.expandPageData(register_box.getHostElement(element).getAttribute(
+		"routeOnSuccess"), undefined, {view: session.get(APP_CONSTANTS.USERVIEW)});
+	const routeOnNotApproved = register_box.getHostElement(element).getAttribute("routeOnNotApproved");
 
 	switch (registerResult) {
 		case loginmanager.ID_OK: router.loadPage(routeOnSuccess, dataOnSuccess); break;

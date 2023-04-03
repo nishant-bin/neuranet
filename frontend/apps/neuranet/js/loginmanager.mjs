@@ -24,6 +24,7 @@ async function signin(id, pass, otp) {
         session.set("__org_monkshu_cuser_pass", pass);
         session.set(APP_CONSTANTS.USER_NEEDS_VERIFICATION, resp.verified);
         session.set(APP_CONSTANTS.USERORGDOMAIN, resp.domain);
+        session.set(APP_CONSTANTS.USERVIEW, resp.view);
         securityguard.setCurrentRole(resp.role);
         LOG.info(`Login succeeded for ${id}.`);
         return resp.verified?loginmanager.ID_OK:loginmanager.ID_OK_NOT_YET_VERIFIED;
@@ -61,6 +62,7 @@ async function registerOrUpdate(old_id, name, id, pass, org, totpSecret, totpCod
         session.set(APP_CONSTANTS.USERNAME, name);
         session.set(APP_CONSTANTS.USERORG, org);
         session.set(APP_CONSTANTS.USERORGDOMAIN, resp.domain);
+        session.set(APP_CONSTANTS.USERVIEW, resp.view);
         session.set(APP_CONSTANTS.USER_NEEDS_VERIFICATION, resp.needs_verification);
         session.set("__org_monkshu_cuser_pass", pass);
         securityguard.setCurrentRole(resp.role);

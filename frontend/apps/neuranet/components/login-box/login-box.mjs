@@ -71,10 +71,11 @@ async function _handleLoginResult(result, shadowRoot, routeOnSuccess, routeOnNot
 		await router.expandPageData(login_box.getHostElement(containedElement).getAttribute("dataOnSuccess")||"{}",
 		undefined, {name: session.get(APP_CONSTANTS.USERNAME), id: session.get(APP_CONSTANTS.USERID), 
 			org: session.get(APP_CONSTANTS.USERORG), role: securityguard.getCurrentRole(), needs_verification: false}));
+	const renderedRouteOnSuccess = await router.expandPageData(routeOnSuccess, undefined, {view: session.get(APP_CONSTANTS.USERVIEW)});
 			
 	switch (result) {
-		case loginmanager.ID_OK: router.loadPage(routeOnSuccess, data); break;
-		case loginmanager.ID_OK_NOT_YET_VERIFIED: router.loadPage(routeOnSuccess, data); break;
+		case loginmanager.ID_OK: router.loadPage(renderedRouteOnSuccess, data); break;
+		case loginmanager.ID_OK_NOT_YET_VERIFIED: router.loadPage(renderedRouteOnSuccess, data); break;
 		case loginmanager.ID_OK_NOT_YET_APPROVED: router.loadPage(routeOnNotApproved, data); break;
 
 		case loginmanager.ID_FAILED_MISSING: shadowRoot.querySelector("span#errorMissingID").classList.add("visible"); break;

@@ -1,0 +1,95 @@
+<style>
+    div#body {
+        padding: 0em 3em 3em 3em;
+        height: 100%;
+        width: 100%;
+        overflow: auto;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    div#main {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        border: 1px solid #03B3FF;
+        border-radius: 0.5em;
+        box-sizing: border-box;
+        height: 70%;
+        margin-bottom: 2em;
+        padding: 0.5em;
+    }
+    span#mainimage {
+        flex-grow: 1;
+    }
+    img#mainimage {
+        height: 100%;
+        padding: 2em;
+        box-sizing: border-box;
+    }
+    span#mainspan {
+        flex-grow: 1;
+        text-align: center;
+        color: #03B3FF;
+        font-size: xx-large;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        font-weight: 200;
+        overflow: hidden;
+    }
+
+    div#icons {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        flex-grow: 1;
+        height: calc(30% - 2em);
+        overflow: auto;
+    }
+    div#viewicon {
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #03B3FF;
+        border-radius: 0.5em;
+        box-sizing: border-box;
+        height: 100%;
+        justify-content: space-between;
+        max-width: 10em;
+        min-width: 10em;
+        padding: 1em;
+    }
+    img#viewicon {
+        height: calc(100% - 2.5em);
+        margin-bottom: 1em;
+    }
+    span#viewlabel {
+        width: 100%;
+        text-align: center;
+        color: #007BB0;
+        max-height: 1.5em;
+        user-select: none;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+    }
+</style>
+
+<div id="body">
+
+<div id="main">
+    <span id="mainimage"><img id="mainimage" src="{{APP_CONSTANTS.VIEW_PATH}}/main/img/brain.svg"></span>
+    <span id="mainspan"><p>AI Neural Network<br>Ready...</p><p>Choose Activity</p></span>
+</div>
+
+<div id="icons">
+    {{#views}}
+    <div id="viewicon">
+        <img id="viewicon" src="{{viewicon}}">
+        <span id="viewlabel">{{viewlabel}}</span>
+    </div>
+    {{/views}}
+</div>
+
+</div>

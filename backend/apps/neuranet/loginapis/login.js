@@ -4,7 +4,6 @@
  */
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const totp = require(`${APP_CONSTANTS.LIB_DIR}/totp.js`);
-const CONF = require(`${APP_CONSTANTS.CONF_DIR}/app.json`);
 const userid = require(`${APP_CONSTANTS.LIB_DIR}/userid.js`);
 const register = require(`${APP_CONSTANTS.API_DIR}/register.js`);
 const jwttokenmanager = APIREGISTRY.getExtension("JWTTokenManager");
@@ -54,11 +53,12 @@ exports.doService = async (jsonReq, servObject) => {
 	}
 
 	if (result.tokenflag) {	// tokenflag means geenrate JWT, meaning login succeeded
-		LOG.info(`User logged in: ${result.id}${CONF.verify_email_on_registeration?`, email verification status is ${result.verified}.`:"."}`); 
+		LOG.info(`User logged in: ${result.id}${APP_CONSTANTS.CONF.verify_email_on_registeration?`, email verification status is ${result.verified}.`:"."}`); 
 		const remoteIP = utils.getClientIP(servObject.req);	// api end closes the socket so when the queue task runs remote IP is lost.
 		queueExecutor.add(async _=>{	// update login stats don't care much if it fails
-			try { await userid.updateLoginStats(jsonReq.id, Date.now(), remoteIP), undefined, true, CONF.login_update_delay||DEFAULT_QUEUE_DELAY } 
-			catch(err) {LOG.error(`Error updating login stats for ID ${jsonReq.id}. Error is ${err}.`);}
+			try { await userid.updateLoginStats(jsonReq.id, Date.now(), remoteIP), undefined, true, 
+				APP_CONSTANTS.CONF.login_update_delay||DEFAULT_QUEUE_DELAY } catch(err) {
+				LOG.error(`Error updating login stats for ID ${jsonReq.id}. Error is ${err}.`); }
 		});	
 	} else LOG.error(`Bad login or not approved for ID: ${jsonReq.id}.`);
 
