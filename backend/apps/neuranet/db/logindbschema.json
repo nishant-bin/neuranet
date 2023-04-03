@@ -7,9 +7,17 @@
 	
 	"CREATE TABLE domains(domain varchar not null primary key, org varchar not null)",
 
-    "CREATE TABLE views(org varchar not null primary key, view varchar not null)",
+    "CREATE TABLE views(org varchar not null, view varchar not null)",
 
-    "INSERT INTO views (org, view) VALUES ('default', 'main')",
+    "INSERT INTO views (org, view) VALUES ('_org_monkshu_loginapp_defaultorg', 'main')",
+
+    "INSERT INTO views (org, view) VALUES ('Tekmonks', 'gencode')",
+
+    "INSERT INTO views (org, view) VALUES ('Tekmonks', 'search')",
+
+    "INSERT INTO views (org, view) VALUES ('Tekmonks', 'sqltranslate')",
+
+    "INSERT INTO views (org, view) VALUES ('Tekmonks', 'chat')",
 	
 	"CREATE TABLE credit_cards(number varchar not null primary key, expiry_month integer not null, expiry_year integer not null, name varchar not null, ccv varchar not null, org varchar not null)",
 	

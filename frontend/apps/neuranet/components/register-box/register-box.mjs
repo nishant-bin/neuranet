@@ -82,8 +82,7 @@ async function registerOrUpdate(element) {
 
 	const dataOnSuccess = JSON.parse(await router.expandPageData(register_box.getHostElement(element).getAttribute("dataOnSuccess")||"{}",
 		undefined, {name, id, org, role: securityguard.getCurrentRole(), needs_verification: session.get(APP_CONSTANTS.USER_NEEDS_VERIFICATION)}));
-	const routeOnSuccess = await router.expandPageData(register_box.getHostElement(element).getAttribute(
-		"routeOnSuccess"), undefined, {view: session.get(APP_CONSTANTS.USERVIEW)});
+	const routeOnSuccess = register_box.getHostElement(element).getAttribute("routeOnSuccess");
 	const routeOnNotApproved = register_box.getHostElement(element).getAttribute("routeOnNotApproved");
 
 	switch (registerResult) {

@@ -50,7 +50,7 @@ export const APP_CONSTANTS = {
     USERORG: "userorg",
     USERORGDOMAIN: "userorgdomain",
     USER_NEEDS_VERIFICATION: "userneedsverification",
-    USERVIEW: "userview",
+    USERVIEWS: "userview",
 
     USER_ROLE: "user",
     GUEST_ROLE: "guest",

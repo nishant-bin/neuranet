@@ -163,3 +163,11 @@
 {"ts":"2023:04:03:18:40:41","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
 {"ts":"2023:04:03:18:41:24","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
 {"ts":"2023:04:03:18:42:06","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:04:02:58:03","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:04:03:00:26","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:04:03:33:13","level":"error","message":"[192.168.1.12] Error in fetching https://192.168.1.12:9090/apps/neuranet/login for request {\"pwph\":\"thecompany@tekmonks.com Shalom12\",\"otp\":\"542148\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:04:04:03:33:13","level":"warning","message":"[192.168.1.12] Unknown reason for login failure for thecompany@tekmonks.com. Null response."}
+{"ts":"2023:04:04:03:34:19","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:04:03:36:30","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:04:03:38:14","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:04:03:38:51","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}

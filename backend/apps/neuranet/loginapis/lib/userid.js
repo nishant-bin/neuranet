@@ -14,6 +14,7 @@ const DB_CREATION_SQLS = require(`${APP_CONSTANTS.DB_DIR}/${APP_CONSTANTS.CONF.d
 const db = require(`${CONSTANTS.LIBDIR}/db.js`).getDBDriver("sqlite", DB_PATH, DB_CREATION_SQLS);
 
 const idDeletionListeners = [];
+const DEFAULT_VIEW_ORG = "_org_monkshu_loginapp_defaultorg";
 
 exports.initDB = async _ => await db.init();
 
@@ -37,10 +38,10 @@ exports.register = async (id, name, org, pwph, totpSecret, role, approved, verif
 		}
 	];
 	const registerResult = await db.runTransaction(commandsToInsert);
-	let view; if (registerResult) view = await exports.getViewForOrg(org);
+	let view; if (registerResult) views = await exports.getViewsForOrg(org);
 
 	return {result: registerResult, id, name, org, pwph: pwphHashed, totpsec: totpSecret, role, 
-		approved:approved?1:0, verified:verifyEmail?0:1, domain, view};
+		approved:approved?1:0, verified:verifyEmail?0:1, domain, views};
 }
 
 exports.delete = async id => {
@@ -80,8 +81,8 @@ exports.checkPWPH = async (id, pwph) => {
 exports.existsID = exports.getTOTPSec = async id => {
 	const rows = await db.getQuery("SELECT * FROM users WHERE id = ? COLLATE NOCASE", [id]);
 	if (rows && rows.length) {
-		const view = await exports.getViewForOrg(rows[0].org);
-		return {result: true, ...(rows[0]), view}; 
+		const views = await exports.getViewsForOrg(rows[0].org);
+		return {result: true, ...(rows[0]), views}; 
 	} else return {result: false};
 }
 
@@ -191,13 +192,14 @@ exports.deleteDomain = async domain => {
 	return {result: await db.runCmd("DELETE FROM domain WHERE domain = ?", [domain]), domain};
 }
 
-exports.getViewForOrg = async org => {
-	const defaultView = await db.getQuery("SELECT view FROM views WHERE org='default' COLLATE NOCASE");
-	const orgView = await db.getQuery("SELECT view FROM views WHERE org=? COLLATE NOCASE", [org]);
+exports.getViewsForOrg = async org => {
+	const defaultViews = await db.getQuery("SELECT view FROM views WHERE org=? COLLATE NOCASE", [DEFAULT_VIEW_ORG]);
+	const orgViews = await db.getQuery("SELECT view FROM views WHERE org=? COLLATE NOCASE", [org]);
 
-	const selectedView = orgView && orgView.length > 0 ? orgView[0].view : defaultView[0].view;
+	const selectedViews = orgViews && orgViews.length > 0 ? _flattenArray(orgViews, "view") : 
+		_flattenArray(defaultViews, "view");
 
-	return selectedView;
+	return selectedViews;
 }
 
 function _flattenArray(results, columnName, functionToCall) { 
