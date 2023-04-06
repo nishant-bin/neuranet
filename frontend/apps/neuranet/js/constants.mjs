@@ -26,11 +26,12 @@ export const APP_CONSTANTS = {
 
     DEFAULT_VIEW: "main",
 
+    FORCE_LOAD_VIEW: "___org_monkshu_loginapp_force_load_view",
+
     DIALOGS_PATH: APP_PATH+"/dialogs",
 
     SESSION_NOTE_ID: "com_monkshu_ts",
 
-    // Login constants
     MIN_PASS_LENGTH: 8,
     API_LOGIN: API_PATH+"/login",
     API_RESET: API_PATH+"/resetuser",

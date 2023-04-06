@@ -1,4 +1,4 @@
----- Translate this SQL from Microsoft SQL Server to SingleStore.
+---- Translate this SQL from {{{dbfrom}}} to SingleStore.
 ---- Please follow these important rules.
 --- The word NONCLUSTERED should never appear in the translation.
 --- The word GO should never appear in the translation.

@@ -20,6 +20,18 @@
             "response_contentpath": "data.choices[0].message.content",
             "response_finishreason": "data.choices[0].finish_reason",
             "sample_ai_response": "sql_ai_response.json",
+            "read_ai_response_from_samples": false
+        },
+        "chat-gpt35-turbo": {
+            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
+            "request":{ 
+                "model": "gpt-3.5-turbo", "temperature": 0.7, "stream": false, "max_tokens": 2048, 
+                "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
+            },
+            "request_contentpath": "messages",
+            "response_contentpath": "data.choices[0].message.content",
+            "response_finishreason": "data.choices[0].finish_reason",
+            "sample_ai_response": "chat_ai_response.json",
             "read_ai_response_from_samples": true
         }
     }

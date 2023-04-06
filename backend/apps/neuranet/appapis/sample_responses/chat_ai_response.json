@@ -1,20 +1,20 @@
 {
 "error": null,
 "data": {
-    "id": "chatcmpl-6ylbLQ66MISBmtVZDLdWpDaEmf2aq",
+    "id": "chatcmpl-71iQFQ0BFfoL9sxABC0NyyszhQHDq",
     "object": "chat.completion",
-    "created": 1679940679,
+    "created": 1680643443,
     "model": "gpt-3.5-turbo-0301",
     "usage": {
-        "prompt_tokens": 28,
-        "completion_tokens": 5,
-        "total_tokens": 33
+        "prompt_tokens": 25,
+        "completion_tokens": 21,
+        "total_tokens": 46
     },
     "choices": [
         {
             "message": {
                 "role": "assistant",
-                "content": "SELECT * FROM USERS;"
+                "content": "Hello in Russian is \"Здравствуйте\" (zdravstvuyte)."
             },
             "finish_reason": "stop",
             "index": 0
@@ -23,20 +23,23 @@
 },
 "status": 200,
 "resHeaders": {
-    "date": "Mon, 27 Mar 2023 18:11:19 GMT",
+    "date": "Tue, 04 Apr 2023 21:24:04 GMT",
     "content-type": "application/json",
-    "content-length": "305",
     "access-control-allow-origin": "*",
     "cache-control": "no-cache, must-revalidate",
     "openai-model": "gpt-3.5-turbo-0301",
     "openai-organization": "tekmonks",
-    "openai-processing-ms": "755",
+    "openai-processing-ms": "1022",
     "openai-version": "2020-10-01",
     "strict-transport-security": "max-age=15724800; includeSubDomains",
     "x-ratelimit-limit-requests": "3500",
     "x-ratelimit-remaining-requests": "3499",
     "x-ratelimit-reset-requests": "17ms",
-    "x-request-id": "dd3bfbcf5fcca7582f7a7a1600ba2f74",
+    "x-request-id": "f43d561ae3baafda50a6f589ded7cf7e",
+    "cf-cache-status": "DYNAMIC",
+    "server": "cloudflare",
+    "cf-ray": "7b2c9db1fa6be334-DEL",
+    "alt-svc": "h3=\":443\"; ma=86400, h3-29=\":443\"; ma=86400",
     "status": 200
 }
 }

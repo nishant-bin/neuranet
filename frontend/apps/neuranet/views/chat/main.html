@@ -1,0 +1,107 @@
+<style>
+    div#body {
+        padding: 0em 3em 3em 3em;
+        height: 100%;
+        width: 100%;
+        overflow: auto;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    div#chat {
+        width: 100%;
+        border: 1px solid #03B3FF;
+        border-radius: 0.5em;
+        box-sizing: border-box;
+        height: 70%;
+        margin-bottom: 2em;
+        padding: 0.5em;
+        display: flex;
+        flex-direction: row;
+    }
+    div#chatmainarea {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+    }
+    div#start {
+        display: flex;
+        flex-direction: row;
+        width: 100%;
+        height: 100%;
+    }
+    div#chat > div.visible {display: flex;}
+    div#chat > div.hidden {display: none;}
+    img#mainimage {
+        height: 100%;
+        width: 100%;
+        padding: 2em;
+        box-sizing: border-box;
+    }
+    span#mainspan {
+        flex-grow: 1;
+        text-align: center;
+        color: #03B3FF;
+        font-size: xx-large;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        font-weight: 200;
+        overflow: hidden;
+    }
+
+    div#message {
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        flex-grow: 1;
+        height: calc(30% - 2em);
+        overflow: auto;
+        position: relative;
+    }
+    textarea#messagearea {
+        width: 100%;
+        height: 100%;
+        outline: none;
+        border: 1px solid #03B3FF;
+        resize: none;
+        border-radius: 0.5em;
+        padding: 1em 7em 1em 1em;
+        font-family: sans-serif;
+        color: #0082ba;
+    }
+    img#send {
+        position: absolute;
+        right: 2em;
+        top: calc((100% - 3em) / 2);
+        height: 3em;
+        width: 3em;
+    }
+</style>
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_START}}}
+	div#start {flex-direction: column;}
+    div#body {padding: 0em 0.5em 1em 0.5em;}
+    span#mainimage {max-height: 50%}
+    span#mainspan {font-size: x-large;}
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_END}}}
+
+<div id="body">
+
+<div id="chat">
+    <div id="chatmainarea" class="hidden" readonly></div>
+
+    <div id="start" class="visible">
+        <span id="mainimage"><img id="mainimage" src="{{APP_CONSTANTS.VIEW_PATH}}/chooser/img/brain.svg"></span>
+        <span id="mainspan"><p>AI Neural Network<br>Ready...</p><p>Type Message.</p></span>
+    </div>
+</div>
+
+<div id="message">
+    <textarea id="messagearea"></textarea>
+    <img id="send" onclick="chat.send(this)" src="{{{viewpath}}}/img/send.svg">
+</div>
+
+</div>

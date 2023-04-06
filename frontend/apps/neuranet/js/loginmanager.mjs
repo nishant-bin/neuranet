@@ -9,11 +9,11 @@ import {session} from "/framework/js/session.mjs";
 import {securityguard} from "/framework/js/securityguard.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
-let currTimeout, logoutListeners = [];
+const LOGOUT_LISTENERS = "__loginmanager_logout_listeners", TIMEOUT_CURRENT = "__loginmanager_timeout_current";
 
 async function signin(id, pass, otp) {
     const pwph = `${id} ${pass}`;
-    logoutListeners = [];   // reset listeners on sign in
+    session.set(LOGOUT_LISTENERS, []); // reset listeners on sign in
         
     const resp = await apiman.rest(APP_CONSTANTS.API_LOGIN, "POST", {pwph, otp, id}, false, true);
     if (!resp) {LOG.warn(`Unknown reason for login failure for ${id}. Null response.`); return loginmanager.ID_INTERNAL_ERROR;}
@@ -82,16 +82,27 @@ async function changepassword(id, pass) {
     else {LOG.error(`Password change failed for ${id}`); return false;}
 }
 
-const addLogoutListener = listener => logoutListeners.push(listener);
+const addLogoutListener = (modulePathOrFunction, exportToCall, functionToCall) => {
+    const logoutListeners = session.get(LOGOUT_LISTENERS);
+    logoutListeners.push({modulePath: modulePathOrFunction, exportToCall, functionToCall});
+    session.set(LOGOUT_LISTENERS, logoutListeners);
+}
 
 async function logout(dueToTimeout) {
-    for (const listener of logoutListeners) await listener();
+    LOG.info(`Logout of user ID: ${session.get(APP_CONSTANTS.USERID)}${dueToTimeout?" due to timeout":""}.`);
+
+    for (const listener of (session.get(LOGOUT_LISTENERS)||[])) {
+        try {
+            const module = await import(listener.modulePath);
+            module[listener.exportToCall][listener.functionToCall]();
+        } catch (err) {LOG.error("Error calling logout listener "+JSON.stringify(listener));}
+    }
     _stopAutoLogoutTimer(); 
 
     const savedLang = session.get($$.MONKSHU_CONSTANTS.LANG_ID);
     session.remove(APP_CONSTANTS.USERID); session.remove(APP_CONSTANTS.USERNAME);
     session.remove(APP_CONSTANTS.USERORG); session.remove("__org_telemeet_cuser_pass");
-    session.set($$.MONKSHU_CONSTANTS.LANG_ID, savedLang);     securityguard.setCurrentRole(APP_CONSTANTS.GUEST_ROLE);
+    session.set($$.MONKSHU_CONSTANTS.LANG_ID, savedLang); securityguard.setCurrentRole(APP_CONSTANTS.GUEST_ROLE);
     
     if (dueToTimeout) application.main(APP_CONSTANTS.ERROR_HTML, {error: await i18n.get("Timeout_Error"), 
         button: await i18n.get("Relogin"), link: router.encodeURL(APP_CONSTANTS.LOGIN_HTML)}); 
@@ -115,14 +126,17 @@ function startAutoLogoutTimer() { return;
     if (!session.get(APP_CONSTANTS.USERID)) return; // no one is logged in
     
     const events = ["load", "mousemove", "mousedown", "click", "scroll", "keypress"];
-    const resetTimer = _=> {_stopAutoLogoutTimer(); currTimeout = setTimeout(_=>logout(true), APP_CONSTANTS.TIMEOUT);}
+    const resetTimer = _=> {_stopAutoLogoutTimer(); session.set(TIMEOUT_CURRENT, setTimeout(_=>logout(true), APP_CONSTANTS.TIMEOUT));}
     for (const event of events) {document.addEventListener(event, resetTimer);}
     resetTimer();   // start the timing
 }
 
 const interceptPageLoad = _ => router.addOnLoadPage("*", startAutoLogoutTimer); 
 
-const _stopAutoLogoutTimer = _ => { if (currTimeout) {clearTimeout(currTimeout); currTimeout = null;} }
+const _stopAutoLogoutTimer = _ => { 
+    const currTimeout = session.get(TIMEOUT_CURRENT);
+    if (currTimeout) {clearTimeout(currTimeout); session.remove(TIMEOUT_CURRENT);} 
+}
 
 export const loginmanager = {signin, reset, registerOrUpdate, logout, changepassword, startAutoLogoutTimer, 
     addLogoutListener, getProfileData, checkResetSecurity, getSessionUser, interceptPageLoad, 

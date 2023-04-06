@@ -3,13 +3,14 @@
  * License: See enclosed license.txt file.
  */
 import {i18n} from "/framework/js/i18n.mjs";
+import {util} from "/framework/js/util.mjs"
 import {loginmanager} from "./loginmanager.mjs"
 import {router} from "/framework/js/router.mjs";
 import {session} from "/framework/js/session.mjs";
 import {securityguard} from "/framework/js/securityguard.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
-const dialog = _ => monkshu_env.components['dialog-box'];
+const dialog = _ => monkshu_env.components['dialog-box'], MODULE_PATH = util.getModulePath(import.meta);
 
 function toggleMenu() {
     const imgElement = document.querySelector("span#menubutton > img"), menuIsOpen = imgElement.src.indexOf("menu.svg") != -1;
@@ -75,13 +76,33 @@ const logoutClicked = _ => loginmanager.logout();
 
 const interceptPageData = _ => router.addOnLoadPageData(APP_CONSTANTS.MAIN_HTML, async data => {   
     if (securityguard.getCurrentRole()==APP_CONSTANTS.ADMIN_ROLE) data.admin = true;    // set admin role if applicable
-    const viewsAllowed = session.get(APP_CONSTANTS.USERVIEWS);
-    const viewURL = viewsAllowed.length == 1?`${APP_CONSTANTS.VIEW_PATH}/${viewsAllowed[0]}/main.html` :
-        `${APP_CONSTANTS.VIEW_PATH}/${APP_CONSTANTS.VIEW_CHOOSER}/main.html`
-    const views = []; for (const view of viewsAllowed) if (view != APP_CONSTANTS.VIEW_CHOOSER) views.push(  // views we can choose from
-        {viewicon: `${APP_CONSTANTS.VIEW_PATH}/${view}/img/icon.svg`, viewlabel: await i18n.get(`ViewLabel_${view}`)});
-    data.viewcontent = await router.loadHTML(viewURL, {...data, views});
+    let viewURL, views; 
+    if (!session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)) {
+        const viewsAllowed = session.get(APP_CONSTANTS.USERVIEWS);
+        viewURL = viewsAllowed.length == 1?`${APP_CONSTANTS.VIEW_PATH}/${viewsAllowed[0]}/main.html` :
+            `${APP_CONSTANTS.VIEW_PATH}/${APP_CONSTANTS.VIEW_CHOOSER}/main.html`
+        views = []; for (const view of viewsAllowed) if (view != APP_CONSTANTS.VIEW_CHOOSER) views.push(  // views we can choose from
+            {viewicon: `${APP_CONSTANTS.VIEW_PATH}/${view}/img/icon.svg`, 
+                viewlabel: await i18n.get(`ViewLabel_${view}`), viewname: view});
+    } else viewURL = `${APP_CONSTANTS.VIEW_PATH}/${session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)}/main.html`;
+
+    data.viewpath = viewURL.substring(0, viewURL.lastIndexOf("/"));
+    data.viewcontent = await router.loadHTML(viewURL, {...data, views}); 
 });
+
+function gohome() {
+    session.remove(APP_CONSTANTS.FORCE_LOAD_VIEW);
+    router.navigate(APP_CONSTANTS.MAIN_HTML);
+}
+
+function openView(viewname) {
+    session.set(APP_CONSTANTS.FORCE_LOAD_VIEW, viewname);
+    loginmanager.addLogoutListener(`${MODULE_PATH}/main.mjs`, "main", "onlogout");
+
+    router.navigate(APP_CONSTANTS.MAIN_HTML);
+}
+
+function onlogout() {session.remove(APP_CONSTANTS.FORCE_LOAD_VIEW);}
 
 async function _getTOTPQRCode(key) {
 	const title = await i18n.get("Title");
@@ -91,4 +112,5 @@ async function _getTOTPQRCode(key) {
 }
 
 const _showMessage = message => dialog().showMessage(message, "dialog");
-export const main = {toggleMenu, changePassword, showOTPQRCode, showLoginMessages, changeProfile, logoutClicked, interceptPageData}
+export const main = {toggleMenu, changePassword, showOTPQRCode, showLoginMessages, changeProfile, 
+    logoutClicked, interceptPageData, openView, onlogout, gohome}

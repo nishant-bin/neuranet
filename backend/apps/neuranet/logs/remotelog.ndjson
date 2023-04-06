@@ -171,3 +171,24 @@
 {"ts":"2023:04:04:03:36:30","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
 {"ts":"2023:04:04:03:38:14","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
 {"ts":"2023:04:04:03:38:51","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:16:10:59","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:16:11:00","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:16:30:12","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:16:35:24","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:16:36:02","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:16:37:00","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:16:37:31","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:16:39:24","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:17:00:05","level":"error","message":"[192.168.1.17] Error in conversion, due to bad input SQL.\n\nFound unparsable section: &#39;CREATE TABLE\n\nFound at: Line:1, Column:1."}
+{"ts":"2023:04:06:18:11:23","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:18:23:12","level":"warning","message":"[192.168.1.17] Bad OTP given for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:18:23:26","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:18:29:26","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:18:42:04","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:18:59:22","level":"error","message":"[192.168.1.17] Error calling logout listener {\"modulePath\":\"https://192.168.1.17/apps/neuranet/js/main.mjs\",\"functionToCall\":\"onlogout\"}"}
+{"ts":"2023:04:06:19:01:37","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:19:01:43","level":"info","message":"[192.168.1.17] Logout of user ID: thecompany@tekmonks.com."}
+{"ts":"2023:04:06:19:02:30","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:19:02:36","level":"info","message":"[192.168.1.17] Logout of user ID: thecompany@tekmonks.com."}
+{"ts":"2023:04:06:19:02:45","level":"info","message":"[192.168.1.17] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:06:19:59:16","level":"info","message":"[192.168.1.17] Logout of user ID: thecompany@tekmonks.com."}

@@ -6,16 +6,25 @@
 const mustache = require("mustache");
 const fspromises = require("fs").promises;
 const rest = require(`${CONSTANTS.LIBDIR}/rest.js`);
+const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 
 const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}";
 
 exports.process = async function(data, promptFile, apiKey, model) {
     const prompt = mustache.render(await fspromises.readFile(promptFile, "utf-8"), data);   // create the prompt
     const modelObject = NEURANET_CONSTANTS.CONF.ai_models[model];
-    const promptMustacheStr = JSON.stringify(modelObject.request).replace(PROMPT_VAR, "{{{prompt}}}"), 
-        promptJSONStr = JSON.stringify(prompt),
-        promptInjectedStr = mustache.render(promptMustacheStr, {prompt: promptJSONStr.substring(1,promptJSONStr.length-1)}),
+
+    let promptObject;
+    if (!modelObject.request_contentpath)
+    {   
+        const promptMustacheStr = JSON.stringify(modelObject.request).replace(PROMPT_VAR, "{{{prompt}}}"), 
+            promptJSONStr = JSON.stringify(prompt),
+            promptInjectedStr = mustache.render(promptMustacheStr, {prompt: promptJSONStr.substring(1,promptJSONStr.length-1)});
         promptObject = JSON.parse(promptInjectedStr);
+    } else {
+        promptObject = {...modelObject.request};
+        utils.setObjProperty(promptObject, modelObject.request_contentpath, JSON.parse(prompt));
+    }
         
     LOG.info(`Calling AI engine for request ${JSON.stringify(data)} and prompt ${JSON.stringify(prompt)}`);
     LOG.info(`The prompt object for this call is ${JSON.stringify(promptObject)}.`);
@@ -33,9 +42,8 @@ exports.process = async function(data, promptFile, apiKey, model) {
 
     LOG.info(`The AI response for request ${JSON.stringify(data)} and prompt object ${JSON.stringify(promptObject)} was ${JSON.stringify(response)}`);
 
-    const readObjProperty = (_object, path) => eval(`_object.${path}`);
-    const finishReason = readObjProperty(response, modelObject.response_finishreason),
-        messageContent = readObjProperty(response, modelObject.response_contentpath);
+    const finishReason = utils.getObjProperty(response, modelObject.response_finishreason),
+        messageContent = utils.getObjProperty(response, modelObject.response_contentpath);
     if (!messageContent) {
         LOG.error(`Response from AI engine for request ${data} and prompt ${prompt} is missing content.`); return null; }
     else if (finishReason != "stop") {

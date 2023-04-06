@@ -10,5 +10,5 @@
     "COMPONENTS": ["dialog-box", "login-box", "password-box", "register-box", "span-with-menu", 
         "user-manager", "context-menu", "editable-list", "neuranet-sql", "text-editor"],
     "APP_ABOUT_URL": "https://tekmonks.com/",
-    "VIEW_CHOOSER": "main"
+    "VIEW_CHOOSER": "chooser"
 }
