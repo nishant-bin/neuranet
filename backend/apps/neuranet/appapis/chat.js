@@ -15,7 +15,7 @@
  * 
  * (C) 2023 TekMonks. All rights reserved.
  */
-
+const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest"}, 
@@ -35,24 +35,37 @@ exports.doService = async jsonReq => {
 		return {reason: REASONS.BAD_MODEL, ...CONSTANTS.FALSE_RESULT};
 	}
 	
-	let chatsession; const sessionID = jsonReq.session_id||Date.now(), 
-		sessionKey = CHAT_SESSION_MEMORY_KEY_PREFIX + jsonReq.id + sessionID; 
-	if (jsonReq.maintain_session) chatsession = DISTRIBUTED_MEMORY.get(sessionKey, []);
-	const response = await aiLibrary.process({session: [...chatsession,...jsonReq.session]},
+	let chatsession = []; const sessionID = jsonReq.session_id||Date.now(), 
+		sessionKey = CHAT_SESSION_MEMORY_KEY_PREFIX + jsonReq.id; 
+	if (jsonReq.maintain_session) chatsession = (DISTRIBUTED_MEMORY.get(sessionKey, {})[sessionID])||[]; 
+
+	const finalSessionObject = _jsonifyContentsInThisSession([...chatsession, ...(utils.clone(jsonReq.session))]); 
+	finalSessionObject[finalSessionObject.length-1].last = true;
+
+	const response = await aiLibrary.process({session: finalSessionObject}, 
 		`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/chat_prompt.txt`, aiKey, aiModelToUse);
 
 	if (!response) {
 		LOG.error(`AI library error processing request ${JSON.stringify(jsonReq)}`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 	} else {
-		if (jsonReq.maintainSession) {
-			chatsession.push({"role": "user", "content": jsonReq.session.at(-1)},
+		if (jsonReq.maintain_session) {
+			chatsession.push({"role": "user", "content": finalSessionObject.at(-1).content},
 				{"role": "assistant", "content": response.airesponse});
 			chatsession[CHAT_SESSION_UPDATE_TIMESTAMP_KEY] = Date.now();
-			DISTRIBUTED_MEMORY.set(sessionKey, chatsession);
+			const idSessions = DISTRIBUTED_MEMORY.get(sessionKey, {}); idSessions[sessionID] = chatsession;
+			DISTRIBUTED_MEMORY.set(sessionKey, idSessions);
 		}
 		return {response: response.airesponse, reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT, session_id: sessionID};
 	}
+}
+
+const _jsonifyContentsInThisSession = session => {
+	for (const sessionObject of session) try {JSON.parse(sessionObject.content);} catch (err) {
+		const jsonStr = JSON.stringify(sessionObject.content), jsonifiedStr = jsonStr.substring(1, jsonStr.length-1);
+		sessionObject.content = jsonifiedStr;
+	}
+	return session;
 }
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.session && Array.isArray(jsonReq.session) && 

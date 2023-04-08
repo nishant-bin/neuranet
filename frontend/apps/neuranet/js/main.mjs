@@ -77,8 +77,8 @@ const logoutClicked = _ => loginmanager.logout();
 const interceptPageData = _ => router.addOnLoadPageData(APP_CONSTANTS.MAIN_HTML, async data => {   
     if (securityguard.getCurrentRole()==APP_CONSTANTS.ADMIN_ROLE) data.admin = true;    // set admin role if applicable
     let viewURL, views; 
+    const viewsAllowed = session.get(APP_CONSTANTS.USERVIEWS);
     if (!session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)) {
-        const viewsAllowed = session.get(APP_CONSTANTS.USERVIEWS);
         viewURL = viewsAllowed.length == 1?`${APP_CONSTANTS.VIEW_PATH}/${viewsAllowed[0]}/main.html` :
             `${APP_CONSTANTS.VIEW_PATH}/${APP_CONSTANTS.VIEW_CHOOSER}/main.html`
         views = []; for (const view of viewsAllowed) if (view != APP_CONSTANTS.VIEW_CHOOSER) views.push(  // views we can choose from
@@ -87,6 +87,7 @@ const interceptPageData = _ => router.addOnLoadPageData(APP_CONSTANTS.MAIN_HTML,
     } else viewURL = `${APP_CONSTANTS.VIEW_PATH}/${session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)}/main.html`;
 
     data.viewpath = viewURL.substring(0, viewURL.lastIndexOf("/"));
+    data.showhome = viewsAllowed.length == 1 ? undefined : true;
     data.viewcontent = await router.loadHTML(viewURL, {...data, views}); 
 });
 

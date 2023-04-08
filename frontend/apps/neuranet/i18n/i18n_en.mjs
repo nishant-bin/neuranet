@@ -117,6 +117,9 @@ export const i18n = {
 "OrgEditErrorDomain": "Error updating the new domain is not allowed. Please contact support for help.",
 "OrgFetchError": "Unable to get organization details. Please retry later or contact support for help.",
 
+
+
+
 "NothingToConvert": "Found nothing to convert.",
 "ErrorConvertingInternal": "Error in conversion, sorry.",
 "ErrorConvertingBadAIModel": "Error in conversion, due to an AI model mismatch, sorry.",
@@ -124,6 +127,13 @@ export const i18n = {
 "ErrorConvertingBadInputSQL": "Error in conversion, due to bad input SQL.\n\n{{#message}}{{message}}{{/message}}{{^message}}SQL parser failed to parse.{{/message}}\n\nFound at: Line:{{#line}}{{line}}{{/line}}{{^line}}0{{/line}}, Column:{{#column}}{{column}}{{/column}}{{^column}}0{{/column}}.",
 "PossibleErrorConverting": "--- WARNING: Possibly bad SQL.\n--- {{#message}}{{message}}{{/message}}{{^message}}SQL parser failed to parse.{{/message}}\n--- Found at: {{#line}}{{line}}{{/line}}{{^line}}0{{/line}}, Column:{{#column}}{{column}}{{/column}}{{^column}}0{{/column}}.",
 "InternalErrorConverting": "Internal error, please retry later.",
+
+"ChooseActivity": "Choose Activity",
+
+"ChatAIError": "AI error in processing. Please retry later.",
+"NeuralNetReady": "AI Neural Network<br>Ready...",
+"TypeMessage": "Type Message",
+
 "ViewLabel_gencode": "Generate Code",
 "ViewLabel_search": "Enterprise Search",
 "ViewLabel_sqltranslate": "Translate SQL",

@@ -35,7 +35,7 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
-        font-weight: 200;
+        font-weight: 400;
         overflow: hidden;
     }
 
@@ -80,7 +80,7 @@
 	div#main {flex-direction: column; max-height: 50%;}
     span#mainimage {max-height: 50%;}
     div#body {padding: 0em 0.5em 1em 0.5em;}
-    span#mainspan {font-size: x-large;}
+    span#mainspan {font-size: x-large; font-weight: 200;}
     div#icons {flex-wrap: wrap;}
     div#viewicon {width: calc((100% - 2em) / 2); max-width: unset; min-width: unset; height: calc(50% - 2em); margin: 0;}
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_END}}}
@@ -88,8 +88,8 @@
 <div id="body">
 
 <div id="main">
-    <span id="mainimage"><img id="mainimage" src="{{APP_CONSTANTS.VIEW_PATH}}/chooser/img/brain.svg"></span>
-    <span id="mainspan"><p>AI Neural Network<br>Ready...</p><p>Choose Activity</p></span>
+    <span id="mainimage"><img id="mainimage" src="{{viewpath}}/img/brain.svg"></span>
+    <span id="mainspan"><p>{{{i18n.NeuralNetReady}}}</p><p>{{i18n.ChooseActivity}}</p></span>
 </div>
 
 <div id="icons">
