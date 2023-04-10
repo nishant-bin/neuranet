@@ -1,0 +1,30 @@
+{
+    "supported_langs": {
+        "cobol": {"label":"Cobol"}, 
+        "cpp": {"label":"C++"},
+        "java": {"label":"Java"},
+        "js": {"label":"Javascript"},
+        "nodejs": {"label":"Nodejs Javascript"},
+        "csharp": {"label":"CSharp"},
+        "swift": {"label":"Swift"},
+        "kotlin": {"label":"Kotlin"},
+        "python": {"label":"Python"},
+        "naturallang": {"label":"Natural Language"}
+    },
+
+    "mappings": {
+        "*_cobol": {"promptfile_lang": "generic_langprompt.txt"},
+        "*_cpp": {"promptfile_lang": "generic_langprompt.txt"},
+        "*_java": {"promptfile_lang": "generic_langprompt.txt"},
+        "*_js": {"promptfile_lang": "generic_langprompt.txt"},
+        "*_nodejs": {"promptfile_lang": "generic_langprompt.txt"},
+        "*_csharp": {"promptfile_lang": "generic_langprompt.txt"},
+        "*_swift": {"promptfile_lang": "generic_langprompt.txt"},
+        "*_kotlin": {"promptfile_lang": "generic_langprompt.txt"},
+        "*_python": {"promptfile_lang": "generic_langprompt.txt"},
+
+        "naturallang_*": {"promptfile_lang": "naturallang_langprompt.txt"},
+
+        "default": {"promptfile_lang": "generic_langprompt.txt"}
+    }
+}

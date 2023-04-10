@@ -1,9 +1,21 @@
 {
-    "db2": {"label":"IBM DB2", "promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
-    "oracle": {"label":"Oracle", "promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
-    "postgresql": {"label":"PostgreSQL","promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
-    "mysql": {"label":"MySQL","promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
-    "singlestore": {"label":"SingleStore DB","promptfile_sql": "singlestore_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
-    "mssql": {"label":"Microsoft SQL Server", "promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
-    "default": {"label":"MySQL", "promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"}
+    "supported_dbs": {
+        "db2":{"label":"IBM DB2"}, 
+        "oracle":{"label":"Oracle"}, 
+        "postgresql":{"label":"PostgreSQL"}, 
+        "mysql":{"label":"MySQL"}, 
+        "singlestore":{"label":"SingleStore DB"}, 
+        "mssql":{"label":"Microsoft SQL Server"}
+    },
+
+    "mappings": {
+        "*_db2": {"promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
+        "*_oracle": {"promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
+        "*_postgresql": {"promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
+        "*_mysql": {"promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
+        "*_singlestore": {"promptfile_sql": "singlestore_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
+        "*_mssql": {"promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"},
+        
+        "default": {"promptfile_sql": "generic_dbprompt.txt", "promptfile_storedproc": "generic_dbprocedure.txt"}
+    }
 }

@@ -5,10 +5,11 @@
 
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const sqlvalidator = require(`${NEURANET_CONSTANTS.LIBDIR}/sqlvalidator.js`);
-const DB_MAPPINGS = require(`${NEURANET_CONSTANTS.CONFDIR}/dbmappings.json`); 
+const DB_MAPPINGS = require(`${NEURANET_CONSTANTS.CONFDIR}/dbmappings.json`).mappings; 
+const SUPPORTED_DBS = require(`${NEURANET_CONSTANTS.CONFDIR}/dbmappings.json`).supported_dbs; 
 
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
-		BAD_INPUT_SQL: "badinputsql"}, MODEL_DEFAULT = "sql-code-gen35";
+		BAD_INPUT_SQL: "badinputsql"}, MODEL_DEFAULT = "sql-code-gen35", DEFAULT = "default";
 
 exports.doService = async jsonReq => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
@@ -28,16 +29,16 @@ exports.doService = async jsonReq => {
 		return {reason: REASONS.BAD_MODEL, ...CONSTANTS.FALSE_RESULT};
 	}
 	
-	const response = await aiLibrary.process({request: jsonReq.request, dbfrom: DB_MAPPINGS[jsonReq.dbfrom].label, 
-		dbto: DB_MAPPINGS[jsonReq.dbto].label}, 
-		`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${_getPromptFile(jsonReq.request, jsonReq.dbto)}`, 
+	const response = await aiLibrary.process({request: jsonReq.request, dbfrom: SUPPORTED_DBS[jsonReq.dbfrom].label, 
+		dbto: SUPPORTED_DBS[jsonReq.dbto].label}, 
+		`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${_getPromptFile(jsonReq.request, jsonReq.dbfrom, jsonReq.dbto)}`, 
 		aiKey, aiModelToUse);
 
 	if (!response) {
 		LOG.error(`AI library error processing request ${JSON.stringify(jsonReq)}`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 	} else {
-		const sql = response.airesponse; const validationResult = sqlvalidator.validate(sql, jsonReq.dbto, 
+		const sql = response.airesponse; const validationResult = await sqlvalidator.validate(sql, jsonReq.dbto, 
 			undefined, jsonReq.use_simple_validator);
 		return {sql, reason: REASONS.OK, possible_error: validationResult.isOK?undefined:true, 
 			parser_error: validationResult.isOK?undefined:validationResult.errors, ...CONSTANTS.TRUE_RESULT};
@@ -46,9 +47,11 @@ exports.doService = async jsonReq => {
 
 const _isStoredProcedure = sql => sql.match(/create[' '\t]+procedure/i);
 
-const _getPromptFile = (sql, dbType) => _isStoredProcedure(sql) ? 
-	(DB_MAPPINGS[dbType].promptfile_storedproc || DB_MAPPINGS[DEFAULT].promptfile_storedproc) :
-	(DB_MAPPINGS[dbType].promptfile_sql || DB_MAPPINGS[DEFAULT].promptfile_sql);
+const _getPromptFile = (sql, dbfrom, dbto) => _isStoredProcedure(sql) ? 
+	(DB_MAPPINGS[`${dbfrom}_${dbto}`]?.promptfile_storedproc || DB_MAPPINGS[`${dbfrom}_*`]?.promptfile_storedproc ||
+		DB_MAPPINGS[`*_${dbto}`]?.promptfile_storedproc || DB_MAPPINGS[DEFAULT]?.promptfile_storedproc) :
+	(DB_MAPPINGS[`${dbfrom}_${dbto}`]?.promptfile_sql || DB_MAPPINGS[`${dbfrom}_*`]?.promptfile_sql ||
+		DB_MAPPINGS[`*_${dbto}`]?.promptfile_sql || DB_MAPPINGS[DEFAULT]?.promptfile_sql);
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.request && jsonReq.dbfrom && jsonReq.dbto &&
-	DB_MAPPINGS[jsonReq.dbfrom] && DB_MAPPINGS[jsonReq.dbto]);
+	Object.keys(SUPPORTED_DBS).includes(jsonReq.dbfrom) && Object.keys(SUPPORTED_DBS).includes(jsonReq.dbto));

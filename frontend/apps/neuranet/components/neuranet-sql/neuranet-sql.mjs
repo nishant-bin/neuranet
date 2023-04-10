@@ -50,11 +50,12 @@ async function convert(elementImg) {
 		LOG.error(err); if (key == "BadInputSQL") _showErrorNoCenter(err); else _showError(err); return;
 	}
 
-	let sqlResponseErrHeader = "-- "; if (convertedResponse.possibleError) {	// set the SQL with an error warning if needed
-		sqlResponseErrHeader += mustache.render(await i18n.get("PossibleErrorConverting"), convertedResponse.parser_error ?
-			{ message: convertedResponse.parser_error[0].error, line: convertedResponse.parser_error[0].line, 
-				column: convertedResponse.parser_error[0].column } : {});
-	}; texteditorResponse.value = (convertedResponse.possibleError?sqlResponseErrHeader:"")+convertedResponse.sql;
+	let sqlResponseErrHeader; if (convertedResponse.possible_error) {	// set the SQL with an error warning if needed
+		sqlResponseErrHeader = mustache.render(await i18n.get("PossibleErrorConvertingSQL"), 
+			convertedResponse.parser_error ? { message: convertedResponse.parser_error[0].error, 
+				line: convertedResponse.parser_error[0].line, 
+				column: convertedResponse.parser_error[0].column } : {}); + "\n\n";
+	}; texteditorResponse.value = (convertedResponse.possible_error?sqlResponseErrHeader:"")+convertedResponse.sql;
 }
 
 const _showError = async error => { await monkshu_env.components['dialog-box'].showDialog(`${COMPONENT_PATH}/dialogs/error.html`, 

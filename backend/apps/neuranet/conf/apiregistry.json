@@ -1,5 +1,6 @@
 {
     "/apps/{{app}}/convertsql" : "/appapis/convertsql.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
+    "/apps/{{app}}/convertcode" : "/appapis/convertcode.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
     "/apps/{{app}}/chat" : "/appapis/chat.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
 
     "/apps/{{app}}/log" : "{{server_lib}}/log.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&logpath={{server}}/../apps/{{app}}/logs/remotelog.ndjson",

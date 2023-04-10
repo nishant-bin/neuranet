@@ -1,6 +1,7 @@
 {
-    "LANGS_SUPPORTED": ["Cobol", "C++", "Java", "Javascript", "NodeJS", "C#", "Swift", "Kotlin", "Python"],
+    "LANGS_SUPPORTED": ["Natural Language", "Cobol", "C++", "Java", "Javascript", "NodeJS", "C#", "Swift", "Kotlin", "Python"],
     "LANG_BACKEND_ID_MAPPINGS": {
+        "Natural Language": "naturallang",
         "Cobol": "cobol",
         "C++": "cpp",
         "Java": "java",
