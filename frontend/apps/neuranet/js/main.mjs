@@ -29,7 +29,7 @@ async function changePassword(_element) {
     dialog().showDialog(`${APP_CONSTANTS.DIALOGS_PATH}/changepass.html`, true, true, {}, "dialog", ["p1","p2"], async result=>{
         const done = await loginmanager.changepassword(session.get(APP_CONSTANTS.USERID), result.p1);
         if (!done) dialog().error("dialog", await i18n.get("PWCHANGEFAILED"));
-        else { dialog().hideDialog("dialog"); _showMessage(await i18n.get("PWCHANGED")); }
+        else { dialog().hideDialog("dialog"); showMessage(await i18n.get("PWCHANGED")); }
     });
 }
 
@@ -69,25 +69,27 @@ async function changeProfile(_element) {
 
 function showLoginMessages() {
     const data = router.getCurrentPageData();
-    if (data.showDialog) { _showMessage(data.showDialog.message); delete data.showDialog; router.setCurrentPageData(data); }
+    if (data.showDialog) { showMessage(data.showDialog.message); delete data.showDialog; router.setCurrentPageData(data); }
 }
 
 const logoutClicked = _ => loginmanager.logout();
 
 const interceptPageData = _ => router.addOnLoadPageData(APP_CONSTANTS.MAIN_HTML, async data => {   
     if (securityguard.getCurrentRole()==APP_CONSTANTS.ADMIN_ROLE) data.admin = true;    // set admin role if applicable
-    let viewURL, views; 
+    let viewPath, views; 
     const viewsAllowed = session.get(APP_CONSTANTS.USERVIEWS);
     if (!session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)) {
-        viewURL = viewsAllowed.length == 1?`${APP_CONSTANTS.VIEW_PATH}/${viewsAllowed[0]}/main.html` :
-            `${APP_CONSTANTS.VIEW_PATH}/${APP_CONSTANTS.VIEW_CHOOSER}/main.html`
+        viewPath = viewsAllowed.length == 1?`${APP_CONSTANTS.VIEW_PATH}/${viewsAllowed[0]}` :
+            `${APP_CONSTANTS.VIEW_PATH}/${APP_CONSTANTS.VIEW_CHOOSER}`;
         views = []; for (const view of viewsAllowed) if (view != APP_CONSTANTS.VIEW_CHOOSER) views.push(  // views we can choose from
             {viewicon: `${APP_CONSTANTS.VIEW_PATH}/${view}/img/icon.svg`, 
                 viewlabel: await i18n.get(`ViewLabel_${view}`), viewname: view});
-    } else viewURL = `${APP_CONSTANTS.VIEW_PATH}/${session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)}/main.html`;
+    } else viewPath = `${APP_CONSTANTS.VIEW_PATH}/${session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)}`;
 
-    data.viewpath = viewURL.substring(0, viewURL.lastIndexOf("/"));
-    data.showhome = viewsAllowed.length == 1 ? undefined : true;
+    const viewURL = `${viewPath}/main.html`, viewMainMJS = `${viewPath}/js/main.mjs`;
+    data.viewpath = viewPath; data.showhome = viewsAllowed.length == 1 ? undefined : true;
+    try { const viewMain = await import(viewMainMJS); await viewMain.main.initView(data, main); }    // init the view before loading it
+    catch (err) { LOG.error(`Error in initializing view ${viewPath}.`); }
     data.viewcontent = await router.loadHTML(viewURL, {...data, views}); 
 });
 
@@ -112,6 +114,6 @@ async function _getTOTPQRCode(key) {
 	    `otpauth://totp/${title}?secret=${key}&issuer=TekMonks&algorithm=sha1&digits=6&period=30`, (_, data_url) => resolve(data_url)));
 }
 
-const _showMessage = message => dialog().showMessage(message, "dialog");
+const showMessage = message => dialog().showMessage(message, "dialog");
 export const main = {toggleMenu, changePassword, showOTPQRCode, showLoginMessages, changeProfile, 
-    logoutClicked, interceptPageData, openView, onlogout, gohome}
+    logoutClicked, interceptPageData, openView, onlogout, gohome, showMessage}

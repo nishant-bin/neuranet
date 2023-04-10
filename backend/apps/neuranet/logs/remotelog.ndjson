@@ -232,3 +232,8 @@
 {"ts":"2023:04:08:20:03:16","level":"info","message":"[192.168.1.12] Logout of user ID: thecompany@tekmonks.com."}
 {"ts":"2023:04:08:20:03:31","level":"info","message":"[192.168.1.12] Login succeeded for thecompany@tekmonks.com."}
 {"ts":"2023:04:08:20:09:31","level":"info","message":"[192.168.1.12] Logout of user ID: thecompany@tekmonks.com."}
+{"ts":"2023:04:10:17:16:40","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:10:17:17:36","level":"warning","message":"[192.168.1.14] Bad OTP given for thecompany@tekmonks.com."}
+{"ts":"2023:04:10:17:17:46","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:10:17:20:40","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:10:17:27:54","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
