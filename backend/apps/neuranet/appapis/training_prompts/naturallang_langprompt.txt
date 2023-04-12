@@ -1,7 +1,2 @@
----- Generate code in language {{{langto}}} which accomplishes the task below.
----- Only respond with program code and no other text.
---- Task to accomplish with {{{langto}}} code
-
+Generate code in language {{{langto}}} which accomplishes the task below. Do not add comments.
 {{{request}}}
-
---- {{{langto}}} code

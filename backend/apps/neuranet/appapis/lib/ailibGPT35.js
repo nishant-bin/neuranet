@@ -3,16 +3,19 @@
  * (C) 2022 TekMonks. All rights reserved.
  */
 
+const path = require("path");
 const mustache = require("mustache");
 const fspromises = require("fs").promises;
 const rest = require(`${CONSTANTS.LIBDIR}/rest.js`);
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 
-const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}";
+const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}", DEBUG_RUN = NEURANET_CONSTANTS.CONF.debug_mode;
+const PROMPT_CACHE = {};
 
 exports.process = async function(data, promptFile, apiKey, model) {
-    const prompt = mustache.render(await fspromises.readFile(promptFile, "utf-8"), data);   // create the prompt
-    const modelObject = NEURANET_CONSTANTS.CONF.ai_models[model];
+    const prompt = mustache.render(await _getPrompt(promptFile), data);   // create the prompt
+    const modelObject = await _getAIModel(model); 
+    if (!modelObject) { LOG.error(`Bad model object - ${modelObject}.`); return null; }
 
     let promptObject;
     if (!modelObject.request_contentpath)
@@ -49,4 +52,21 @@ exports.process = async function(data, promptFile, apiKey, model) {
     else if (finishReason != "stop") {
         LOG.error(`Response from AI engine for request ${data} and prompt ${prompt} didn't stop properly.`); return null; }
     else return {airesponse: messageContent};
+}
+
+async function _getAIModel(model) {
+    if (!DEBUG_RUN) return NEURANET_CONSTANTS.CONF.ai_models[model];
+
+    const confFile = await fspromises.readFile(`${NEURANET_CONSTANTS.CONFDIR}/neuranet.json`, "utf8");
+    const renderedFile = mustache.render(confFile, NEURANET_CONSTANTS).replace(/\\/g, "\\\\");
+    const jsonConf = JSON.parse(renderedFile);
+    return jsonConf.ai_models[model];   // escape windows paths
+}
+
+async function _getPrompt(promptFile) {
+    if (DEBUG_RUN) return await fspromises.readFile(promptFile, "utf-8");
+
+    const pathToFile = path.resolve(promptFile);
+    if (!PROMPT_CACHE[pathToFile]) PROMPT_CACHE[pathToFile] = await fspromises.readFile(pathToFile, "utf-8");
+    return  PROMPT_CACHE[pathToFile];
 }

@@ -8,6 +8,7 @@ const sqlvalidator = require(`${NEURANET_CONSTANTS.LIBDIR}/sqlvalidator.js`);
 const DB_MAPPINGS = require(`${NEURANET_CONSTANTS.CONFDIR}/dbmappings.json`).mappings; 
 const SUPPORTED_DBS = require(`${NEURANET_CONSTANTS.CONFDIR}/dbmappings.json`).supported_dbs; 
 
+const DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
 		BAD_INPUT_SQL: "badinputsql"}, MODEL_DEFAULT = "sql-code-gen35", DEFAULT = "default";
 
@@ -31,7 +32,7 @@ exports.doService = async jsonReq => {
 	
 	const response = await aiLibrary.process({request: jsonReq.request, dbfrom: SUPPORTED_DBS[jsonReq.dbfrom].label, 
 		dbto: SUPPORTED_DBS[jsonReq.dbto].label}, 
-		`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${_getPromptFile(jsonReq.request, jsonReq.dbfrom, jsonReq.dbto)}`, 
+		`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${await _getPromptFile(jsonReq.request, jsonReq.dbfrom, jsonReq.dbto)}`, 
 		aiKey, aiModelToUse);
 
 	if (!response) {
@@ -47,11 +48,19 @@ exports.doService = async jsonReq => {
 
 const _isStoredProcedure = sql => sql.match(/create[' '\t]+procedure/i);
 
-const _getPromptFile = (sql, dbfrom, dbto) => _isStoredProcedure(sql) ? 
-	(DB_MAPPINGS[`${dbfrom}_${dbto}`]?.promptfile_storedproc || DB_MAPPINGS[`${dbfrom}_*`]?.promptfile_storedproc ||
-		DB_MAPPINGS[`*_${dbto}`]?.promptfile_storedproc || DB_MAPPINGS[DEFAULT]?.promptfile_storedproc) :
-	(DB_MAPPINGS[`${dbfrom}_${dbto}`]?.promptfile_sql || DB_MAPPINGS[`${dbfrom}_*`]?.promptfile_sql ||
-		DB_MAPPINGS[`*_${dbto}`]?.promptfile_sql || DB_MAPPINGS[DEFAULT]?.promptfile_sql);
+const _getPromptFile = async (sql, dbfrom, dbto) => {
+	const dbmappings = await getDBMappings();
+	return _isStoredProcedure(sql) ? 
+		(dbmappings[`${dbfrom}_${dbto}`]?.promptfile_storedproc || dbmappings[`${dbfrom}_*`]?.promptfile_storedproc ||
+			dbmappings[`*_${dbto}`]?.promptfile_storedproc || dbmappings[DEFAULT]?.promptfile_storedproc) :
+		(dbmappings[`${dbfrom}_${dbto}`]?.promptfile_sql || dbmappings[`${dbfrom}_*`]?.promptfile_sql ||
+			dbmappings[`*_${dbto}`]?.promptfile_sql || dbmappings[DEFAULT]?.promptfile_sql);
+}
+
+const _getDBMappings = async _ => {
+	if (DEBUG_MODE) return JSON.parse(await fspromises.readFile(`${NEURANET_CONSTANTS.CONFDIR}/dbmappings.json`)).mappings;
+	else return DB_MAPPINGS;
+}
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.request && jsonReq.dbfrom && jsonReq.dbto &&
 	Object.keys(SUPPORTED_DBS).includes(jsonReq.dbfrom) && Object.keys(SUPPORTED_DBS).includes(jsonReq.dbto));

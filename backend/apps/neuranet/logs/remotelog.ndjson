@@ -274,3 +274,33 @@
 {"ts":"2023:04:11:02:28:24","level":"error","message":"[192.168.1.14] Conversion failed due to backend internal issues."}
 {"ts":"2023:04:11:02:32:43","level":"info","message":"[192.168.1.14] Logout of user ID: thecompany@tekmonks.com."}
 {"ts":"2023:04:11:02:33:02","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:13:01:00:35","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:13:01:21:32","level":"error","message":"[192.168.1.14] Error in conversion, sorry."}
+{"ts":"2023:04:13:01:27:08","level":"error","message":"[192.168.1.14] Error in conversion, sorry."}
+{"ts":"2023:04:13:01:27:47","level":"error","message":"[192.168.1.14] Error in conversion, sorry."}
+{"ts":"2023:04:13:01:29:19","level":"error","message":"[192.168.1.14] Error in conversion, sorry."}
+{"ts":"2023:04:13:01:30:49","level":"error","message":"[192.168.1.14] Error in conversion, sorry."}
+{"ts":"2023:04:13:01:31:38","level":"error","message":"[192.168.1.14] Error in conversion, sorry."}
+{"ts":"2023:04:13:01:32:16","level":"error","message":"[192.168.1.14] Error in conversion, sorry."}
+{"ts":"2023:04:13:01:44:04","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:13:01:44:24","level":"error","message":"[192.168.1.14] Error in conversion, due to an AI model mismatch, sorry."}
+{"ts":"2023:04:13:01:46:21","level":"info","message":"[192.168.1.14] Logout of user ID: thecompany@tekmonks.com."}
+{"ts":"2023:04:13:01:46:38","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:13:01:46:56","level":"error","message":"[192.168.1.14] Error in conversion, due to an AI model mismatch, sorry."}
+{"ts":"2023:04:13:01:47:51","level":"info","message":"[192.168.1.14] Logout of user ID: thecompany@tekmonks.com."}
+{"ts":"2023:04:13:01:48:08","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:13:01:48:22","level":"error","message":"[192.168.1.14] Error in conversion, due to an AI model mismatch, sorry."}
+{"ts":"2023:04:13:01:49:00","level":"error","message":"[192.168.1.14] Error in conversion, due to an AI model mismatch, sorry."}
+{"ts":"2023:04:13:01:49:09","level":"info","message":"[192.168.1.14] Logout of user ID: thecompany@tekmonks.com."}
+{"ts":"2023:04:13:01:49:24","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:13:01:50:59","level":"error","message":"[192.168.1.14] Error in fetching https://192.168.1.14:9090/apps/neuranet/convertcode for request {\"request\":\"IDENTIFICATION DIVISION.\\nPROGRAM-ID. HELLOWRD.\\n\\nPROCEDURE DIVISION.\\nDISPLAY \\\"SIMPLE HELLO WORLD\\\".\\nSTOP RUN.\",\"langfrom\":\"cobol\",\"langto\":\"naturallang\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:04:13:01:50:59","level":"error","message":"[192.168.1.14] Conversion failed due to backend internal issues."}
+{"ts":"2023:04:13:01:55:49","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:13:02:22:26","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:13:02:22:46","level":"error","message":"[192.168.1.14] Error in fetching https://192.168.1.14:9090/apps/neuranet/convertcode for request {\"request\":\"IDENTIFICATION DIVISION.\\nPROGRAM-ID. CALCULATOR.\\n\\nDATA DIVISION.\\nFILE SECTION.\\nFD INPUT-FILE.\\n01 INPUT-RECORD.\\n   05 NAME         PIC X(20).\\n   05 AMOUNT-1     PIC 9(7)V99.\\n   05 AMOUNT-2     PIC 9(7)V99.\\n\\nFD OUTPUT-FILE.\\n01 OUTPUT-RECORD.\\n   05 NAME         PIC X(20).\\n   05 TOTAL-AMOUNT PIC 9(8)V99.\\n\\nWORKING-STORAGE SECTION.\\n01 WS-VARIABLES.\\n   05 AMOUNT-1-NUM  PIC 9(7)V99 VALUE 0.\\n   05 AMOUNT-2-NUM  PIC 9(7)V99 VALUE 0.\\n   05 TOTAL-NUM     PIC 9(8)V99 VALUE 0.\\n\\nPROCEDURE DIVISION.\\nMAIN-PARAGRAPH.\\n   OPEN INPUT INPUT-FILE.\\n   OPEN OUTPUT OUTPUT-FILE.\\n\\n   READ INPUT-FILE\\n       AT END GO TO END-OF-DATA.\\n   PERFORM UNTIL END-OF-DATA\\n       COMPUTE AMOUNT-1-NUM = FUNCTION NUMVAL (AMOUNT-1)\\n       COMPUTE AMOUNT-2-NUM = FUNCTION NUMVAL (AMOUNT-2)\\n       COMPUTE TOTAL-NUM = AMOUNT-1-NUM + AMOUNT-2-NUM\\n       MOVE TOTAL-NUM TO TOTAL-AMOUNT\\n       MOVE NAME TO NAME-OUT\\n       WRITE OUTPUT-RECORD\\n       READ INPUT-FILE\\n           AT END GO TO END-OF-DATA\\n   END-PERFORM.\\n\\n   END-OF-DATA.\\n       CLOSE INPUT-FILE, OUTPUT-FILE.\\n       STOP RUN.\\n\",\"langfrom\":\"cobol\",\"langto\":\"java\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:04:13:02:22:46","level":"error","message":"[192.168.1.14] Conversion failed due to backend internal issues."}
+{"ts":"2023:04:13:02:24:27","level":"info","message":"[192.168.1.14] Logout of user ID: thecompany@tekmonks.com."}
+{"ts":"2023:04:13:02:24:43","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:13:02:31:13","level":"info","message":"[192.168.1.14] Logout of user ID: thecompany@tekmonks.com."}
+{"ts":"2023:04:13:02:32:27","level":"info","message":"[192.168.1.14] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:04:13:02:37:06","level":"info","message":"[192.168.1.14] Logout of user ID: thecompany@tekmonks.com."}

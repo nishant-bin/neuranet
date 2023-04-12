@@ -23,6 +23,8 @@
         "*_kotlin": {"promptfile_lang": "generic_langprompt.txt"},
         "*_python": {"promptfile_lang": "generic_langprompt.txt"},
 
+        "*_naturallang": {"promptfile_lang": "tonaturallang_langprompt.txt"},
+
         "naturallang_*": {"promptfile_lang": "naturallang_langprompt.txt"},
 
         "default": {"promptfile_lang": "generic_langprompt.txt"}

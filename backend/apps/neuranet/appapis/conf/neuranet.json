@@ -2,6 +2,7 @@
     "crypt_key":"82577als2141rwq294938wasj3029ldwpz",
     "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
     "ai_model_default": "code-gen35",
+    "debug_mode": true,
     "ai_models": {
         "code-gen35": {
             "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/completions"}, 
@@ -12,6 +13,7 @@
             "sample_ai_response": "codegen_ai_response.json",
             "read_ai_response_from_samples": false
         },
+
         "sql-code-gen35": {
             "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
             "request":{ "model": "gpt-3.5-turbo", "temperature": 0, "stream": false, "max_tokens": 1024, 
@@ -22,6 +24,7 @@
             "sample_ai_response": "sql_ai_response.json",
             "read_ai_response_from_samples": false
         },
+
         "chat-gpt35-turbo": {
             "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
             "request":{ 
@@ -34,14 +37,16 @@
             "sample_ai_response": "chat_ai_response.json",
             "read_ai_response_from_samples": true
         },
+
         "lang-code-gen35": {
             "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
-            "request":{ "model": "gpt-3.5-turbo", "temperature": 0, "stream": false, "max_tokens": 4096, 
-                "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1, "stop":["---"], 
+            "request":{ "model": "gpt-3.5-turbo", 
+                "temperature": 0, "stream": false, "max_tokens": 2048, 
+                "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1, 
                 "messages":[{"role": "user", "content": "${__ORG_NEURANET_PROMPT__}"}] },
             "response_contentpath": "data.choices[0].message.content",
             "response_finishreason": "data.choices[0].finish_reason",
-            "sample_ai_response": "sql_ai_response.json",
+            "sample_ai_response": "code_ai_response.json",
             "read_ai_response_from_samples": true
         }
     }
