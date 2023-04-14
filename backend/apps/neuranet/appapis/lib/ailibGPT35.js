@@ -51,7 +51,8 @@ exports.process = async function(data, promptFile, apiKey, model) {
         LOG.error(`Response from AI engine for request ${data} and prompt ${prompt} is missing content.`); return null; }
     else if (finishReason != "stop") {
         LOG.error(`Response from AI engine for request ${data} and prompt ${prompt} didn't stop properly.`); return null; }
-    else return {airesponse: messageContent};
+    else return {airesponse: messageContent, metric_cost: modelObject.response_cost_of_query_path?
+        utils.getObjProperty(response, modelObject.response_cost_of_query_path) : undefined};
 }
 
 async function _getAIModel(model) {

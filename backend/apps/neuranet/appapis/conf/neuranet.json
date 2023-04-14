@@ -1,19 +1,10 @@
 {
     "crypt_key":"82577als2141rwq294938wasj3029ldwpz",
     "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
-    "ai_model_default": "code-gen35",
+    "ai_model_default": "chat-gpt35-turbo",
     "debug_mode": true,
-    "ai_models": {
-        "code-gen35": {
-            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/completions"}, 
-            "request":{ "model": "text-davinci-003", "temperature": 0, "stream": false, "logprobs": 0, "max_tokens": 1024, 
-                "echo": true, "best_of": 1, "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1, "stop":["///"],
-                "prompt": "${__ORG_NEURANET_PROMPT__}" },
-            "responsepath": "data.choices[0].message.content",
-            "sample_ai_response": "codegen_ai_response.json",
-            "read_ai_response_from_samples": false
-        },
 
+    "ai_models": {
         "sql-code-gen35": {
             "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
             "request":{ "model": "gpt-3.5-turbo", "temperature": 0, "stream": false, "max_tokens": 1024, 
@@ -21,6 +12,7 @@
                 "messages":[{"role": "user", "content": "${__ORG_NEURANET_PROMPT__}"}] },
             "response_contentpath": "data.choices[0].message.content",
             "response_finishreason": "data.choices[0].finish_reason",
+            "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "sql_ai_response.json",
             "read_ai_response_from_samples": false
         },
@@ -34,6 +26,7 @@
             "request_contentpath": "messages",
             "response_contentpath": "data.choices[0].message.content",
             "response_finishreason": "data.choices[0].finish_reason",
+            "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "chat_ai_response.json",
             "read_ai_response_from_samples": true
         },
@@ -46,8 +39,9 @@
                 "messages":[{"role": "user", "content": "${__ORG_NEURANET_PROMPT__}"}] },
             "response_contentpath": "data.choices[0].message.content",
             "response_finishreason": "data.choices[0].finish_reason",
+            "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "code_ai_response.json",
-            "read_ai_response_from_samples": true
+            "read_ai_response_from_samples": false
         }
     }
 }

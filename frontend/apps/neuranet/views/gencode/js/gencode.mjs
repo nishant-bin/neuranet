@@ -9,7 +9,8 @@ import {router} from "/framework/js/router.mjs";
 import {session} from "/framework/js/session.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
-const MODULE_PATH = util.getModulePath(import.meta), API_CONVERT = "convertcode", VIEW_PATH = util.resolveURL(`${MODULE_PATH}/../`);
+const MODULE_PATH = util.getModulePath(import.meta), API_CONVERT = "convertcode", 
+	VIEW_PATH = util.resolveURL(`${MODULE_PATH}/../`);
 let conf, mainModule;
 
 async function convert(elementImg) {

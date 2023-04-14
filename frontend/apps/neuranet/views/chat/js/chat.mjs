@@ -8,10 +8,12 @@
  */
 
 import {i18n} from "/framework/js/i18n.mjs";
+import {util} from "/framework/js/util.mjs";
 import {session} from "/framework/js/session.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
-const API_CHAT = "chat", SESSION_OBJ_TEMPLATE = {"role": "user", "content": ""}; 
+const API_CHAT = "chat", SESSION_OBJ_TEMPLATE = {"role": "user", "content": ""}, 
+    VIEW_PATH = util.resolveURL(`${util.getModulePath(import.meta)}/../`); 
 let sessionID;
 
 const dialog = _ => monkshu_env.components['dialog-box'];
@@ -22,9 +24,13 @@ async function send(_element) {
 
     const sessionRequest = {...SESSION_OBJ_TEMPLATE}; sessionRequest.content = userPrompt;
 
+    const textareaEdit = document.querySelector("textarea#messagearea"), buttonSendImg = document.querySelector("img#send");
+    textareaEdit.classList.add("readonly"); textareaEdit.setAttribute("readonly", "true"); buttonSendImg.src = `${VIEW_PATH}/img/spinner.svg`; 
     const result = await apiman.rest(`${APP_CONSTANTS.API_PATH}/${API_CHAT}`, "POST", 
         {id: session.get(APP_CONSTANTS.USERID), session: [sessionRequest], maintain_session: true, 
             session_id: sessionID}, true);
+    textareaEdit.classList.remove("readonly"); textareaEdit.removeAttribute("readonly"); buttonSendImg.src = `${VIEW_PATH}/img/send.svg`; 
+    
     if (!result || (!result.result)) {_showMessage(await i18n.get("ChatAIError")); return;}
 
     sessionID = result.session_id;  // save session ID so that backend can maintain session
