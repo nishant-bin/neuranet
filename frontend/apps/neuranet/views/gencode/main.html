@@ -21,9 +21,16 @@ select {
     box-sizing: border-box;
     color: #017aae;
     flex-grow: 1;
-    min-width: calc( (100% - 7em) / 2 );
-    max-width: calc( (100% - 7em) / 2 );
 }
+
+span#controls {
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+    margin: 0em 5%;
+    color: #017aae;
+}
+input#agichain {margin-right: 0.5em;}
 
 div#mainworkspace {
     overflow-y: auto;
@@ -79,6 +86,11 @@ import {gencode} from "{{{viewpath}}}/js/gencode.mjs"; monkshu_env.apps[APP_CONS
         <option value="{{.}}">{{.}}</option>
         {{/CONF.LANGS_SUPPORTED}}
     </select>
+
+    <span id="controls">
+        <input id="agichain" type="checkbox">
+        <label for="agichain" style="word-wrap:break-word">AGI Chain</label>
+    </span>
 
     <select id="targetlang">
         {{#CONF.LANGS_SUPPORTED}}

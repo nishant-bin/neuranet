@@ -1,0 +1,9 @@
+{
+    "start_cobol_*": "cobol_start_langprompt.txt",
+    "function_cobol_*":"cobol_function_langprompt.txt",
+    "program_section_cobol_*": "cobol_program_langprompt.txt",
+    "workingstorage_section_cobol_*": "cobol_wssection_langprompt.txt",
+    "response_*_*": "default_codechainresponseprompt.txt",
+    "response_preprocessor_*_java": "defaultlangresponsetojava.js",
+    "response_preprocessor_*_*": "defaultlangresponse.js"
+}

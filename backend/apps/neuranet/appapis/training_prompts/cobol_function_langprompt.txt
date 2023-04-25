@@ -1,0 +1,2 @@
+Convert this Cobol routine to {{{langto}}} function with the same name as Cobol routine. Ignore incomplete functions. Do not add comments.
+{{{request}}}

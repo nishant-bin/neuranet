@@ -5,6 +5,7 @@
 
 const fspromises = require("fs").promises;
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
+const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const codevalidator = require(`${NEURANET_CONSTANTS.LIBDIR}/codevalidator.js`);
 const LANG_MAPPINGS = require(`${NEURANET_CONSTANTS.CONFDIR}/langmappings.json`).mappings; 
 const SUPPORTED_LANGS = require(`${NEURANET_CONSTANTS.CONFDIR}/langmappings.json`).supported_langs; 
@@ -26,7 +27,7 @@ exports.doService = async jsonReq => {
 	const aiKey = crypt.decrypt(NEURANET_CONSTANTS.CONF.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
 		aiModelToUse = jsonReq.model || MODEL_DEFAULT,
 		aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${NEURANET_CONSTANTS.CONF.ai_models[aiModelToUse].driver.module}`;
-	let aiLibrary; try{aiLibrary = require(aiModuleToUse);} catch (err) {
+	let aiLibrary; try{aiLibrary = utils.requireWithDebug(aiModuleToUse, DEBUG_MODE);} catch (err) {
 		LOG.error(`Bad AI Library or model - ${aiModuleToUse}. The error is ${err}`); 
 		return {reason: REASONS.BAD_MODEL, ...CONSTANTS.FALSE_RESULT};
 	}

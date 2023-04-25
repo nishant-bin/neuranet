@@ -10,7 +10,8 @@ import {session} from "/framework/js/session.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
 const MODULE_PATH = util.getModulePath(import.meta), API_CONVERT = "convertcode", 
-	VIEW_PATH = util.resolveURL(`${MODULE_PATH}/../`);
+	API_CONVERT_CHAIN = "convertcodechain", VIEW_PATH = util.resolveURL(`${MODULE_PATH}/../`),
+	CHAIN_BOUNDARY = "------------ AGI CHAIN ";
 let conf, mainModule;
 
 async function convert(elementImg) {
@@ -18,12 +19,14 @@ async function convert(elementImg) {
 		texteditorResponse = document.querySelector("text-editor#targetlang"), requestCode = texteditorRequest.value,
 		langfrom = conf.LANG_BACKEND_ID_MAPPINGS[document.querySelector("select#sourcelang").value], 
 		langto = conf.LANG_BACKEND_ID_MAPPINGS[document.querySelector("select#targetlang").value],
-		userid = session.get(APP_CONSTANTS.USERID);
+		userid = session.get(APP_CONSTANTS.USERID), 
+		isAGIChain = document.querySelector("input#agichain").checked;
 	
 	if (requestCode.trim() == "") {mainModule.showMessage(await i18n.get("NothingToConvert")); return;}
 	texteditorResponse.value = ""; elementImg.src = `${VIEW_PATH}/img/spinner.svg`;
 	const convertedResponse = langfrom == langto ? {code: requestCode, result: true} : await apiman.rest(
-		`${APP_CONSTANTS.API_PATH}/${API_CONVERT}`, "POST", {request: requestCode, langfrom, langto, 
+		`${APP_CONSTANTS.API_PATH}/${isAGIChain?API_CONVERT_CHAIN:API_CONVERT}`, "POST", {
+			request: isAGIChain?_getRequestChain(requestCode):requestCode, langfrom, langto, 
             id: userid}, true);
 	elementImg.src = `${VIEW_PATH}/img/bot.svg`;
 
@@ -53,6 +56,16 @@ async function convert(elementImg) {
 async function init(data, main) {
     const confPath = `${VIEW_PATH}/conf/conf.json`; conf = await $$.requireJSON(confPath);
     data.CONF = {...conf}; mainModule = main;
+}
+
+function _getRequestChain(request) {
+	const rawChains = request.trim().split(CHAIN_BOUNDARY);
+	const requestChain = []; for (const rawChain of rawChains) {
+		const context = rawChain.substring(0, rawChain.indexOf("\n")).trim().toLowerCase(), 
+			data = rawChain.substring(rawChain.indexOf("\n")+1).trim();
+		if (context && data) requestChain.push({context, data});
+	}
+	return requestChain;
 }
 
 export const gencode = {convert, init};

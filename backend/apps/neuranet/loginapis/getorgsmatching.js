@@ -12,11 +12,11 @@ exports.doService = async jsonReq => {
     if (jsonReq.org.indexOf("%") == -1) jsonReq.org = jsonReq.org + "%";
     const result = await userid.getOrgsMatching(jsonReq.org);
 
-    if (result.result) LOG.info(`Sending org list for: ${jsonReq.org}, as ${result.orgs}`); 
+    if (result.result) LOG.info(`Sending org list for: ${jsonReq.org}, as ${JSON.stringify(result.orgs)}`); 
     else LOG.error(`Unable to find matching org list for: ${jsonReq.org}, DB error`);
 
     if (result.result && result.orgs.length) { // flatten orgs
-        const orgs = []; for (const orgObject of result.orgs) orgs.push(orgObject.org); result.orgs = orgs; }
+        const orgs = []; for (const orgObject of result.orgs) orgs.push(orgObject.name); result.orgs = orgs; }
 
     return result;
 }

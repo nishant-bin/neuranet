@@ -13,7 +13,7 @@ const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}", DEBUG_RUN = NEURANET_CONSTANTS.
 const PROMPT_CACHE = {};
 
 exports.process = async function(data, promptFile, apiKey, model) {
-    const prompt = mustache.render(await _getPrompt(promptFile), data);   // create the prompt
+    const prompt = mustache.render(await _getPrompt(promptFile), data).replace(/\r\n/gm,"\n");   // create the prompt
     const modelObject = await _getAIModel(model); 
     if (!modelObject) { LOG.error(`Bad model object - ${modelObject}.`); return null; }
 
@@ -38,7 +38,7 @@ exports.process = async function(data, promptFile, apiKey, model) {
             {"Authorization": `Bearer ${apiKey}`}, promptObject);
 
     if ((!response) || (!response.data) || (response.error)) {
-        LOG.error(`AI engine for request ${JSON.stringify(data)} and prompt ${JSON.stringify(prompt)}, call error, the resulting code is ${response?.status} and response data is ${response.data?typeof response.data == "string"?response.data:response.data.toString():""}.`);
+        LOG.error(`Error: AI engine call error, the resulting code is ${response?.status} and response data is ${response.data?typeof response.data == "string"?response.data:response.data.toString():""}.`);
         LOG.info(`The prompt object for this call is ${JSON.stringify(promptObject)}.`);
         return null;
     }

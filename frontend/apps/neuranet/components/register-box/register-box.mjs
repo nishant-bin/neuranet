@@ -21,7 +21,7 @@ import {monkshu_component} from "/framework/js/monkshu_component.mjs";
 const COMPONENT_PATH = util.getModulePath(import.meta), DIALOGS_PATH = `${COMPONENT_PATH}/dialogs`;
 let API_GETMATCHINGORGS;
 
-let conf, dialog_box;
+let conf, dialog_box, fetchedOrgsList, previousOrgFetchFor;
 
 async function elementConnected(host) {
 	if (window.monkshu_env.components["dialog-box"]) dialog_box = window.monkshu_env.components["dialog-box"];
@@ -89,12 +89,12 @@ async function registerOrUpdate(element) {
 		case loginmanager.ID_OK: router.loadPage(routeOnSuccess, dataOnSuccess); break;
 		case loginmanager.ID_OK_NOT_YET_APPROVED: router.loadPage(routeOnNotApproved, dataOnSuccess); break;
 
-		case loginmanager.ID_FAILED_OTP: shadowRoot.querySelector("span#errorOTP").style.display = "inline"; break;
-		case loginmanager.ID_FAILED_EXISTS: shadowRoot.querySelector("span#errorExists").style.display = "inline"; break;
-		case loginmanager.ID_INTERNAL_ERROR: shadowRoot.querySelector("span#errorInternal").style.display = "inline"; break;
-		case loginmanager.ID_SECURITY_ERROR: shadowRoot.querySelector("span#errorSecurity").style.display = "inline"; break;
-		case loginmanager.ID_DOMAIN_ERROR: shadowRoot.querySelector("span#errorDomain").style.display = "inline"; break;
-		default: shadowRoot.querySelector("span#errorInternal").style.display = "inline"; break;
+		case loginmanager.ID_FAILED_OTP: shadowRoot.querySelector("span#errorOTP").classList.add("errorvisible"); break;
+		case loginmanager.ID_FAILED_EXISTS: shadowRoot.querySelector("span#errorExists").classList.add("errorvisible"); break;
+		case loginmanager.ID_INTERNAL_ERROR: shadowRoot.querySelector("span#errorInternal").classList.add("errorvisible"); break;
+		case loginmanager.ID_SECURITY_ERROR: shadowRoot.querySelector("span#errorSecurity").classList.add("errorvisible"); break;
+		case loginmanager.ID_DOMAIN_ERROR: shadowRoot.querySelector("span#errorDomain").classList.add("errorvisible"); break;
+		default: shadowRoot.querySelector("span#errorInternal").classList.add("errorvisible"); break;
 	}
 }
 
@@ -105,9 +105,14 @@ async function openAuthenticator(containedElement, totpURL) {
 }
 
 async function updateOrgDataList(org, datalist) {
-	util.removeAllChildElements(datalist);
-	const resp = await apiman.rest(API_GETMATCHINGORGS, "GET", {org}); if (!resp || !resp.orgs) return;  
-	for (const org of resp.orgs) datalist.appendChild(new Option(org, org));
+	if (org.trim() == "") return; util.removeAllChildElements(datalist);
+	if ((!fetchedOrgsList) || (previousOrgFetchFor.toLowerCase()[0] != org.toLowerCase()[0])) {
+		const resp = await apiman.rest(API_GETMATCHINGORGS, "GET", {org}); if (!resp || !resp.orgs) return; 
+		fetchedOrgsList = resp.orgs; previousOrgFetchFor = org;
+	}
+	const filteredList = []; for (const org of fetchedOrgsList) if (org.toLowerCase().startsWith(org.toLowerCase()))
+		filteredList.push(org);
+	for (const org of filteredList) datalist.appendChild(new Option(org, org));
 }
 
 function _validateForm(shadowRoot) {
@@ -121,7 +126,7 @@ function _validateForm(shadowRoot) {
 	if (!pass2.checkValidity()) {pass2.reportValidity(); return false;}
 	if (!org.checkValidity()) {org.reportValidity(); return false;}
 	if (!otp.checkValidity()) {otp.reportValidity(); return false;}
-	if (!_doPasswordsMatch(shadowRoot)) {shadowRoot.querySelector("span#errorPasswordMismatch").style.display = "inline"; return false;}
+	if (!_doPasswordsMatch(shadowRoot)) {shadowRoot.querySelector("span#errorPasswordMismatch").classList.add("errorvisible"); return false;}
 
 	return true;
 }
@@ -155,12 +160,12 @@ async function _checkAndFillAccountProfile(data, email, time) {
 }
 
 function _resetUI(shadowRoot) {
-	shadowRoot.querySelector("span#errorOTP").style.display = "none";
-	shadowRoot.querySelector("span#errorExists").style.display = "none";
-	shadowRoot.querySelector("span#errorPasswordMismatch").style.display = "none";
-	shadowRoot.querySelector("span#errorSecurity").style.display = "none";
-	shadowRoot.querySelector("span#errorInternal").style.display = "none";
-	shadowRoot.querySelector("span#errorDomain").style.display = "none";
+	shadowRoot.querySelector("span#errorOTP").classList.remove("errorvisible");
+	shadowRoot.querySelector("span#errorExists").classList.remove("errorvisible");
+	shadowRoot.querySelector("span#errorPasswordMismatch").classList.remove("errorvisible");
+	shadowRoot.querySelector("span#errorSecurity").classList.remove("errorvisible");
+	shadowRoot.querySelector("span#errorInternal").classList.remove("errorvisible");
+	shadowRoot.querySelector("span#errorDomain").classList.remove("errorvisible");
 	_hideWait(shadowRoot);
 }
 
