@@ -18,27 +18,33 @@ const codevalidator = utils.requireWithDebug(`${NEURANET_CONSTANTS.LIBDIR}/codev
 
 const DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode, MEMORY_KEY = "_org_monkshu_neuranet_convertcodechain";
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
-		BAD_INPUT_CODE: "badinputcode"}, MODEL_DEFAULT = "lang-code-chaingen35", DEFAULT = "default";
+		BAD_INPUT_CODE: "badinputcode"}, MODEL_DEFAULT = "lang-code-chaingen35", DEFAULT = "default", 
+        FILE_CONTENTS_CACHE = {};
 
 let LANG_MAPPINGS, LANG_CHAINS, SUPPORTED_LANGS; 
 
-exports.doService = async (jsonReq, _servObject, _headers, url) => {    
+exports.doService = async (jsonReq, servObject, headers, url) => {    
     const memory = CLUSTER_MEMORY.get(MEMORY_KEY, {});
 
     if (jsonReq.requestid) {    // poll check
         if (memory[jsonReq.requestid]) {
-            const response = memory[jsonReq.requestid]; 
-            delete memory[jsonReq.requestid]; CLUSTER_MEMORY.set(MEMORY_KEY, memory);
-            return {...response, requestid: jsonReq.requestid};
+            const response = memory[jsonReq.requestid].response; 
+            if (memory[jsonReq.requestid].complete) {
+                delete memory[jsonReq.requestid]; CLUSTER_MEMORY.set(MEMORY_KEY, memory);
+                return {...response, requestid: jsonReq.requestid};
+            }
+            else return {...response, requestid: jsonReq.requestid, ...CONSTANTS.WAIT_RESULT};  // it's a partial response
         } else return {requestid: jsonReq.requestid, ...CONSTANTS.WAIT_RESULT};
     }
 
-    const requestid = url+Date.now();
-    const responseGetter = async _ => memory[requestid] = await _realDoService(jsonReq); responseGetter();  // won't wait
+    const requestid = `${url}?timestamp=${Date.now()}&uuid=${utils.generateUUID()}`;
+    const streamer = partialResponse => memory[requestid] = {response: partialResponse, complete: false};
+    const responseGetter = async _ => memory[requestid] = {response: await _realDoService(jsonReq, servObject, headers, url, streamer), complete: true}; 
+    responseGetter();  // won't wait
     return {requestid, ...CONSTANTS.WAIT_RESULT};
 }
 
-async function _realDoService(jsonReq) {
+async function _realDoService(jsonReq, _servObject, _headers, _url, partialResponseStreamer) {
     _refreshLangFilesIfDebug();
 
     if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
@@ -59,7 +65,10 @@ async function _realDoService(jsonReq) {
 	}
 	
     const requestChain = Array.isArray(jsonReq.request)?jsonReq.request:[jsonReq.request];
-    const responses = [], allValidationsOK = true, validationErrors = [];
+    const responses = [], allValidationsOK = true, validationErrors = [], responsePromptFilePath = 
+        NEURANET_CONSTANTS.TRAININGPROMPTSDIR+"/"+_getPromptFile("response", jsonReq.langfrom, jsonReq.langto);
+    const responsePreProcessor = utils.requireWithDebug(
+        NEURANET_CONSTANTS.LIBDIR+"/"+_getPromptFile("response_preprocessor", jsonReq.langfrom, jsonReq.langto));
     if (!aiModelObject.read_ai_response_from_samples) for (const request of requestChain) {
         const promptFile = _getPromptFile(request.context.toLowerCase(), jsonReq.langfrom.toLowerCase(), 
             jsonReq.langto.toLowerCase());
@@ -75,11 +84,12 @@ async function _realDoService(jsonReq) {
             jsonReq.langto, undefined, jsonReq.use_simple_validator);
         if (!validationResult.isOK) {allValidationsOK = false; validationErrors.push(...validationResult.errors);}
         responses.push({context: request.context, code});
+        const partialResponse = mustache.render(await _readPromptFile(responsePromptFilePath), 
+            responsePreProcessor.getResponse(responses));
+        partialResponseStreamer({code: partialResponse, reason: REASONS.OK, possible_error: allValidationsOK?undefined:true, 
+            parser_error: allValidationsOK?undefined:validationErrors})
     } else responses.push(...utils.requireWithDebug(`${NEURANET_CONSTANTS.RESPONSESDIR}/${aiModelObject.sample_ai_response}`, true));
 
-    const responsePromptFilePath = NEURANET_CONSTANTS.TRAININGPROMPTSDIR+"/"+_getPromptFile("response", jsonReq.langfrom, jsonReq.langto);
-    const responsePreProcessor = utils.requireWithDebug(
-        NEURANET_CONSTANTS.LIBDIR+"/"+_getPromptFile("response_preprocessor", jsonReq.langfrom, jsonReq.langto));
     const finalResponse = mustache.render(await _readPromptFile(responsePromptFilePath), 
         responsePreProcessor.getResponse(responses));
 

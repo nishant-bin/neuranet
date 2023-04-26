@@ -13,6 +13,7 @@ async function elementPrerender(host) {
 	if (!CONF) CONF = await $$.requireJSON(`${COMPONENT_PATH}/conf/texteditor.json`);
 
 	Object.defineProperty(host, "value", {get: _=>_getValue(host), set: value=>_setValue(value, host)});
+	Object.defineProperty(host, "readOnly", {get: _=>_getReadOnly(host), set: value=>_setReadOnly(value, host)});
 
 	const data = { componentPath: COMPONENT_PATH, styleBody:host.getAttribute("styleBody")?
 		`<style>${host.getAttribute("styleBody")}</style>`:undefined, 
@@ -60,6 +61,13 @@ async function save(element) {
 	util.downloadFile(contents, mime, decodeURIComponent(host.getAttribute("downloadfilename"))||"code.txt");
 }
 
+function scrollToBottom(hostID) {
+	const host = text_editor.getHostElementByID(hostID);
+	const cm = text_editor.getMemoryByHost(host).editor;
+	const currentScrollInfo = cm.getScrollInfo();
+	cm.scrollTo(0, currentScrollInfo.height);
+}
+
 function _getValue(host) {
 	const cm = text_editor.getMemoryByHost(host).editor;
 	const value = cm?.getDoc().getValue(); return value||"";
@@ -70,6 +78,16 @@ function _setValue(value, host) {
 	if (!cm?.getDoc()) return; else cm.getDoc().setValue(value);
 }
 
+function _getReadOnly(host) {
+	const cm = text_editor.getMemoryByHost(host).editor;
+	return cm.getOption("readOnly");
+}
+
+function _setReadOnly(value, host) {
+	const cm = text_editor.getMemoryByHost(host).editor;
+	return cm.setOption("readOnly", value);
+}
+
 // convert this all into a WebComponent so we can use it
-export const text_editor = {trueWebComponentMode: true, elementPrerender, elementRendered, open, save}
+export const text_editor = {trueWebComponentMode: true, elementPrerender, elementRendered, open, save, scrollToBottom}
 monkshu_component.register("text-editor", `${COMPONENT_PATH}/text-editor.html`, text_editor);
