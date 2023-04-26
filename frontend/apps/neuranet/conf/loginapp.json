@@ -1,5 +1,5 @@
 {
-    "TIMEOUT": 600000,
+    "AUTO_LOGOUT_TIMEOUT": 600000,
     "MIN_PASS_LENGTH": 8,
     "MOBILE_MEDIA_QUERY_START": "<style>@media only screen and (max-width: 959px) {",
     "MOBILE_MEDIA_QUERY_END": "}</style>",
@@ -10,5 +10,6 @@
     "COMPONENTS": ["dialog-box", "login-box", "password-box", "register-box", "span-with-menu", 
         "user-manager", "context-menu", "editable-list", "neuranet-sql", "text-editor"],
     "APP_ABOUT_URL": "https://tekmonks.com/",
-    "VIEW_CHOOSER": "chooser"
+    "VIEW_CHOOSER": "chooser",
+    "ASYNC_API_POLL_WAIT": 5000
 }

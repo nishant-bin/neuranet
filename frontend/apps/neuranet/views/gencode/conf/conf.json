@@ -11,5 +11,6 @@
         "Swift": "swift",
         "Kotlin": "kotlin",
         "Python": "python"
-    }
+    },
+    "GENCODE_API_TIMEOUT": 600000
 }

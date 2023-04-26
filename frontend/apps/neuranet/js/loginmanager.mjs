@@ -126,7 +126,7 @@ function startAutoLogoutTimer() { return;
     if (!session.get(APP_CONSTANTS.USERID)) return; // no one is logged in
     
     const events = ["load", "mousemove", "mousedown", "click", "scroll", "keypress"];
-    const resetTimer = _=> {_stopAutoLogoutTimer(); session.set(TIMEOUT_CURRENT, setTimeout(_=>logout(true), APP_CONSTANTS.TIMEOUT));}
+    const resetTimer = _=> {_stopAutoLogoutTimer(); session.set(TIMEOUT_CURRENT, setTimeout(_=>logout(true), APP_CONSTANTS.AUTO_LOGOUT_TIMEOUT));}
     for (const event of events) {document.addEventListener(event, resetTimer);}
     resetTimer();   // start the timing
 }

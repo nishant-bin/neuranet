@@ -1,6 +1,10 @@
 /**
  * AI based Code convertor using AGI chains.
  * jsonReq.request is an array of [{context:"context name", data:"code to work on"},...]
+ * 
+ * This is an async API. For now, use polling to get the actual answer later.
+ * returns {result: true, requestid} which can be used to retrieve the result later.
+ * 
  * (C) 2022 TekMonks. All rights reserved.
  */
 const fs = require("fs");
@@ -9,19 +13,35 @@ const mustache = require("mustache");
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const LANG_MAPPINGS_FILE = `${NEURANET_CONSTANTS.CONFDIR}/langmappings.json`; 
-const LANG_CHAINS_FILE = `${NEURANET_CONSTANTS.CONFDIR}/langchaindriver.json`; 
-const codevalidator = require(`${NEURANET_CONSTANTS.LIBDIR}/codevalidator.js`);
+const LANG_CHAINS_FILE = `${NEURANET_CONSTANTS.CONFDIR}/langagichaindriver.json`; 
+const codevalidator = utils.requireWithDebug(`${NEURANET_CONSTANTS.LIBDIR}/codevalidator.js`, NEURANET_CONSTANTS.CONF.debug_mode);
 
-const DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
+const DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode, MEMORY_KEY = "_org_monkshu_neuranet_convertcodechain";
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
 		BAD_INPUT_CODE: "badinputcode"}, MODEL_DEFAULT = "lang-code-chaingen35", DEFAULT = "default";
 
 let LANG_MAPPINGS, LANG_CHAINS, SUPPORTED_LANGS; 
 
-exports.doService = async jsonReq => {
+exports.doService = async (jsonReq, _servObject, _headers, url) => {    
+    const memory = CLUSTER_MEMORY.get(MEMORY_KEY, {});
+
+    if (jsonReq.requestid) {    // poll check
+        if (memory[jsonReq.requestid]) {
+            const response = memory[jsonReq.requestid]; 
+            delete memory[jsonReq.requestid]; CLUSTER_MEMORY.set(MEMORY_KEY, memory);
+            return {...response, requestid: jsonReq.requestid};
+        } else return {requestid: jsonReq.requestid, ...CONSTANTS.WAIT_RESULT};
+    }
+
+    const requestid = url+Date.now();
+    const responseGetter = async _ => memory[requestid] = await _realDoService(jsonReq); responseGetter();  // won't wait
+    return {requestid, ...CONSTANTS.WAIT_RESULT};
+}
+
+async function _realDoService(jsonReq) {
     _refreshLangFilesIfDebug();
 
-	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
+    if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
 
 	LOG.debug(`Got code conversion request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
@@ -63,8 +83,9 @@ exports.doService = async jsonReq => {
     const finalResponse = mustache.render(await _readPromptFile(responsePromptFilePath), 
         responsePreProcessor.getResponse(responses));
 
-    return {code: finalResponse, reason: REASONS.OK, possible_error: allValidationsOK?undefined:true, 
+    const jsonResponse = {code: finalResponse, reason: REASONS.OK, possible_error: allValidationsOK?undefined:true, 
 		parser_error: allValidationsOK?undefined:validationErrors, ...CONSTANTS.TRUE_RESULT};
+    return jsonResponse;
 }
 
 const _getPromptFile = (context, langfrom, langto) => {
@@ -93,6 +114,7 @@ const _refreshLangFilesIfDebug = _ => {
     global.NEURANET_CONSTANTS.CONF = JSON.parse(confjson);
 }
  
-const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.request && jsonReq.langfrom && 
-    jsonReq.langto && Object.keys(SUPPORTED_LANGS).includes(jsonReq.langfrom) &&
-    Object.keys(SUPPORTED_LANGS).includes(jsonReq.langto));
+const validateRequest = jsonReq => (jsonReq && jsonReq.id && (jsonReq.requestid || 
+    (jsonReq.request && jsonReq.langfrom && 
+        jsonReq.langto && Object.keys(SUPPORTED_LANGS).includes(jsonReq.langfrom) &&
+        Object.keys(SUPPORTED_LANGS).includes(jsonReq.langto)) ) );

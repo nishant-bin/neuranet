@@ -14,5 +14,6 @@
         "Microsoft SQL Server": "mssql",
         "IBM DB2": "db2"
     },
-    "SIMPLE_VALIDATOR": false
+    "SIMPLE_VALIDATOR": false,
+    "GENSQL_API_TIMEOUT": 600000
 }

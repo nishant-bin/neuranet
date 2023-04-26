@@ -11,7 +11,7 @@ import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
 const MODULE_PATH = util.getModulePath(import.meta), API_CONVERT = "convertcode", 
 	API_CONVERT_CHAIN = "convertcodechain", VIEW_PATH = util.resolveURL(`${MODULE_PATH}/../`),
-	CHAIN_BOUNDARY = "------------ AGI CHAIN ";
+	AGI_CHAIN_BOUNDARY = "------------ AGI CHAIN ";
 let conf, mainModule;
 
 async function convert(elementImg) {
@@ -24,10 +24,10 @@ async function convert(elementImg) {
 	
 	if (requestCode.trim() == "") {mainModule.showMessage(await i18n.get("NothingToConvert")); return;}
 	texteditorResponse.value = ""; elementImg.src = `${VIEW_PATH}/img/spinner.svg`;
-	const convertedResponse = langfrom == langto ? {code: requestCode, result: true} : await apiman.rest(
-		`${APP_CONSTANTS.API_PATH}/${isAGIChain?API_CONVERT_CHAIN:API_CONVERT}`, "POST", {
-			request: isAGIChain?_getRequestChain(requestCode):requestCode, langfrom, langto, 
-            id: userid}, true);
+	const apirequest = {request: isAGIChain?_getRequestChain(requestCode):requestCode, langfrom, langto, id: userid}
+	const convertedResponse = langfrom == langto ? {code: requestCode, result: true} : 
+		await _getPolledResponse(`${APP_CONSTANTS.API_PATH}/${isAGIChain?API_CONVERT_CHAIN:API_CONVERT}`, 
+			"POST", apirequest, {id: userid}, [true]);
 	elementImg.src = `${VIEW_PATH}/img/bot.svg`;
 
     const mustache = await router.getMustache();
@@ -59,13 +59,35 @@ async function init(data, main) {
 }
 
 function _getRequestChain(request) {
-	const rawChains = request.trim().split(CHAIN_BOUNDARY);
+	const rawChains = request.trim().split(AGI_CHAIN_BOUNDARY);
 	const requestChain = []; for (const rawChain of rawChains) {
 		const context = rawChain.substring(0, rawChain.indexOf("\n")).trim().toLowerCase(), 
 			data = rawChain.substring(rawChain.indexOf("\n")+1).trim();
 		if (context && data) requestChain.push({context, data});
 	}
 	return requestChain;
+}
+
+async function _getPolledResponse(url, requestType, initialRequest, waitRequest, apimanOptions, timeout) {	
+	return new Promise(async resolve => {
+		const startTime = Date.now();
+		const initialResponse = await apiman.rest(url, requestType, initialRequest, ...apimanOptions);
+		if ((!initialResponse) || (initialResponse.result != "wait") || (!initialResponse.requestid)) {
+			resolve(initialResponse); return; }
+
+		// only if we get a requestid back then we are inside an async API wait loop
+		const timer = setInterval(async _=>{
+			if (timeout && ((Date.now() - startTime) >= timeout)) {
+				clearInterval(timer); LOG.error(`Async API ${url} timedout after ${timeout} milliseconds.`); 
+				resolve(null); return; 
+			}
+
+			const waitResponse = await apiman.rest(url, requestType, 
+				{...waitRequest, requestid: initialResponse.requestid}, ...apimanOptions);
+			if ((!waitResponse) || (waitResponse.result != "wait") || (!initialResponse.requestid)) {
+				clearInterval(timer); resolve(waitResponse); return; }
+		}, APP_CONSTANTS.ASYNC_API_POLL_WAIT);
+	});
 }
 
 export const gencode = {convert, init};
