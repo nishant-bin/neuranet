@@ -2,7 +2,7 @@
  * AI based SQL convertor. 
  * (C) 2022 TekMonks. All rights reserved.
  */
-
+const fspromises = require("fs").promises;
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const sqlvalidator = require(`${NEURANET_CONSTANTS.LIBDIR}/sqlvalidator.js`);
 const DB_MAPPINGS = require(`${NEURANET_CONSTANTS.CONFDIR}/dbmappings.json`).mappings; 
@@ -49,7 +49,7 @@ exports.doService = async jsonReq => {
 const _isStoredProcedure = sql => sql.match(/create[' '\t]+procedure/i);
 
 const _getPromptFile = async (sql, dbfrom, dbto) => {
-	const dbmappings = await getDBMappings();
+	const dbmappings = await _getDBMappings();
 	return _isStoredProcedure(sql) ? 
 		(dbmappings[`${dbfrom}_${dbto}`]?.promptfile_storedproc || dbmappings[`${dbfrom}_*`]?.promptfile_storedproc ||
 			dbmappings[`*_${dbto}`]?.promptfile_storedproc || dbmappings[DEFAULT]?.promptfile_storedproc) :

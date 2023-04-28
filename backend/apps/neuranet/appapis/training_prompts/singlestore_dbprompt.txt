@@ -12,8 +12,8 @@
 --- Only respond with SQL code and no other text.
 --- Automatically assume a semicolon at the end of each valid SQL statement even if not provided.
 
---- {{{dbfrom}}}
+--- {{{dbfrom}}} SQL
 
 {{{request}}}
 
---- {{{dbto}}}
+--- {{{dbto}}} SQL

@@ -3,7 +3,7 @@
     "function_cobol_*":"cobol_function_langprompt.txt",
     "program_section_cobol_*": "cobol_program_langprompt.txt",
     "workingstorage_section_cobol_*": "cobol_wssection_langprompt.txt",
-    "response_*_*": "default_codechainresponseprompt.txt",
-    "response_preprocessor_*_java": "defaultlangresponsetojava.js",
-    "response_preprocessor_*_*": "defaultlangresponse.js"
+    "response_*_*": "defaultlang_agicodechain_response_prompt.txt",
+    "response_preprocessor_*_java": "defaultlang_agi_chain_response_tojava.js",
+    "response_preprocessor_*_*": "defaultlang_agi_chain_response.js"
 }
