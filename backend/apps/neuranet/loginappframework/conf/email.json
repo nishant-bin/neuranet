@@ -1,0 +1,64 @@
+{
+    "en_resetuser_title":"Login reset - Your Tekmonks Login Account",
+    "en_resetuser_email_html":"<p>Hello {{name}}</p><p>A request has been received to reset the account for your Tekmonks Login account.</p><p align='center'>{{{button_code_pre}}}Reset Account{{{button_code_post}}}</p><p>If you did not send this request, please contact your company's administrator for Tekmonks Login and ignore this email.</p><p>Thank you, <br/>The Tekmonks Login Team.</p>",
+    "en_resetuser_email_text": "Hello {{name}}\n\nA request has been received to reset the account for your Tekmonks Login account.\n\nPaste this URL into a new browser window to reset your account\n{{{action_url}}}\n\nIf you did not send this request, please contact your company's administrator for Tekmonks Login and ignore this email.\n\nThank you,\nThe Tekmonks Login Team.",
+
+    "hi_resetuser_title":"लॉगिन रीसेट - आपका Tekmonks अकाउंट",
+    "hi_resetuser_email_html":"<p>नमस्ते {{name}}</p><p>आपके टेकमॉन्क्स अकाउंट खाता रीसेट करने के लिए एक अनुरोध प्राप्त हुआ है।</p><p align='center'>{{{button_code_pre}}}अकाउंट रीसेट{{{button_code_post}}}</p><p>यदि आपने यह अनुरोध नहीं भेजा है, तो कृपया Tekmonks Login के लिए अपनी कंपनी के व्यवस्थापक से संपर्क करें और इस ईमेल को अनदेखा करें।</p><p>धन्यवाद, <br/>टेकमॉन्क्स अकाउंट की टीम।</p>",
+    "hi_resetuser_email_text": "Hello {{name}}\n\nआपके टेकमॉन्क्स अकाउंट खाता रीसेट करने के लिए एक अनुरोध प्राप्त हुआ है।\n\nअपना अकाउंट रीसेट करने के लिए इस URL को एक नई ब्राउज़र विंडो में पेस्ट करें\n{{{action_url}}}\n\nयदि आपने यह अनुरोध नहीं भेजा है, तो कृपया Tekmonks Login के लिए अपनी कंपनी के व्यवस्थापक से संपर्क करें और इस ईमेल को अनदेखा करें।\n\nधन्यवाद,\nटेकमॉन्क्स अकाउंट की टीम।",
+
+    "ja_resetuser_title":"ログインリセット - Tekmonks ログイン アカウント",
+    "ja_resetuser_email_html":"<p>こんにちは {{name}}</p><p>のTekmonks Loginアカウントのパスワードを変更するリクエストを受け取りました。</p><p align='center'>{{{button_code_pre}}}アカウントをリセットする{{{button_code_post}}}</p><p>このリクエストを送信しなかった場合は、Tekmonks Loginについて会社の管理者に連絡し、このメールを無視してください。</p><p>ありがとうございました, <br/>Tekmonks Loginのチーム。</p>",
+    "ja_resetuser_email_text": "こんにちは {{name}}\n\nのTekmonks Loginアカウントのパスワードを変更するリクエストを受け取りました。\n\nこの URL を新しいブラウザ ウィンドウに貼り付けて、アカウントをリセットします\n{{{action_url}}}\n\nこのリクエストを送信しなかった場合は、Tekmonks Loginについて会社の管理者に連絡し、このメールを無視してください。\n\nありがとうございました,\nTekmonks Loginのチーム。",
+
+    "en_adduser_title":"Login - Your Tekmonks Login Account",
+    "en_adduser_email_html":"<p>Hello {{name}}</p><p>A request has been received to create a Tekmonks Login account for you.</p><p align='center'>{{{button_code_pre}}}Click to Login{{{button_code_post}}}</p><p>If you did not expect this request, please contact your company's administrator for Tekmonks Login and ignore this email.</p><p>Thank you, <br/>The Tekmonks Login Team.</p>",
+    "en_adduser_email_text": "Hello {{name}}\n\nA request has been received to create a Tekmonks Login account for you.\n\nPaste this URL into a new browser window to login to your account\n{{{action_url}}}\n\nIf you did not expect this request, please contact your company's administrator for Tekmonks Login and ignore this email.\n\nThank you,\nThe Tekmonks Login Team.",
+
+    "hi_adduser_title":"लॉगिन - आपका Tekmonks अकाउंट",
+    "hi_adduser_email_html":"<p>नमस्ते {{name}}</p><p>आपके लिए एक टेकमॉन्क्स लॉगिन अकाउंट बनाने का अनुरोध प्राप्त हुआ है।</p><p align='center'>{{{button_code_pre}}}लॉगिन करने के लिए क्लिक करें{{{button_code_post}}}</p><p>यदि आपने यह अनुरोध नहीं भेजा है, तो कृपया टेकमॉन्क्स अकाउंट के लिए अपनी कंपनी के व्यवस्थापक से संपर्क करें और इस ईमेल को अनदेखा करें।</p><p>धन्यवाद, <br/>टेकमॉन्क्स अकाउंट की टीम।</p>",
+    "hi_adduser_email_text": "नमस्ते {{name}}\n\nआपके लिए एक टेकमॉन्क्स लॉगिन अकाउंट बनाने का अनुरोध प्राप्त हुआ है।\n\nअपना अकाउंट लॉगिन करने के लिए इस URL को एक नई ब्राउज़र विंडो में पेस्ट करें\n{{{action_url}}}\n\nयदि आपने यह अनुरोध नहीं भेजा है, तो कृपया टेकमॉन्क्स अकाउंट के लिए अपनी कंपनी के व्यवस्थापक से संपर्क करें और इस ईमेल को अनदेखा करें।\n\nधन्यवाद,\nटेकमॉन्क्स अकाउंट की टीम।",
+
+    "ja_adduser_title":"ログイン - Tekmonks ログイン アカウント",
+    "ja_adduser_email_html":"<p>こんにちは {{name}}</p><p>Tekmonks ログイン アカウントを作成するリクエストを受け取りました。</p><p align='center'>{{{button_code_pre}}}クリック ログインするには{{{button_code_post}}}</p><p>このリクエストを予期していなかった場合は、会社の管理者に Tekmonks Login について連絡し、このメールを無視してください。</p><p>よろしくお願いします。<br/ >Tekmonks ログイン チーム。</p>",
+    "ja_adduser_email_text": "こんにちは {{name}}\n\nTekmonks ログイン アカウントを作成するリクエストを受け取りました。\n\nこの URL を新しいブラウザ ウィンドウに貼り付けて、アカウントにログインします\n{{{action_url}}}\n\nこの要求を予期していなかった場合は、会社の管理者に Tekmonks Login について連絡し、このメールを無視してください。\n\nありがとう、\nTekmonks Login チーム。",
+
+    "en_verifyemail_title":"Verify email - Your Tekmonks Login Account",
+    "en_verifyemail_html":"<p>Hello {{name}}</p><p>Please verify your email for your Tekmonks Login account.</p><p align='center'>{{{button_code_pre}}}Verify Account{{{button_code_post}}}</p><p>If you did not send this request, please contact your company's administrator for Tekmonks Login and ignore this email.</p><p>Thank you, <br/>The Tekmonks Login Team.</p>",
+    "en_verifyemail_text": "Hello {{name}}\n\nPlease verify your email for your Tekmonks Login account.\n\nPaste this URL into a new browser window to verify your account\n{{{action_url}}}\n\nIf you did not send this request, please contact your company's administrator for Tekmonks Login and ignore this email.\n\nThank you,\nThe Tekmonks Login Team.",
+
+    "hi_verifyemail_title":"अकाउंट वेरिफ़ाई करें - आपका Tekmonks अकाउंट",
+    "hi_verifyemail_html":"<p>नमस्ते {{name}}</p><p>आपके टेकमॉन्क्स अकाउंट के लिए कृपया अपना ईमेल वेरिफ़ाई करें।</p><p align='center'>{{{button_code_pre}}}अकाउंट वेरिफ़ाई करें{{{button_code_post}}}</p><p>यदि आपने यह अनुरोध नहीं भेजा है, तो कृपया टेकमॉन्क्स अकाउंट के लिए अपनी कंपनी के व्यवस्थापक से संपर्क करें और इस ईमेल को अनदेखा करें।</p><p>धन्यवाद, <br/>टेकमॉन्क्स अकाउंट की टीम।</p>",
+    "hi_verifyemail_text": "नमस्ते {{name}}\n\nआपके टेकमॉन्क्स अकाउंट के लिए कृपया अपना ईमेल वेरिफ़ाई करें।\n\nअपना अकाउंट वेरिफ़ाई करने के लिए इस URL को एक नई ब्राउज़र विंडो में पेस्ट करें\n{{{action_url}}}\n\nयदि आपने यह अनुरोध नहीं भेजा है, तो कृपया टेकमॉन्क्स अकाउंट के लिए अपनी कंपनी के व्यवस्थापक से संपर्क करें और इस ईमेल को अनदेखा करें।\n\nधन्यवाद,\nटेकमॉन्क्स अकाउंट की टीम।",
+
+    "ja_verifyemail_title":"メールの確認 - Tekmonks ログイン アカウント",
+    "ja_verifyemail_html":"<p>こんにちは {{name}}</p><p>Tekmonks ログイン アカウントのメールアドレスを確認してください。</p><p align='center'>{{{button_code_pre}}}アカウントを確認{{{button_code_post}}}</p><p>このリクエストを送信していない場合は、会社の Tekmonks ログインの管理者に連絡し、このメールを無視してください。</p><p>ありがとうございます。<br/>Tekmonks ログイン チーム 。</p>",
+    "ja_verifyemail_text": "こんにちは {{name}}\n\nTekmonks ログイン アカウントのメールアドレスを確認してください。\n\nこの URL を新しいブラウザ ウィンドウに貼り付けて、アカウントを確認します\n{{{action_url}}}\n\n このリクエストを送信する場合は、Tekmonks ログインについて会社の管理者に連絡し、このメールを無視してください。\n\nありがとう、\nTekmonks ログイン チーム。",
+
+    "en_newregistrationemail_title":"New user registration - Your Tekmonks Login Account",
+    "en_newregistrationemail_html":"<p>Hello {{adminname}}</p><p>A new user has registered in your organization's account. User name is {{name}} and ID is {{id}}.</p><p>Please approve the user by signing into your account.</p><p align='center'>{{{button_code_pre}}}Login to Approve the Account{{{button_code_post}}}</p><p>Thank you, <br/>The Tekmonks Login Team.</p>",
+    "en_newregistrationemail_text": "Hello {{adminname}}\n\nA new user has registered in your organization's account. User name is {{name}} and ID is {{id}}.\n\nPaste this URL into a new browser window to approve the user by signing into your account.\n{{{action_url}}}\n\nThank you,\nThe Tekmonks Login Team.",
+
+    "hi_newregistrationemail_title":"नए यूज़र का पंजीकरण - आपका Tekmonks लॉगिन खाता",
+    "hi_newregistrationemail_html":"<p>नमस्कार {{adminname}}</p><p>आपके संगठन के खाते में एक नए यूज़र ने पंजीकरण कराया है। यूज़र का नाम {{name}} है और आईडी {{id}} है।</p><p>कृपया अपने खाते में साइन इन करके यूज़र को स्वीकृति दें।</p><p align='center'>{{{button_code_pre }}}खाता स्वीकृत करने के लिए लॉगिन करें{{{button_code_post}}}</p><p>धन्यवाद, <br/>टेकमॉन्क्स अकाउंट की टीम।</p>",
+    "hi_newregistrationemail_text": "नमस्कार {{adminname}}\n\nआपके संगठन के खाते में एक नए यूज़र ने पंजीकरण कराया है। यूज़र का नाम {{name}} है और आईडी {{id}} है।\n\nअपने खाते में साइन इन करके यूज़र को स्वीकृति देने के लिए इस URL को एक नई ब्राउज़र विंडो में पेस्ट करें।\n{{action_url}}}\n\nधन्यवाद,\nटेकमॉन्क्स अकाउंट की टीम।",
+
+    "ja_newregistrationemail_title":"新規ユーザー登録 - Tekmonks ログイン アカウント",
+    "ja_newregistrationemail_html":"<p>こんにちは {{adminname}}</p><p>あなたの組織のアカウントに新しいユーザーが登録されました。 ユーザー名は {{name}}、ID は {{id}} です。</p><p>アカウントにサインインしてユーザーを承認してください。</p><p align='center'>{{{button_code_pre }}}ログインしてアカウントを承認{{{button_code_post}}}</p><p>ありがとうございます。<br/>Tekmonks ログイン チーム</p>",
+    "ja_newregistrationemail_text": "こんにちは {{adminname}}\n\nあなたの組織のアカウントに新しいユーザーが登録されました。 ユーザー名は {{name}}、ID は {{id}} です。\n\nこの URL を新しいブラウザ ウィンドウに貼り付けて、アカウントにサインインしてユーザーを承認します。\n{{{action_url}}}\n\nありがとう、\nTekmonksログインチーム。",
+
+    "en_approvedaccountemail_title":"Account Approved - Your Tekmonks Login Account",
+    "en_approvedaccountemail_html":"<p>Hello {{name}}</p><p>Your account has been approved. Your login ID is {{id}}.</p><p>Use the link below to login.</p><p align='center'>{{{button_code_pre}}}Login{{{button_code_post}}}</p><p>Thank you, <br/>The Tekmonks Login Team.</p>",
+    "en_approvedaccountemail_text": "Hello {{name}}\n\nYour account has been approved. Your login ID is {{id}}.\n\nPaste this URL into a new browser window to login into your account.\n{{{action_url}}}\n\nThank you,\nThe Tekmonks Login Team.",
+
+    "hi_approvedaccountemail_title":"खाता स्वीकृत - आपका Tekmonks लॉगिन खाता",
+    "hi_approvedaccountemail_html":"<p>नमस्ते {{name}}</p><p>आपका खाता स्वीकृत हो गया है। आपकी लॉगिन आईडी {{id}} है। </p><p>धन्यवाद, <br/>Tekmonks लॉगिन टीम।</p>",
+    "hi_approvedaccountemail_text": "नमस्कार {{name}}\n\nआपका खाता स्वीकृत हो गया है। आपकी लॉगिन आईडी {{id}} है।\n\nअपने खाते में लॉगिन करने के लिए इस URL को एक नई ब्राउज़र विंडो में पेस्ट करें।\n{{action_url}}}\n\nधन्यवाद,\nTekmonks लॉगिन टीम।",
+
+    "ja_approvedaccountemail_title":"アカウントが承認されました - Tekmonks ログイン アカウント",
+    "ja_approvedaccountemail_html":"<p>こんにちは {{name}}</p><p>あなたのアカウントは承認されました。 あなたのログイン ID は {{id}} です。</p><p>以下のリンクを使用してログインしてください。</p><p align='center'>{{{button_code_pre}}}ログイン{{{button_code_post}} }</p><p>ありがとう、<br/>Tekmonks ログイン チーム。</p>",
+    "ja_approvedaccountemail_text": "こんにちは {{name}}\n\nあなたのアカウントは承認されました。 ログイン ID は {{id}} です。\n\nこの URL を新しいブラウザ ウィンドウに貼り付けて、アカウントにログインしてください。\n{{{action_url}}}\n\nありがとうございます。\nTekmonks ログイン チーム。",
+
+    "button_code_pre": "<table border='0' width='100%' cellspacing='0' cellpadding='0'><tbody><tr><td><table border='0' cellspacing='0' cellpadding='0'><tbody><tr><td style='border-radius: 3px;' align='center' bgcolor='#0492c2'><a style='font-size: 16px; font-family: Helvetica, Arial, sans-serif; color: #ffffff; text-decoration: none; border-radius: 3px; padding: 12px 18px; border: 1px solid #0492c2; display: inline-block;' href='{{{action_url}}}' target='_blank' rel='noopener'>",
+    "button_code_post": " &rarr;</a></td></tr></tbody></table></td></tr></tbody></table>"
+}

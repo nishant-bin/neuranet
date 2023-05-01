@@ -4,13 +4,13 @@
     ],
     "redirects": [
         {
-            "^http(.*)://([^/]+?)/index.html$": "http{{{$1}}}://{{{$2}}}/apps/neuranet/index.html"
+            "^http(.*)://([^/]+?)/index.html$": "http{{{$1}}}://{{{$2}}}/apps/neuranet/loginappframework/index.html"
         },
         {
-            "^http(.*)://([^/]+?)/$": "http{{{$1}}}://{{{$2}}}/apps/neuranet/index.html"
+            "^http(.*)://([^/]+?)/$": "http{{{$1}}}://{{{$2}}}/apps/neuranet/loginappframework/index.html"
         },
         {
-            "^http(.*)://([^/]+?)$": "http{{{$1}}}://{{{$2}}}/apps/neuranet/index.html"
+            "^http(.*)://([^/]+?)$": "http{{{$1}}}://{{{$2}}}/apps/neuranet/loginappframework/index.html"
         }
     ],
     "diskCache": {

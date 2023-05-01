@@ -1,0 +1,114 @@
+<!--
+/* A user manager component.
+ * (C) 2021 TekMonks. All rights reserved.
+ * License: See enclosed license file.
+ */
+ -->
+
+<style>
+div::-webkit-scrollbar {
+    width: 0.5em !important;
+    height: 0.5em !important;
+    scroll-behavior: smooth !important;
+}
+
+div::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
+    margin: 15vh 15vw;
+    border-radius: 10px !important;
+}
+
+div::-webkit-scrollbar-thumb {
+    background-color: darkgrey !important;
+    border-radius: 10px !important;
+    background-clip: padding-box;
+}
+
+body{
+    margin: 0; padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    height: 100%;
+}
+
+div#container {
+    overflow-y: auto;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+}
+
+div.subcontainer {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    height: 100%;
+    box-sizing: border-box;
+    max-width: calc((100% - 6em) / 2);
+}
+
+div.subcontainer select {
+    padding: 1em;
+    border: 1px solid #03B3FF;
+    outline: none;
+    border-radius: 1em;
+    box-sizing: border-box;
+    width: 100%;
+    color: #017aae;
+}
+
+div.subcontainer text-editor {
+    flex-grow: 1;
+    resize: none;
+    border: 1px solid #03B3FF;
+    outline: none;
+    margin: 2em 0em;
+    border-radius: 1em;
+    box-sizing: border-box;
+    padding: 1em;
+    width: 100%;
+}
+
+span#botbutton {
+    display: flex;
+    align-items: center;
+    margin: 0em 1em;
+}
+img#botbutton { width: 4em; height: 4em; }
+</style>
+{{{CONF.MOBILE_MEDIA_QUERY_START}}}
+span#header > input {margin-right: 0em; max-width: calc(100% - 9em);}
+span#header > button {min-width: 7em;}
+{{{CONF.MOBILE_MEDIA_QUERY_END}}}
+
+{{{styleBody}}}
+
+<div id="container">
+<div id="sourcedb" class="subcontainer">
+    <select id="sourcedb">
+        {{#CONF.DBS_SUPPORTED}}
+        <option value="{{.}}">{{.}}</option>
+        {{/CONF.DBS_SUPPORTED}}
+    </select>
+    <text-editor id="sourcesql" editormode="sql" takefocus downloadfilename="code.sql" 
+        uploadMime=".sql" downloadMime="application/sql"></text-editor>
+</div>
+
+<span id="botbutton">
+<img id="botbutton" src="{{{COMPONENT_PATH}}}/img/bot.svg" onclick="monkshu_env.components['neuranet-sql'].convert(this)">
+</span>
+
+<div id="targetdb" class="subcontainer">
+    <select id="targetdb">
+        {{#CONF.DBS_SUPPORTED}}
+        <option value="{{.}}">{{.}}</option>
+        {{/CONF.DBS_SUPPORTED}}
+    </select>
+    <text-editor id="targetsql" editormode="sql" readonly showToolbarLoadButton="false" 
+        downloadfilename="code.sql" uploadMime=".sql" downloadMime="application/sql"></text-editor>
+</div>
+</div>
+
+<dialog-box id="dialog"></dialog-box>

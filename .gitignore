@@ -1,8 +1,5 @@
 backend/server/logs
 frontend/server/logs
 debug.log
-backend/apps/xbin/drive/*
-!backend/apps/xbin/drive/.dummy
-backend/apps/xbin/logs/remotelog.ndjson
-backend/apps/xbin/db/app.db*
-
+backend/apps/loginapp/logs/remotelog.ndjson
+backend/apps/loginapp/db/*.db*

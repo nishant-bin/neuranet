@@ -1,0 +1,19 @@
+[
+    "BEGIN TRANSACTION",
+	
+	
+    "CREATE TABLE views(org varchar not null, view varchar not null)",
+
+    "INSERT INTO views (org, view) VALUES ('_org_monkshu_loginapp_defaultorg', 'chooser')",
+
+    "INSERT INTO views (org, view) VALUES ('Tekmonks', 'gencode')",
+
+    "INSERT INTO views (org, view) VALUES ('Tekmonks', 'search')",
+
+    "INSERT INTO views (org, view) VALUES ('Tekmonks', 'sqltranslate')",
+
+    "INSERT INTO views (org, view) VALUES ('Tekmonks', 'chat')",
+	
+
+    "COMMIT TRANSACTION"
+]

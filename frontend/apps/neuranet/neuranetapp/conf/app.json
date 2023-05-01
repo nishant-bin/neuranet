@@ -1,0 +1,8 @@
+{
+    "COMPONENTS": ["neuranetapp/components/text-editor", "neuranetapp/components/neuranet-sql"],
+    "APP_ABOUT_URL": "https://neuranet.app/",
+    "FORCE_LOAD_VIEW": "___org_monkshu_loginapp_force_load_view",
+    "VIEWS_RELATIVE_PATH": "/views",
+    "VIEW_CHOOSER": "chooser",
+    "ASYNC_API_POLL_WAIT": 5000
+}
