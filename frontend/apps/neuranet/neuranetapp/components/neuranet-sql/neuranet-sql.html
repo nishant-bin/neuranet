@@ -32,9 +32,36 @@ body{
     height: 100%;
 }
 
-div#container {
+div#header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    height: 3em;
+}
+
+select {
+    padding: 1em;
+    border: 1px solid #03B3FF;
+    outline: none;
+    border-radius: 1em;
+    box-sizing: border-box;
+    color: #017aae;
+    flex-grow: 1;
+    width: 10%;
+}
+
+span#controls {
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+    margin: 0em 5%;
+    color: #017aae;
+}
+input#validatesql {margin-right: 0.5em;}
+
+div#mainworkspace {
     overflow-y: auto;
-    height: 100%;
+    height: calc(100% - 3em);
     width: 100%;
     display: flex;
     flex-direction: row;
@@ -49,17 +76,7 @@ div.subcontainer {
     max-width: calc((100% - 6em) / 2);
 }
 
-div.subcontainer select {
-    padding: 1em;
-    border: 1px solid #03B3FF;
-    outline: none;
-    border-radius: 1em;
-    box-sizing: border-box;
-    width: 100%;
-    color: #017aae;
-}
-
-div.subcontainer text-editor {
+text-editor {
     flex-grow: 1;
     resize: none;
     border: 1px solid #03B3FF;
@@ -75,23 +92,39 @@ span#botbutton {
     display: flex;
     align-items: center;
     margin: 0em 1em;
+    justify-content: center;
 }
 img#botbutton { width: 4em; height: 4em; }
 </style>
 {{{CONF.MOBILE_MEDIA_QUERY_START}}}
 span#header > input {margin-right: 0em; max-width: calc(100% - 9em);}
 span#header > button {min-width: 7em;}
+div.subcontainer {max-width: unset;}
+div#mainworkspace {flex-direction: column;}
 {{{CONF.MOBILE_MEDIA_QUERY_END}}}
 
 {{{styleBody}}}
 
-<div id="container">
-<div id="sourcedb" class="subcontainer">
+<div id="header">
     <select id="sourcedb">
         {{#CONF.DBS_SUPPORTED}}
         <option value="{{.}}">{{.}}</option>
         {{/CONF.DBS_SUPPORTED}}
     </select>
+
+    <span id="controls">
+        <input id="validatesql" type="checkbox">
+        <label for="validatesql" style="word-wrap:break-word">Skip validation</label>
+    </span>
+
+    <select id="targetdb">
+        {{#CONF.DBS_SUPPORTED}}
+        <option value="{{.}}">{{.}}</option>
+        {{/CONF.DBS_SUPPORTED}}
+    </select>
+</div>
+<div id="mainworkspace">
+<div id="sourcedb" class="subcontainer">
     <text-editor id="sourcesql" editormode="sql" takefocus downloadfilename="code.sql" 
         uploadMime=".sql" downloadMime="application/sql"></text-editor>
 </div>
@@ -101,11 +134,6 @@ span#header > button {min-width: 7em;}
 </span>
 
 <div id="targetdb" class="subcontainer">
-    <select id="targetdb">
-        {{#CONF.DBS_SUPPORTED}}
-        <option value="{{.}}">{{.}}</option>
-        {{/CONF.DBS_SUPPORTED}}
-    </select>
     <text-editor id="targetsql" editormode="sql" readonly showToolbarLoadButton="false" 
         downloadfilename="code.sql" uploadMime=".sql" downloadMime="application/sql"></text-editor>
 </div>

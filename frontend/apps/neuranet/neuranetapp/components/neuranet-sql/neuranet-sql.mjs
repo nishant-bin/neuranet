@@ -25,11 +25,15 @@ async function convert(elementImg) {
 		texteditorResponse = shadowRoot.querySelector("text-editor#targetsql"), requestSQL = texteditorRequest.value,
 		dbfrom = conf.DB_BACKEND_ID_MAPPINGS[shadowRoot.querySelector("select#sourcedb").value], 
 		dbto = conf.DB_BACKEND_ID_MAPPINGS[shadowRoot.querySelector("select#targetdb").value],
+		validate = shadowRoot.querySelector("input#validatesql").checked,
 		userid = host.getAttribute("user");
+	
 	if (requestSQL.trim() == "") {_showError(await i18n.get("NothingToConvert")); return;}
-	elementImg.src = `${COMPONENT_PATH}/img/spinner.svg`;
+	texteditorResponse.value = ""; elementImg.src = `${COMPONENT_PATH}/img/spinner.svg`;
 	const convertedResponse = dbfrom == dbto ? {sql: requestSQL, result: true} : await apiman.rest(
-		`${host.getAttribute("backendurl")}/${API_CONVERT}`, "POST", {request: requestSQL, dbfrom, dbto, id: userid}, true);
+		`${host.getAttribute("backendurl")}/${API_CONVERT}`, "POST", {request: requestSQL, dbfrom, dbto, id: userid, 
+			skipvalidation: validate, use_simple_validator: conf.SIMPLE_VALIDATOR}, true, false, false, 
+			false, false, conf.GENSQL_API_TIMEOUT);
 	elementImg.src = `${COMPONENT_PATH}/img/bot.svg`;
 
 	if (!convertedResponse) {LOG.error("Conversion failed due to backend internal issues."); _showError(await i18n.get("InternalErrorConverting")); return;}
@@ -41,17 +45,18 @@ async function convert(elementImg) {
 			case "badinputsql": key = "BadInputSQL"; break;
 			default: key = "Internal"; break;
 		}
-		const err = mustache.render(await i18n.get(`ErrorConverting${key}`), {
-			message: `${convertedResponse.parser_error.name}: ${convertedResponse.parser_error.message}`, 
-			line: convertedResponse.parser_error.location.start.line, column: convertedResponse.parser_error.location.start.column });
+		const err = mustache.render(await i18n.get(`ErrorConverting${key}`), convertedResponse.parser_error?.[0] ?
+			{ message: convertedResponse.parser_error[0].error, line: convertedResponse.parser_error[0].line, 
+				column: convertedResponse.parser_error[0].column } : {});
 		LOG.error(err); if (key == "BadInputSQL") _showErrorNoCenter(err); else _showError(err); return;
 	}
 
-	let sqlErrHeader = ""; if (convertedResponse.possibleError) {	// set the SQL with an error warning if needed
-		err = mustache.render(await i18n.get("PossibleErrorConverting"), {
-			message: `${convertedResponse.parser_error.name}: ${convertedResponse.parser_error.message}`, 
-			line: convertedResponse.parser_error.location.start.line, column: convertedResponse.parser_error.location.start.column });
-	}; texteditorResponse.value = sqlErrHeader+convertedResponse.sql;
+	let sqlResponseErrHeader; if (convertedResponse.possible_error) {	// set the SQL with an error warning if needed
+		sqlResponseErrHeader = mustache.render(await i18n.get("PossibleErrorConvertingSQL"), 
+			convertedResponse.parser_error ? { message: convertedResponse.parser_error[0].error, 
+				line: convertedResponse.parser_error[0].line, 
+				column: convertedResponse.parser_error[0].column } : {}); + "\n\n";
+	}; texteditorResponse.value = (convertedResponse.possible_error?sqlResponseErrHeader:"")+convertedResponse.sql;
 }
 
 const _showError = async error => { await monkshu_env.components['dialog-box'].showDialog(`${COMPONENT_PATH}/dialogs/error.html`, 

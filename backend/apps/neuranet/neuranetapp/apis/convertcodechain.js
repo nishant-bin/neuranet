@@ -122,7 +122,7 @@ const _refreshLangFilesIfDebug = _ => {
     SUPPORTED_LANGS = LANG_MAPPINGS.supported_langs;
     const confjson = mustache.render(fs.readFileSync(`${NEURANET_CONSTANTS.CONFDIR}/neuranet.json`, "utf8"), 
         NEURANET_CONSTANTS).replace(/\\/g, "\\\\");   // escape windows paths
-    global.NEURANET_CONSTANTS.CONF = JSON.parse(confjson);
+    NEURANET_CONSTANTS.CONF = JSON.parse(confjson);
 }
  
 const validateRequest = jsonReq => (jsonReq && jsonReq.id && (jsonReq.requestid || 

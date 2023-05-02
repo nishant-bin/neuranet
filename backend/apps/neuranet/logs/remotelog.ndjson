@@ -348,3 +348,6 @@
 {"ts":"2023:05:02:16:14:46","level":"error","message":"[192.168.1.15] Error in fetching https://192.168.1.15:9090/apps/neuranet/convertcode for request {\"request\":\"efq\",\"langfrom\":\"cobol\",\"langto\":\"java\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
 {"ts":"2023:05:02:16:14:46","level":"error","message":"[192.168.1.15] Conversion failed due to backend internal issues."}
 {"ts":"2023:05:02:16:15:33","level":"info","message":"[192.168.1.15] Logout of user ID: thecompany@tekmonks.com."}
+{"ts":"2023:05:03:02:47:20","level":"info","message":"[192.168.1.61] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:05:03:03:04:05","level":"info","message":"[192.168.1.61] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:05:03:03:06:15","level":"info","message":"[192.168.1.61] Logout of user ID: thecompany@tekmonks.com."}
