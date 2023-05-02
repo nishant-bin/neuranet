@@ -328,3 +328,23 @@
 {"ts":"2023:05:02:03:54:35","level":"info","message":"[192.168.1.61] Login succeeded for thecompany@tekmonks.com."}
 {"ts":"2023:05:02:03:55:13","level":"error","message":"[192.168.1.61] Error in initializing embeded app neuranetapp, error is ReferenceError: i18n is not defined."}
 {"ts":"2023:05:02:03:56:16","level":"info","message":"[192.168.1.61] Logout of user ID: thecompany@tekmonks.com."}
+{"ts":"2023:05:02:15:54:59","level":"info","message":"[192.168.1.15] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:05:02:16:04:45","level":"info","message":"[192.168.1.15] Login succeeded for thecompany@tekmonks.com."}
+{"ts":"2023:05:02:16:04:55","level":"error","message":"[192.168.1.15] Error in initializing embeded app neuranetapp, error is TypeError: Cannot read properties of undefined (reading 'showMessage')."}
+{"ts":"2023:05:02:16:05:34","level":"error","message":"[192.168.1.15] Error in fetching https://192.168.1.15:9090/apps/neuranet/convertcode for request {\"request\":\"fefefw\",\"langfrom\":\"cobol\",\"langto\":\"java\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:05:02:16:05:34","level":"error","message":"[192.168.1.15] Conversion failed due to backend internal issues."}
+{"ts":"2023:05:02:16:05:50","level":"error","message":"[192.168.1.15] Error in fetching https://192.168.1.15:9090/apps/neuranet/convertcode for request {\"request\":\"fefefw\",\"langfrom\":\"cobol\",\"langto\":\"java\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:05:02:16:05:50","level":"error","message":"[192.168.1.15] Conversion failed due to backend internal issues."}
+{"ts":"2023:05:02:16:06:43","level":"error","message":"[192.168.1.15] Error in fetching https://192.168.1.15:9090/apps/neuranet/convertcode for request {\"request\":\"efq\",\"langfrom\":\"cobol\",\"langto\":\"java\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:05:02:16:06:43","level":"error","message":"[192.168.1.15] Conversion failed due to backend internal issues."}
+{"ts":"2023:05:02:16:08:47","level":"error","message":"[192.168.1.15] Error in fetching https://192.168.1.15:9090/apps/neuranet/convertcode for request {\"request\":\"efq\",\"langfrom\":\"cobol\",\"langto\":\"java\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:05:02:16:08:47","level":"error","message":"[192.168.1.15] Conversion failed due to backend internal issues."}
+{"ts":"2023:05:02:16:09:07","level":"error","message":"[192.168.1.15] Error in fetching https://192.168.1.15:9090/apps/neuranet/convertcode for request {\"request\":\"efq\",\"langfrom\":\"cobol\",\"langto\":\"java\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:05:02:16:09:07","level":"error","message":"[192.168.1.15] Conversion failed due to backend internal issues."}
+{"ts":"2023:05:02:16:09:31","level":"error","message":"[192.168.1.15] Error in fetching https://192.168.1.15:9090/apps/neuranet/convertcode for request {\"request\":\"efq\",\"langfrom\":\"cobol\",\"langto\":\"java\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:05:02:16:09:31","level":"error","message":"[192.168.1.15] Conversion failed due to backend internal issues."}
+{"ts":"2023:05:02:16:11:49","level":"error","message":"[192.168.1.15] Error in fetching https://192.168.1.15:9090/apps/neuranet/convertcode for request {\"request\":\"efq\",\"langfrom\":\"cobol\",\"langto\":\"java\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:05:02:16:11:49","level":"error","message":"[192.168.1.15] Conversion failed due to backend internal issues."}
+{"ts":"2023:05:02:16:14:46","level":"error","message":"[192.168.1.15] Error in fetching https://192.168.1.15:9090/apps/neuranet/convertcode for request {\"request\":\"efq\",\"langfrom\":\"cobol\",\"langto\":\"java\",\"id\":\"thecompany@tekmonks.com\"} of type POST due to 500: "}
+{"ts":"2023:05:02:16:14:46","level":"error","message":"[192.168.1.15] Conversion failed due to backend internal issues."}
+{"ts":"2023:05:02:16:15:33","level":"info","message":"[192.168.1.15] Logout of user ID: thecompany@tekmonks.com."}

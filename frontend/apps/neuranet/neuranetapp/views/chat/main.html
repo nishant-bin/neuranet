@@ -125,7 +125,7 @@
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_END}}}
 
 <script type="module">
-import {chat} from "{{{viewpath}}}/js/chat.mjs"; monkshu_env.apps[APP_CONSTANTS.APP_NAME].chat = chat; 
+import {chat} from "{{{viewpath}}}/js/chat.mjs"; monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].chat = chat; 
 </script>
 
 <div id="body">
@@ -143,7 +143,7 @@ import {chat} from "{{{viewpath}}}/js/chat.mjs"; monkshu_env.apps[APP_CONSTANTS.
 
 <div id="message">
     <textarea id="messagearea"></textarea>
-    <img id="send" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].chat.send(this)" src="{{{viewpath}}}/img/send.svg">
+    <img id="send" onclick="monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].chat.send(this)" src="{{{viewpath}}}/img/send.svg">
 </div>
 
 <template id="chatresponse_insertion_template">

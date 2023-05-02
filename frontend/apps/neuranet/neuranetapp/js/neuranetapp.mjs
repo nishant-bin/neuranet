@@ -13,8 +13,11 @@ import {session} from "/framework/js/session.mjs";
 const MODULE_PATH = util.getModulePath(import.meta), 
     MAIN_HTML = util.resolveURL(`${APP_CONSTANTS.EMBEDDED_APP_PATH}/main.html`);
 
-const main = async (data, _mainLoginAppModule) => {
+let loginappMain;
+
+const main = async (data, mainLoginAppModule) => {
     window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {main: neuranetapp};
+    loginappMain = mainLoginAppModule; loginappMain.addGoHomeListener(gohome);
 
     APP_CONSTANTS.VIEWS_PATH = util.resolveURL(`${APP_CONSTANTS.EMBEDDED_APP_PATH}/views`);
     await _createdata(data); 
@@ -22,7 +25,7 @@ const main = async (data, _mainLoginAppModule) => {
 }
 
 async function _createdata(data) {   
-    let viewPath, views; 
+    let viewPath, views; delete data.showhome;
     const viewsAllowed = (session.get(APP_CONSTANTS.LOGIN_RESPONSE))?.views||[];
     if (!session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)) {
         viewPath = viewsAllowed.length == 1?`${APP_CONSTANTS.VIEWS_PATH}/${viewsAllowed[0]}` :
@@ -30,19 +33,19 @@ async function _createdata(data) {
         views = []; for (const view of viewsAllowed) if (view != APP_CONSTANTS.VIEW_CHOOSER) views.push(  // views we can choose from
             {viewicon: `${APP_CONSTANTS.VIEWS_PATH}/${view}/img/icon.svg`, 
                 viewlabel: await i18n.get(`ViewLabel_${view}`), viewname: view});
-    } else viewPath = `${APP_CONSTANTS.VIEWS_PATH}/${session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)}`;
+    } else {
+        if (viewsAllowed.length > 1) data.showhome = true;
+        viewPath = `${APP_CONSTANTS.VIEWS_PATH}/${session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)}`;
+    }
 
     const viewURL = `${viewPath}/main.html`, viewMainMJS = `${viewPath}/js/main.mjs`;
     data.viewpath = viewPath; 
-    try { const viewMain = await import(viewMainMJS); await viewMain.main.initView(data, main); }    // init the view before loading it
+    try { const viewMain = await import(viewMainMJS); await viewMain.main.initView(data, neuranetapp); }    // init the view before loading it
     catch (err) { LOG.error(`Error in initializing view ${viewPath}.`); }
     data.viewcontent = await router.loadHTML(viewURL, {...data, views}); 
 }
 
-function gohome() {
-    session.remove(APP_CONSTANTS.FORCE_LOAD_VIEW);
-    router.navigate(APP_CONSTANTS.MAIN_HTML);
-}
+const gohome = _ => session.remove(APP_CONSTANTS.FORCE_LOAD_VIEW);
 
 async function openView(viewname) {
     session.set(APP_CONSTANTS.FORCE_LOAD_VIEW, viewname);
@@ -54,4 +57,6 @@ async function openView(viewname) {
 
 function onlogout() {session.remove(APP_CONSTANTS.FORCE_LOAD_VIEW);}
 
-export const neuranetapp = {main, openView, gohome, onlogout};
+const showMessage = message => loginappMain.showMessage(message);
+
+export const neuranetapp = {main, openView, gohome, onlogout, showMessage};

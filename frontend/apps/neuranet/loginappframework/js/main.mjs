@@ -9,7 +9,7 @@ import {session} from "/framework/js/session.mjs";
 import {securityguard} from "/framework/js/securityguard.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
-const dialog = _ => monkshu_env.components['dialog-box'];
+const dialog = _ => monkshu_env.components['dialog-box'], gohomeListeners = [];
 
 function toggleMenu() {
     const imgElement = document.querySelector("span#menubutton > img"), menuIsOpen = imgElement.src.indexOf("menu.svg") != -1;
@@ -28,7 +28,7 @@ async function changePassword(_element) {
     dialog().showDialog(`${APP_CONSTANTS.DIALOGS_PATH}/changepass.html`, true, true, {}, "dialog", ["p1","p2"], async result=>{
         const done = await loginmanager.changepassword(session.get(APP_CONSTANTS.USERID), result.p1);
         if (!done) dialog().error("dialog", await i18n.get("PWCHANGEFAILED"));
-        else { dialog().hideDialog("dialog"); _showMessage(await i18n.get("PWCHANGED")); }
+        else { dialog().hideDialog("dialog"); showMessage(await i18n.get("PWCHANGED")); }
     });
 }
 
@@ -68,7 +68,7 @@ async function changeProfile(_element) {
 
 function showLoginMessages() {
     const data = router.getCurrentPageData();
-    if (data.showDialog) { _showMessage(data.showDialog.message); delete data.showDialog; router.setCurrentPageData(data); }
+    if (data.showDialog) { showMessage(data.showDialog.message); delete data.showDialog; router.setCurrentPageData(data); }
 }
 
 const logoutClicked = _ => loginmanager.logout();
@@ -83,6 +83,13 @@ const interceptPageData = _ => router.addOnLoadPageData(APP_CONSTANTS.MAIN_HTML,
     } catch (err) { LOG.error(`Error in initializing embeded app ${embeddedAppName}, error is ${err}.`); }
 });
 
+async function gohome() {
+    for (const listener of gohomeListeners) await listener();
+    router.navigate(APP_CONSTANTS.MAIN_HTML);
+}
+
+const addGoHomeListener = listener => gohomeListeners.push(listener);
+
 async function _getTOTPQRCode(key) {
 	const title = await i18n.get("Title");
 	await $$.require(`${APP_CONSTANTS.COMPONENTS_PATH}/register-box/3p/qrcode.min.js`);
@@ -90,5 +97,7 @@ async function _getTOTPQRCode(key) {
 	    `otpauth://totp/${title}?secret=${key}&issuer=TekMonks&algorithm=sha1&digits=6&period=30`, (_, data_url) => resolve(data_url)));
 }
 
-const _showMessage = message => dialog().showMessage(message, "dialog");
-export const main = {toggleMenu, changePassword, showOTPQRCode, showLoginMessages, changeProfile, logoutClicked, interceptPageData}
+const showMessage = message => dialog().showMessage(message, "dialog");
+
+export const main = {toggleMenu, changePassword, showOTPQRCode, showLoginMessages, changeProfile, logoutClicked, 
+    interceptPageData, gohome, addGoHomeListener, showMessage}

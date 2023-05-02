@@ -62,6 +62,8 @@ span#desktopheader {
 
 img#textlogo {height: 2.2em !important; cursor: pointer;}
 
+img#home {cursor: pointer;}
+
 dialog-box#dialog {
 	z-index: 51;
 	position: absolute;
@@ -160,6 +162,7 @@ span#mobilefooter > img {
 <span id="desktopheader">
 	<span id="rightheader">
 	<img id="textlogo" src="./img/logomainpage.svg" onclick="window.open(APP_CONSTANTS.APP_ABOUT_URL, '_blank')">
+	{{#showhome}}<img id="home" src="./img/home.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.gohome()">{{/showhome}}
 	<span id="greeting">
 	<span><img src="./img/person.svg"></span>
 	<span id="name">{{i18n.Hi}} {{#_org_monkshu_session}}username{{/_org_monkshu_session}}!</span>

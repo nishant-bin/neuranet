@@ -16,7 +16,7 @@
             "response_finishreason": "data.choices[0].finish_reason",
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "sql_ai_response.json",
-            "read_ai_response_from_samples": false
+            "read_ai_response_from_samples": true
         },
 
         "chat-gpt35-turbo": {
@@ -44,7 +44,7 @@
             "response_finishreason": "data.choices[0].finish_reason",
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "code_ai_response.json",
-            "read_ai_response_from_samples": false
+            "read_ai_response_from_samples": true
         },
 
         "lang-code-chaingen35": {
@@ -59,7 +59,7 @@
             "response_finishreason": "data.choices[0].finish_reason",
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "chaincode_model_response.json",
-            "read_ai_response_from_samples": false
+            "read_ai_response_from_samples": true
         }
     }
 }

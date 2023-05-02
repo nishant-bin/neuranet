@@ -3,6 +3,8 @@
  * (C) 2022 TekMonks. All rights reserved.
  */
 
+const fs = require("fs");
+const mustache = require("mustache");
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
@@ -51,11 +53,14 @@ exports.doService = async jsonReq => {
 	}
 }
 
-const _getPromptFile = async (langfrom, langto) => 
-	LANG_MAPPINGS[`${langfrom}_${langto}`]?.promptfile_lang ||
-		LANG_MAPPINGS[`${langfrom}_*`]?.promptfile_lang || 
-		LANG_MAPPINGS[`*_${langto}`]?.promptfile_lang || 
-		LANG_MAPPINGS[DEFAULT]?.promptfile_lang;
+const _getPromptFile = async (langfrom, langto) => {
+	const LANG_MAPPING_TO_USE = LANG_MAPPINGS.mappings[`${langfrom}_${langto}`] ||
+		LANG_MAPPINGS.mappings[`${langfrom}_*`] || 
+		LANG_MAPPINGS.mappings[`*_${langto}`] || 
+		LANG_MAPPINGS.mappings[DEFAULT];
+	return LANG_MAPPING_TO_USE.promptfile_lang;
+}
+	
 
 const _refreshLangFilesIfDebug = _ => {
     if ((!DEBUG_MODE) && LANG_MAPPINGS && SUPPORTED_LANGS) return;
@@ -63,7 +68,7 @@ const _refreshLangFilesIfDebug = _ => {
     SUPPORTED_LANGS = LANG_MAPPINGS.supported_langs;
     const confjson = mustache.render(fs.readFileSync(`${NEURANET_CONSTANTS.CONFDIR}/neuranet.json`, "utf8"), 
         NEURANET_CONSTANTS).replace(/\\/g, "\\\\");   // escape windows paths
-    global.NEURANET_CONSTANTS.CONF = JSON.parse(confjson);
+    NEURANET_CONSTANTS.CONF = JSON.parse(confjson);
 }
  
 const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.request && jsonReq.langfrom && jsonReq.langto &&

@@ -77,7 +77,7 @@ div#mainworkspace {flex-direction: column;}
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_END}}}
 
 <script type="module">
-import {gencode} from "{{{viewpath}}}/js/gencode.mjs"; monkshu_env.apps[APP_CONSTANTS.APP_NAME].gencode = gencode; 
+import {gencode} from "{{{viewpath}}}/js/gencode.mjs"; monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].gencode = gencode; 
 </script>
 
 <div id="header">
@@ -106,7 +106,7 @@ import {gencode} from "{{{viewpath}}}/js/gencode.mjs"; monkshu_env.apps[APP_CONS
 </div>
 
 <span id="botbutton">
-<img id="botbutton" src="{{{viewpath}}}/img/bot.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].gencode.convert(this)">
+<img id="botbutton" src="{{{viewpath}}}/img/bot.svg" onclick="monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].gencode.convert(this)">
 </span>
 
 <div id="targetlang" class="subcontainer">
