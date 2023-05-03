@@ -8,6 +8,26 @@
 @import url("{{{componentPath}}}/3p/codemirror/lib/codemirror.css");
 @import url("{{{componentPath}}}/3p/codemirror/addon/lint/lint.css");
 
+
+::-webkit-scrollbar {
+    width: 0.5em !important;
+    height: 0.5em !important;
+    scroll-behavior: smooth !important;
+}
+
+::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
+    margin: 5em;
+    border-radius: 1em !important;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: darkgrey !important;
+    border-radius: 1em !important;
+    background-clip: padding-box;
+}
+
 html, body {
     margin: 0%;
     height: 100%;

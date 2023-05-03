@@ -16,7 +16,7 @@
         "*_cobol": {"promptfile_lang": "generic_langprompt.txt"},
         "*_cpp": {"promptfile_lang": "generic_langprompt.txt"},
         "*_java": {"promptfile_lang": "generic_langprompt.txt"},
-        "*_js": {"promptfile_lang": "generic_langprompt.txt"},
+        "*_js": {"promptfile_lang": "tonodejs_langprompt.txt"},
         "*_nodejs": {"promptfile_lang": "generic_langprompt.txt"},
         "*_csharp": {"promptfile_lang": "generic_langprompt.txt"},
         "*_swift": {"promptfile_lang": "generic_langprompt.txt"},

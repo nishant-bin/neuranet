@@ -1,0 +1,5 @@
+Translate this from {{{langfrom}}} to Nodejs. Do not add comments.
+{{{langfrom}}} code
+{{{request}}}
+
+Nodejs code

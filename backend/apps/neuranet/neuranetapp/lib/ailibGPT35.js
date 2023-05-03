@@ -18,6 +18,13 @@ exports.process = async function(data, promptFile, apiKey, model) {
     const modelObject = await _getAIModel(model); 
     if (!modelObject) { LOG.error(`Bad model object - ${modelObject}.`); return null; }
 
+    const tokencount_request = await countTokens(prompt, modelObject.request.model, modelObject.token_approximation_uplift);
+    if (tokencount_request > modelObject.request.max_tokens - 1) {
+        LOG.error(`Request too large for the model's context length - the token count is ${tokencount_request}, the model's max context length is ${modelObject.request.model}.`); 
+        LOG.error(`The request prompt was ${JSON.stringify(prompt)}`);
+        return null; 
+    } else modelObject.request.max_tokens = modelObject.request.max_tokens - tokencount_request;
+
     let promptObject;
     if (!modelObject.request_contentpath)
     {   
@@ -71,4 +78,16 @@ async function _getPrompt(promptFile) {
     const pathToFile = path.resolve(promptFile);
     if (!PROMPT_CACHE[pathToFile]) PROMPT_CACHE[pathToFile] = await fspromises.readFile(pathToFile, "utf-8");
     return  PROMPT_CACHE[pathToFile];
+}
+
+async function countTokens(string, AImodel, uplift=1.05) {
+    let count;
+    if (AImodel.includes("gpt-3")) {
+        const encoded = require("gpt-3-encoder").encode(string);
+        count = encoded.length;
+    } else {
+        LOG.warn(`${AImodel} is not supported, using an estimation to calculate tokens.`);
+        count = (string.length/4); 
+    }
+    return Math.ceil(count*uplift);
 }
