@@ -8,6 +8,7 @@ const mustache = require("mustache");
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const LANG_MAPPINGS_FILE = `${NEURANET_CONSTANTS.CONFDIR}/langmappings.json`; 
 const codevalidator = utils.requireWithDebug(`${NEURANET_CONSTANTS.LIBDIR}/codevalidator.js`, NEURANET_CONSTANTS.CONF.debug_mode);
 
@@ -46,6 +47,7 @@ exports.doService = async jsonReq => {
 		LOG.error(`AI library error processing request ${JSON.stringify(jsonReq)}`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 	} else {
+		dblayer.logUsage(jsonReq.id, response.metric_cost, aiModelToUse);
 		const code = response.airesponse; const validationResult = await codevalidator.validate(code, jsonReq.langto, 
 			undefined, jsonReq.use_simple_validator);
 		return {code, reason: REASONS.OK, possible_error: validationResult.isOK?undefined:true, 

@@ -81,12 +81,12 @@ async function _getPrompt(promptFile) {
 }
 
 async function countTokens(string, AImodel, uplift=1.05) {
-    let count;
-    if (AImodel.includes("gpt-3")) {
-        const encoded = require("gpt-3-encoder").encode(string);
+    let count, encoderLib; try {encoderLib = require("gpt-3-encoder")} catch (err) {LOG.warn(`GPT3 encoder library not available for estimation, using approximate estimation method instead. The error is ${err}.`);}
+    if (AImodel.includes("gpt-3") && encoderLib) {
+        const encoded = encoderLib.encode(string);
         count = encoded.length;
     } else {
-        LOG.warn(`${AImodel} is not supported, using an estimation to calculate tokens.`);
+        if (encoderLib) LOG.warn(`${AImodel} is not supported using encoder, using the approximate estimation method to calculate tokens.`);
         count = (string.length/4); 
     }
     return Math.ceil(count*uplift);

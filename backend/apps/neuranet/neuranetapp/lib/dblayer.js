@@ -24,6 +24,9 @@ exports.getViewsForOrg = async org => {
 	return selectedViews;
 }
 
+exports.logUsage = async (id, usage, model) => db.runCmd("INSERT INTO usage (id, usage, model) values (?,?,?)",
+	[id, usage, model]);
+
 function _flattenArray(results, columnName, functionToCall) { 
 	if (!results) return [];
 	const retArray = []; for (const result of results) retArray.push(

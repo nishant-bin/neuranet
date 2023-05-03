@@ -13,6 +13,7 @@ const mustache = require("mustache");
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const LANG_MAPPINGS_FILE = `${NEURANET_CONSTANTS.CONFDIR}/langmappings.json`; 
 const LANG_CHAINS_FILE = `${NEURANET_CONSTANTS.CONFDIR}/langagichaindriver.json`; 
 const codevalidator = utils.requireWithDebug(`${NEURANET_CONSTANTS.LIBDIR}/codevalidator.js`, NEURANET_CONSTANTS.CONF.debug_mode);
@@ -81,6 +82,8 @@ async function _realDoService(jsonReq, _servObject, _headers, _url, partialRespo
             LOG.error(`AI library error processing request on chain ${JSON.stringify(request)}.`); 
             return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
         }
+
+        dblayer.logUsage(jsonReq.id, response.metric_cost, aiModelToUse);
         const code = response.airesponse, validationResult = await codevalidator.validate(code, 
             jsonReq.langto, undefined, jsonReq.use_simple_validator);
         if (!validationResult.isOK) {allValidationsOK = false; validationErrors.push(...validationResult.errors);}

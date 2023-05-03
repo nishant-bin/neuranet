@@ -18,6 +18,7 @@
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest"}, 
 	MODEL_DEFAULT = "chat-gpt35-turbo", CHAT_SESSION_UPDATE_TIMESTAMP_KEY = "__last_update",
@@ -50,6 +51,7 @@ exports.doService = async jsonReq => {
 		LOG.error(`AI library error processing request ${JSON.stringify(jsonReq)}`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 	} else {
+		dblayer.logUsage(jsonReq.id, response.metric_cost, aiModelToUse);
 		if (jsonReq.maintain_session) {
 			chatsession.push({"role": "user", "content": finalSessionObject.at(-1).content},
 				{"role": "assistant", "content": response.airesponse});

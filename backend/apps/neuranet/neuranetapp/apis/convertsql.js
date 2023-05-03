@@ -5,6 +5,7 @@
 const fspromises = require("fs").promises;
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const sqlvalidator = require(`${NEURANET_CONSTANTS.LIBDIR}/sqlvalidator.js`);
 const DB_MAPPINGS = require(`${NEURANET_CONSTANTS.CONFDIR}/dbmappings.json`).mappings; 
 const SUPPORTED_DBS = require(`${NEURANET_CONSTANTS.CONFDIR}/dbmappings.json`).supported_dbs; 
@@ -40,6 +41,7 @@ exports.doService = async jsonReq => {
 		LOG.error(`AI library error processing request ${JSON.stringify(jsonReq)}`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 	} else {
+		dblayer.logUsage(jsonReq.id, response.metric_cost, aiModelToUse);
 		const sql = response.airesponse; const validationResult = await sqlvalidator.validate(sql, jsonReq.dbto, 
 			undefined, jsonReq.use_simple_validator);
 		return {sql, reason: REASONS.OK, possible_error: validationResult.isOK?undefined:true, 
