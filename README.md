@@ -1,5 +1,5 @@
-# Login App
-A shell login webapp
+# Neuranet
+Neural network and LLM framework.
 
 Getting Started
 ===============
@@ -12,7 +12,7 @@ Step 6: Browse to http://<your IP>:8080/apps/xbin/index.html
 
 Optional Step
 =============
-Modify /frontend/framework/conf/default_app.json to "loginapp" and then http://[your IP]:8080 should auto redirect.
+Modify /frontend/framework/conf/default_app.json to "neuranet" and then http://[your IP]:8080 should auto redirect.
 
 Login
 =====
