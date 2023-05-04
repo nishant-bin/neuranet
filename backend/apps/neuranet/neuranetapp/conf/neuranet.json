@@ -16,7 +16,7 @@
             "response_finishreason": "data.choices[0].finish_reason",
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "sql_ai_response.json",
-            "read_ai_response_from_samples": false,
+            "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10
         },
 
@@ -31,7 +31,7 @@
             "response_finishreason": "data.choices[0].finish_reason",
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "chat_ai_response.json",
-            "read_ai_response_from_samples": false,
+            "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10
         },
 
@@ -46,7 +46,7 @@
             "response_finishreason": "data.choices[0].finish_reason",
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "code_ai_response.json",
-            "read_ai_response_from_samples": false,
+            "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10
         },
 
@@ -62,7 +62,7 @@
             "response_finishreason": "data.choices[0].finish_reason",
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "chaincode_model_response.json",
-            "read_ai_response_from_samples": false,
+            "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10
         }
     }

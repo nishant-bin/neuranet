@@ -6,8 +6,8 @@
 import {util} from "/framework/js/util.mjs";
 import {monkshu_component} from "/framework/js/monkshu_component.mjs";
 
-const COMPONENT_PATH = util.getModulePath(import.meta);
-let CONF;
+const COMPONENT_PATH = util.getModulePath(import.meta), READONLY_BACKGROUND_COLOR = "#F5F5F5";
+let CONF, cmBackgroundDefaultColor;
 
 async function elementPrerender(host) {
 	if (!CONF) CONF = await $$.requireJSON(`${COMPONENT_PATH}/conf/texteditor.json`);
@@ -85,7 +85,12 @@ function _getReadOnly(host) {
 
 function _setReadOnly(value, host) {
 	const cm = text_editor.getMemoryByHost(host).editor;
-	return cm.setOption("readOnly", value);
+	cm.setOption("readOnly", value);
+	if (value == true)
+	{	
+		if (!cmBackgroundDefaultColor) cmBackgroundDefaultColor = cm.getWrapperElement().style.backgroundColor;
+		cm.getWrapperElement().style.backgroundColor = READONLY_BACKGROUND_COLOR;
+	} else cm.getWrapperElement().style.backgroundColor = cmBackgroundDefaultColor;
 }
 
 // convert this all into a WebComponent so we can use it
