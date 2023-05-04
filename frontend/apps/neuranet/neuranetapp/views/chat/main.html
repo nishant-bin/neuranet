@@ -1,4 +1,23 @@
 <style>
+    ::-webkit-scrollbar {
+        width: 0.5em !important;
+        height: 0.5em !important;
+        scroll-behavior: smooth !important;
+    }
+
+    ::-webkit-scrollbar-track {
+        -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
+        box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
+        margin: 2em;
+        border-radius: 1em !important;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background-color: darkgrey !important;
+        border-radius: 1em !important;
+        background-clip: padding-box;
+    }
+
     div#body {
         padding: 0em 3em 3em 3em;
         height: 100%;
@@ -98,9 +117,13 @@
         height: 2em;
         margin-top: 1em;
     }
+    img#waitspin {
+        margin-top: 0 !important;
+        height: 2em !important;
+        width: auto !important;
+    }
     span#aicontentholder {margin: 0.5em 0em;}
     span#userprompt, span#airesponse {
-        flex-grow: 1;
         padding: 1em;
         box-sizing: border-box;
         min-height: 4em;
@@ -109,6 +132,7 @@
         border: 1px solid #AED6E9;
         white-space: break-spaces;
     }
+    span#spacer {flex-grow: 1;}
     span#userprompt {background-color: #C8EDFF;}
     span#airesponse {background-color: #EAF8FF;}
 
@@ -147,8 +171,10 @@ import {chat} from "{{{viewpath}}}/js/chat.mjs"; monkshu_env.apps[APP_CONSTANTS.
 </div>
 
 <template id="chatresponse_insertion_template">
+    <div id="insertiondiv">
     <span id="usercontentholder"> <img src="{{{viewpath}}}/img/userchatimg.svg"><span id="userprompt"></span> </span>
-    <span id="aicontentholder"> <span id="airesponse"></span><img src="{{{viewpath}}}/img/aichatimg.svg"> </span>
+    <span id="aicontentholder"><span id="spacer"></span><span id="airesponse"><img id="waitspin" src="{{{viewpath}}}/img/chatspin.svg"></span><img src="{{{viewpath}}}/img/aichatimg.svg"> </span>
+    </div>
 </template>
 
 </div>
