@@ -29,12 +29,13 @@ async function convert(elementImg) {
 		userid = host.getAttribute("user");
 	
 	if (requestSQL.trim() == "") {_showError(await i18n.get("NothingToConvert")); return;}
-	texteditorResponse.value = ""; elementImg.src = `${COMPONENT_PATH}/img/spinner.svg`;
+	texteditorResponse.value = ""; elementImg.src = `${COMPONENT_PATH}/img/spinner.svg`; texteditorRequest.readOnly = true; 
+	const orgImgOnclick = elementImg.onclick; elementImg.onclick = _ => {};
 	const convertedResponse = dbfrom == dbto ? {sql: requestSQL, result: true} : await apiman.rest(
 		`${host.getAttribute("backendurl")}/${API_CONVERT}`, "POST", {request: requestSQL, dbfrom, dbto, id: userid, 
 			skipvalidation: validate, use_simple_validator: conf.SIMPLE_VALIDATOR}, true, false, false, 
 			false, false, conf.GENSQL_API_TIMEOUT);
-	elementImg.src = `${COMPONENT_PATH}/img/bot.svg`;
+	elementImg.src = `${COMPONENT_PATH}/img/bot.svg`; elementImg.onclick = orgImgOnclick; texteditorRequest.readOnly = false; 
 
 	if (!convertedResponse) {LOG.error("Conversion failed due to backend internal issues."); _showError(await i18n.get("InternalErrorConverting")); return;}
 	if (!convertedResponse.result) {

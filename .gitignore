@@ -1,5 +1,5 @@
 backend/server/logs
 frontend/server/logs
 debug.log
-backend/apps/loginapp/logs/remotelog.ndjson
-backend/apps/loginapp/db/*.db*
+backend/apps/*/logs/remotelog.ndjson
+backend/apps/*/db/*.db*
