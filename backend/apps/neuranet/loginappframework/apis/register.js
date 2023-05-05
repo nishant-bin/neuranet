@@ -160,7 +160,7 @@ const _arrayToLowercase = array => {
 
 
 const _informNewUserListners = async result => {
-	const newuserListeners = CLUSTER_MEMORY.get(LOGIN_LISTENERS_MEMORY_KEY, []);
+	const newuserListeners = CLUSTER_MEMORY.get(NEW_USER_LISTENERS_MEMORY_KEY, []);
 	for (const listener of newuserListeners) {
 		const listenerFunction = require(listener.modulePath)[listener.functionName];
 		if (!(await listenerFunction(result))) return false; return true; 
