@@ -20,7 +20,7 @@ const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 
-const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest"}, 
+const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
 	MODEL_DEFAULT = "chat-gpt35-turbo", CHAT_SESSION_UPDATE_TIMESTAMP_KEY = "__last_update",
 	CHAT_SESSION_MEMORY_KEY_PREFIX = "__org_monkshu_neuranet_chatsession";
 
@@ -52,14 +52,15 @@ exports.doService = async jsonReq => {
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 	} else {
 		dblayer.logUsage(jsonReq.id, response.metric_cost, aiModelToUse);
+		const {aiResponse, promptSummary, responseSummary} = _unmarshallAIResponse(response.airesponse, 
+			jsonReq.session.at(-1).content);
 		if (jsonReq.maintain_session) {
-			chatsession.push({"role": "user", "content": finalSessionObject.at(-1).content},
-				{"role": "assistant", "content": response.airesponse});
+			chatsession.push({"role": "user", "content": promptSummary}, {"role": "assistant", "content": responseSummary});
 			chatsession[CHAT_SESSION_UPDATE_TIMESTAMP_KEY] = Date.now();
 			const idSessions = DISTRIBUTED_MEMORY.get(sessionKey, {}); idSessions[sessionID] = chatsession;
 			DISTRIBUTED_MEMORY.set(sessionKey, idSessions);
 		}
-		return {response: response.airesponse, reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT, session_id: sessionID};
+		return {response: aiResponse, reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT, session_id: sessionID};
 	}
 }
 
@@ -69,6 +70,18 @@ const _jsonifyContentsInThisSession = session => {
 		sessionObject.content = jsonifiedStr;
 	}
 	return session;
+}
+
+function _unmarshallAIResponse(response, userPrompt) {
+	try {
+		const jsonSummaries = response.trim().match(/\{"user":.*?, "ai":.*?\}$/g);
+		const jsonText = jsonSummaries.at(-1), jsonParsed = JSON.parse(jsonText), 
+			realResponse = response.substring(0, response.length - jsonText.length);
+		return {aiResponse: realResponse, promptSummary: jsonParsed.user, responseSummary: jsonParsed.ai};
+	} catch (err) {
+		LOG.error(`Returning unsummaried conversation as error parsing the AI response summaries, the error is ${err}, the response is ${response}`);
+		return {aiResponse: response, promptSummary: userPrompt, responseSummary: response};
+	}	
 }
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.session && Array.isArray(jsonReq.session) && 

@@ -13,7 +13,7 @@ export const i18n = {
 
 "ChooseActivity": "Choose Activity",
 
-"ChatAIError": "AI error in processing. Please retry later.",
+"ChatAIError": "AI error in processing. Please reload the page to start a new conversation.",
 "NeuralNetReady": "AI Neural Network<br>Ready...",
 "TypeMessage": "Type Message",
 
