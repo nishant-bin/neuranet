@@ -38,8 +38,12 @@ exports.doService = async jsonReq => {
 	}
 	
 	let chatsession = []; const sessionID = jsonReq.session_id||Date.now(), 
-		sessionKey = CHAT_SESSION_MEMORY_KEY_PREFIX + jsonReq.id; 
-	if (jsonReq.maintain_session) chatsession = (DISTRIBUTED_MEMORY.get(sessionKey, {})[sessionID])||[]; 
+		sessionKey = `${CHAT_SESSION_MEMORY_KEY_PREFIX}_${jsonReq.id}`; 
+	if (jsonReq.maintain_session) {
+		const idSessions = DISTRIBUTED_MEMORY.get(sessionKey, {}); chatsession = idSessions[sessionID]||[];
+		LOG.debug(`Distributed memory key for this session is: ${sessionKey}.`);
+		LOG.debug(`Chat session saved previously is ${JSON.stringify(chatsession)}.`); 
+	}
 
 	const finalSessionObject = _jsonifyContentsInThisSession([...chatsession, ...(utils.clone(jsonReq.session))]); 
 	finalSessionObject[finalSessionObject.length-1].last = true;
@@ -59,6 +63,7 @@ exports.doService = async jsonReq => {
 			chatsession[CHAT_SESSION_UPDATE_TIMESTAMP_KEY] = Date.now();
 			const idSessions = DISTRIBUTED_MEMORY.get(sessionKey, {}); idSessions[sessionID] = chatsession;
 			DISTRIBUTED_MEMORY.set(sessionKey, idSessions);
+			LOG.debug(`Chat session saved to the distributed memory is ${JSON.stringify(chatsession)}.`); 
 		}
 		return {response: aiResponse, reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT, session_id: sessionID};
 	}

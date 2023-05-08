@@ -1,6 +1,6 @@
 {
-    "/apps/{{app}}/log" : "{{server_lib}}/log.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&logpath={{server}}/../apps/{{app}}/logs/remotelog.ndjson",
-    "/apps/{{app}}/getremotelog" : "/loginappframework/apis/getremotelog.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389",
+    "/apps/{{app}}/log" : "{{server_lib}}/log.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&reloadOnDebug=false&logpath={{server}}/../apps/{{app}}/logs/remotelog.ndjson",
+    "/apps/{{app}}/getremotelog" : "/loginappframework/apis/getremotelog.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&reloadOnDebug=false",
 
     "/apps/{{app}}/login" : "/loginappframework/apis/login.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=false&addsToken=sub:{{{role}}},tokenflag:{{{tokenflag}}},id:{{{id}}},org:{{{org}}}",
     "/apps/{{app}}/resetuser" : "/loginappframework/apis/resetuser.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=false",
