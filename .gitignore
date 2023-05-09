@@ -3,3 +3,4 @@ frontend/server/logs
 debug.log
 backend/apps/*/logs/remotelog.ndjson
 backend/apps/*/db/*.db*
+backend/**/conf/hostname.json
