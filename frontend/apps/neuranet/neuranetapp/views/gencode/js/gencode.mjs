@@ -16,11 +16,12 @@ let conf, mainModule;
 
 async function convert(elementImg) {
 	const texteditorRequest = document.querySelector("text-editor#sourcelang"), 
-		texteditorResponse = document.querySelector("text-editor#targetlang"), requestCode = texteditorRequest.value,
+		texteditorResponse = document.querySelector("text-editor#targetlang"), requestCode = texteditorRequest.value.trim(),
 		langfrom = conf.LANG_BACKEND_ID_MAPPINGS[document.querySelector("select#sourcelang").value], 
 		langto = conf.LANG_BACKEND_ID_MAPPINGS[document.querySelector("select#targetlang").value],
-		userid = session.get(APP_CONSTANTS.USERID), 
-		isAGIChain = document.querySelector("input#agichain").checked;
+		userid = session.get(APP_CONSTANTS.USERID);
+	let isAGIChain = document.querySelector("input#agichain").checked;
+	if (!_checkValidAGIChain(requestCode)) isAGIChain = false;
 	
 	if (requestCode.trim() == "") {mainModule.showMessage(await i18n.get("NothingToConvert")); return;}
 	texteditorResponse.value = ""; elementImg.src = `${VIEW_PATH}/img/spinner.svg`; texteditorRequest.readOnly = true; 
@@ -76,6 +77,9 @@ function _getRequestChain(request) {
 	}
 	return requestChain;
 }
+
+const _checkValidAGIChain = request => 
+	request.trim().split(AGI_CHAIN_BOUNDARY)[0].startsWith(AGI_CHAIN_BOUNDARY);
 
 async function _getPolledResponse(url, requestType, initialRequest, waitRequest, apimanOptions, timeout, streamer) {	
 	return new Promise(async resolve => {

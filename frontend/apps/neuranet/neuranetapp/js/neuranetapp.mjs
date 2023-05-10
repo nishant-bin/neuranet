@@ -66,6 +66,7 @@ async function checkAndReportStandardAIErrors(result) {
     if (!result) {showError(await i18n.get("ChatAIError")); return false;}
     if ((!result.result) && (result.reason == "limit")) {showError(await i18n.get("ErrorConvertingAIQuotaLimit")); return false;}
     if (!result.result) {showError(await i18n.get("ChatAIError")); return false;}
+    return true;
 }
 
 export const neuranetapp = {main, openView, gohome, onlogout, showMessage, showError, checkAndReportStandardAIErrors};

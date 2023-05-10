@@ -9,7 +9,7 @@
         "sql-code-gen35": {
             "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
             "request":{ 
-                "model": "gpt-3.5-turbo", "temperature": 0, "stream": false, "max_tokens": 1024, 
+                "model": "gpt-3.5-turbo", "temperature": 0, "stream": false, "max_tokens": 4096, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1, "stop":["---"], 
                 "messages":[{"role": "user", "content": "${__ORG_NEURANET_PROMPT__}"}] 
             },
@@ -41,7 +41,7 @@
         "lang-code-gen35": {
             "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
             "request":{ 
-                "model": "gpt-3.5-turbo", "temperature": 0, "stream": false, "max_tokens": 4097, 
+                "model": "gpt-3.5-turbo", "temperature": 0, "stream": false, "max_tokens": 4096, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1,
                 "messages":[{"role": "user", "content": "${__ORG_NEURANET_PROMPT__}"}] 
             },
@@ -57,7 +57,7 @@
         "lang-code-chaingen35": {
             "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
             "request":{ 
-                "model": "gpt-3.5-turbo", "temperature": 0, "stream": false, "max_tokens": 2048, 
+                "model": "gpt-3.5-turbo", "temperature": 0, "stream": false, "max_tokens": 4096, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1, 
                 "messages":[{ "role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": "${__ORG_NEURANET_PROMPT__}"}] 
