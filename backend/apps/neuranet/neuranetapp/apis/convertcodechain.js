@@ -13,6 +13,7 @@ const mustache = require("mustache");
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const LANG_MAPPINGS_FILE = `${NEURANET_CONSTANTS.CONFDIR}/langmappings.json`; 
 const LANG_CHAINS_FILE = `${NEURANET_CONSTANTS.CONFDIR}/langagichaindriver.json`; 
@@ -20,8 +21,8 @@ const codevalidator = utils.requireWithDebug(`${NEURANET_CONSTANTS.LIBDIR}/codev
 
 const DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode, MEMORY_KEY = "_org_monkshu_neuranet_convertcodechain";
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
-		BAD_INPUT_CODE: "badinputcode"}, MODEL_DEFAULT = "lang-code-chaingen35", DEFAULT = "default", 
-        FILE_CONTENTS_CACHE = {};
+    BAD_INPUT_CODE: "badinputcode", LIMIT: "limit"}, MODEL_DEFAULT = "lang-code-chaingen35", DEFAULT = "default", 
+    FILE_CONTENTS_CACHE = {};
 
 let LANG_MAPPINGS, LANG_CHAINS, SUPPORTED_LANGS; 
 
@@ -52,6 +53,11 @@ async function _realDoService(jsonReq, _servObject, _headers, _url, partialRespo
     if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
 
 	LOG.debug(`Got code conversion request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
+
+    if (!(await quota.checkQuota(jsonReq.id))) {
+		LOG.error(`Disallowing the API call, as the user ${jsonReq.id} is over their quota.`);
+		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
+	}
 
 	const codeInputValidationResult = jsonReq.skipvalidation?{isOK:true}:
 		await codevalidator.validate(jsonReq.request, jsonReq.langfrom, undefined, jsonReq.use_simple_validator); 

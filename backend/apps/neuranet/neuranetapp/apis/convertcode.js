@@ -8,13 +8,14 @@ const mustache = require("mustache");
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const LANG_MAPPINGS_FILE = `${NEURANET_CONSTANTS.CONFDIR}/langmappings.json`; 
 const codevalidator = utils.requireWithDebug(`${NEURANET_CONSTANTS.LIBDIR}/codevalidator.js`, NEURANET_CONSTANTS.CONF.debug_mode);
 
 const DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
-		BAD_INPUT_CODE: "badinputcode"}, MODEL_DEFAULT = "lang-code-gen35", DEFAULT = "default";
+	BAD_INPUT_CODE: "badinputcode", LIMIT: "limit"}, MODEL_DEFAULT = "lang-code-gen35", DEFAULT = "default";
 
 let LANG_MAPPINGS, SUPPORTED_LANGS; 
 
@@ -25,6 +26,11 @@ exports.doService = async jsonReq => {
 
 	LOG.debug(`Got code conversion request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
+	if (!(await quota.checkQuota(jsonReq.id))) {
+		LOG.error(`Disallowing the API call, as the user ${jsonReq.id} is over their quota.`);
+		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
+	}
+	
 	const codeInputValidationResult = jsonReq.skipvalidation?{isOK:true}:
 		await codevalidator.validate(jsonReq.request, jsonReq.langfrom, undefined, jsonReq.use_simple_validator); 
 	if (!codeInputValidationResult.isOK) return {reason: REASONS.BAD_INPUT_CODE, 

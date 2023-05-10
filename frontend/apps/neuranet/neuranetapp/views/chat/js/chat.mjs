@@ -7,7 +7,6 @@
  * Supports the chat view.
  */
 
-import {i18n} from "/framework/js/i18n.mjs";
 import {util} from "/framework/js/util.mjs";
 import {session} from "/framework/js/session.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
@@ -15,8 +14,6 @@ import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 const API_CHAT = "chat", SESSION_OBJ_TEMPLATE = {"role": "user", "content": ""}, 
     VIEW_PATH = util.resolveURL(`${util.getModulePath(import.meta)}/../`); 
 let sessionID;
-
-const dialog = _ => monkshu_env.components['dialog-box'];
 
 async function send(_element) {
     const userMessageArea = document.querySelector("textarea#messagearea"), userPrompt = userMessageArea.value.trim();
@@ -32,7 +29,7 @@ async function send(_element) {
             session_id: sessionID}, true);
     textareaEdit.classList.remove("readonly"); textareaEdit.removeAttribute("readonly"); buttonSendImg.src = `${VIEW_PATH}/img/send.svg`; 
     
-    if (!result || (!result.result)) {_showMessage(await i18n.get("ChatAIError")); return;}
+    if (!(await APP_CONSTANTS.EMBEDDED_APP_MAIN.checkAndReportStandardAIErrors(result))) return;
 
     sessionID = result.session_id;  // save session ID so that backend can maintain session
     _insertAIResponse(userMessageArea, userPrompt, result.response, oldInsertion);
@@ -54,7 +51,5 @@ function _insertAIResponse(userMessageArea, userPrompt, aiResponse, oldInsertion
 
     return insertionDiv;
 }
-
-const _showMessage = message => dialog().showMessage(message, "dialog");
 
 export const chat = {send};

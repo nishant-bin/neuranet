@@ -2,6 +2,10 @@
     "BEGIN TRANSACTION",
 	
 	
+    "CREATE TABLE quotas(id varchar not null, quota integer not null)",
+
+    "INSERT INTO quotas (id, quota) VALUES ('_default_', '0.3')",
+
     "CREATE TABLE views(org varchar not null, view varchar not null)",
 
     "INSERT INTO views (org, view) VALUES ('_org_monkshu_loginapp_defaultorg', 'chooser')",

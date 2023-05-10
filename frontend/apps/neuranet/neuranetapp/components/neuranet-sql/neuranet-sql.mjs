@@ -44,6 +44,7 @@ async function convert(elementImg) {
 			case "badmodel": key = "BadAIModel"; break;
 			case "badrequest": key = "BadAPIRequest"; break;
 			case "badinputsql": key = "BadInputSQL"; break;
+			case "limit": key = "AIQuotaLimit"; break;
 			default: key = "Internal"; break;
 		}
 		const err = mustache.render(await i18n.get(`ErrorConverting${key}`), convertedResponse.parser_error?.[0] ?

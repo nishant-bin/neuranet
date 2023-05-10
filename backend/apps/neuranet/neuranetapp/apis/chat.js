@@ -18,6 +18,7 @@
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
@@ -28,6 +29,11 @@ exports.doService = async jsonReq => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
 
 	LOG.debug(`Got chat request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
+
+	if (!(await quota.checkQuota(jsonReq.id))) {
+		LOG.error(`Disallowing the API call, as the user ${jsonReq.id} is over their quota.`);
+		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
+	}
 
 	const aiKey = crypt.decrypt(NEURANET_CONSTANTS.CONF.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
 		aiModelToUse = jsonReq.model || MODEL_DEFAULT,

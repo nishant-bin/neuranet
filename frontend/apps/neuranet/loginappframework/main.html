@@ -187,7 +187,7 @@ span#mobilefooter > img {
 </div>
 
 <span id="mobilefooter">
-	<img src="./img/mobilefooter_home.svg" onclick="monkshu_env.frameworklibs.router.navigate(APP_CONSTANTS.MAIN_HTML)">
+	<img src="./img/mobilefooter_home.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.gohome()">
 	<img src="./img/mobilefooter_reload.svg" onclick="location.reload()">
 	<span-with-menu id="gearmobile" bottommenu="true" styleBody="url(./pages/menu.stylebody.css)"><img src="./img/mobilefooter_settings.svg">
 		<menu-item onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.changePassword(this)" 

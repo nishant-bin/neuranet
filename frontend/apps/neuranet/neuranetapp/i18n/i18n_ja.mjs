@@ -25,5 +25,7 @@ export const i18n = {
 "ErrorConvertingBadInputCode": "Error in conversion, due to bad input code.\n\n{{#message}}{{message}}{{/message}}{{^message}}Code parser failed to parse.{{/message}}\n\nFound at: Line:{{#line}}{{line}}{{/line}}{{^line}}0{{/line}}, Column:{{#column}}{{column}}{{/column}}{{^column}}0{{/column}}.",
 "PossibleErrorConvertingCode": "--- WARNING: Possibly bad code.\n--- {{#message}}{{message}}{{/message}}{{^message}}Code parser failed to parse.{{/message}}\n--- Found at: {{#line}}{{line}}{{/line}}{{^line}}0{{/line}}, Column:{{#column}}{{column}}{{/column}}{{^column}}0{{/column}}.",
 
+"ErrorConvertingAIQuotaLimit": "Your 24 hour spend quota limit has been reached. Please retry tomorrow.",
+
 "NotImplemented": "Not implemented yet."
 }

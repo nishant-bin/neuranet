@@ -20,6 +20,7 @@ const main = async (data, mainLoginAppModule) => {
     loginappMain = mainLoginAppModule; loginappMain.addGoHomeListener(gohome);
 
     APP_CONSTANTS.VIEWS_PATH = util.resolveURL(`${APP_CONSTANTS.EMBEDDED_APP_PATH}/views`);
+    APP_CONSTANTS.EMBEDDED_APP_MAIN = neuranetapp;
     await _createdata(data); 
     data.maincontent = await router.loadHTML(MAIN_HTML, {...data}); 
 }
@@ -59,4 +60,12 @@ function onlogout() {session.remove(APP_CONSTANTS.FORCE_LOAD_VIEW);}
 
 const showMessage = message => loginappMain.showMessage(message);
 
-export const neuranetapp = {main, openView, gohome, onlogout, showMessage};
+const showError = error => {LOG.error(error); showMessage(error);}
+
+async function checkAndReportStandardAIErrors(result) {
+    if (!result) {showError(await i18n.get("ChatAIError")); return false;}
+    if ((!result.result) && (result.reason == "limit")) {showError(await i18n.get("ErrorConvertingAIQuotaLimit")); return false;}
+    if (!result.result) {showError(await i18n.get("ChatAIError")); return false;}
+}
+
+export const neuranetapp = {main, openView, gohome, onlogout, showMessage, showError, checkAndReportStandardAIErrors};

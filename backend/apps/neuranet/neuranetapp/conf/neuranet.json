@@ -3,6 +3,7 @@
     "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
     "ai_model_default": "chat-gpt35-turbo",
     "debug_mode": true,
+    "quota_default_org": "_default_",
 
     "ai_models": {
         "sql-code-gen35": {
@@ -17,7 +18,8 @@
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "sql_ai_response.json",
             "read_ai_response_from_samples": false,
-            "token_approximation_uplift": 1.10
+            "token_approximation_uplift": 1.10,
+            "price_per_unit": "0.000002"
         },
 
         "chat-gpt35-turbo": {
@@ -32,7 +34,8 @@
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "chat_ai_response.json",
             "read_ai_response_from_samples": false,
-            "token_approximation_uplift": 1.10
+            "token_approximation_uplift": 1.10,
+            "price_per_unit": "0.000002"
         },
 
         "lang-code-gen35": {
@@ -47,7 +50,8 @@
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "code_ai_response.json",
             "read_ai_response_from_samples": false,
-            "token_approximation_uplift": 1.10
+            "token_approximation_uplift": 1.10,
+            "price_per_unit": "0.000002"
         },
 
         "lang-code-chaingen35": {
@@ -63,7 +67,8 @@
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "chaincode_model_response.json",
             "read_ai_response_from_samples": false,
-            "token_approximation_uplift": 1.10
+            "token_approximation_uplift": 1.10,
+            "price_per_unit": "0.000002"
         }
     }
 }

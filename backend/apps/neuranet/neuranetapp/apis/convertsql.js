@@ -5,6 +5,7 @@
 const fspromises = require("fs").promises;
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const sqlvalidator = require(`${NEURANET_CONSTANTS.LIBDIR}/sqlvalidator.js`);
 const DB_MAPPINGS = require(`${NEURANET_CONSTANTS.CONFDIR}/dbmappings.json`).mappings; 
@@ -12,13 +13,18 @@ const SUPPORTED_DBS = require(`${NEURANET_CONSTANTS.CONFDIR}/dbmappings.json`).s
 
 const DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
-		BAD_INPUT_SQL: "badinputsql"}, MODEL_DEFAULT = "sql-code-gen35", DEFAULT = "default";
+	BAD_INPUT_SQL: "badinputsql", LIMIT: "limit"}, MODEL_DEFAULT = "sql-code-gen35", DEFAULT = "default";
 
 exports.doService = async jsonReq => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
 
 	LOG.debug(`Got SQL conversion request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
+	if (!(await quota.checkQuota(jsonReq.id))) {
+		LOG.error(`Disallowing the API call, as the user ${jsonReq.id} is over their quota.`);
+		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
+	}
+    
 	const sqlInputValidationResult = jsonReq.skipvalidation?{isOK:true}:
 		await sqlvalidator.validate(jsonReq.request, jsonReq.dbfrom, undefined, jsonReq.use_simple_validator); 
 	if (!sqlInputValidationResult.isOK) return {reason: REASONS.BAD_INPUT_SQL, 
