@@ -85,9 +85,11 @@ const _jsonifyContentsInThisSession = session => {
 
 function _unmarshallAIResponse(response, userPrompt) {
 	try {
-		const jsonSummaries = /\{["]*user["]*:\s*["]*(.*?)["]*,\s*["]*ai["]*:\s*["]*(.*?)["]*\}$/g.exec(response.trim());
+		const summaryRE = /\{["]*user["]*:\s*["]*(.*?)["]*,\s*["]*ai["]*:\s*["]*(.*?)["]*\}/g;
+		const jsonSummaries = summaryRE.exec(response.trim());
 		if (!jsonSummaries) throw new Error(`Error can't parse this response ${response} for summaries.`);
-		const realResponse = response.substring(0, response.length - jsonSummaries[0].length).trim();
+		const realResponse = response.replace(summaryRE, "");
+
 		return {aiResponse: realResponse, promptSummary: jsonSummaries[1].trim(), 
 			responseSummary: jsonSummaries[2].trim()};
 	} catch (err) {
