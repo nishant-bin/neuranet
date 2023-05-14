@@ -41,7 +41,7 @@ const path = require("path");
 const fspromises = fs.promises;
 let queue_executor;  try {queue_executor = require(`${CONSTANTS.LIBDIR}/queueExecutor.js`);} catch (err) {
     // allow running outside Monkshu servers.
-    LOG.warn(`Queue executor is not available. The AI Vector DB is running outside Tekmonks Monkshu Enterprise Server most probably. The error is ${err}. This is a benign error for stand alone Vector DB implementations and can be ignored.`);
+    (LOG||console).warn(`Queue executor is not available. The AI Vector DB is running outside Tekmonks Monkshu Enterprise Server most probably. The error is ${err}. This is a benign error for stand alone Vector DB implementations and can be ignored.`);
 };
 
 const dbs = {}, DB_INDEX_NAME = "index.json";
@@ -50,7 +50,7 @@ exports.initSync = db_path_in => {
     dbs[_get_db_index(db_path_in)] = {vector_index: [], metadatas: {}}; // init to an empty index
 
     if (!fs.existsSync(db_path_in)) {
-        LOG.error(`Vector DB path folder ${db_path_in} does not exist. Initializing to an empty DB. The error was ${err}.`); 
+        _log_error("Vector DB path folder does not exist. Initializing to an empty DB", db_path_in, "Folder not found"); 
         fs.mkdirSync(db_path_in);
         return;
     }
@@ -59,7 +59,7 @@ exports.initSync = db_path_in => {
         const db = require(_get_db_index_file(db_path_in)); 
         dbs[_get_db_index(db_path_in)] = {vector_index: db.vector_index, metadatas: db.metadatas};
     } catch (err) {
-        LOG.error(`Vector DB path ${_get_db_index_file(db_path_in)} does not exist. Initializing to an empty DB. The error was ${err}.`); 
+        _log_error("Vector DB index does not exist. Initializing to an empty DB", db_path_in, err); 
     }
 }
 
@@ -67,54 +67,62 @@ exports.initAsync = async db_path_in => {
     dbs[_get_db_index(db_path_in)] = {vector_index: [], metadatas: {}}; // init to an empty index
 
     try {await fspromises.access(db_path_in, fs.constants.R_OK)} catch (err) {
-        LOG.error(`Vector DB path folder ${index_file_path} does not exist. Initializing to an empty DB.`); 
+        _log_error("Vector DB path folder does not exist. Initializing to an empty DB", db_path_in, err); 
         await fspromises.mkdir(db_path_in);
         return;
     }
 
     try {dbs[_get_db_index(db_path_in)] = JSON.parse(await fspromises.readFile(_get_db_index_file(db_path_in), "utf8"))} catch (err) {
-        LOG.error(`Vector DB path ${_get_db_index_file(db_path_in)} does not exist. Initializing to an empty DB. The error was ${err}.`); 
+        _log_error("Vector DB index does not exist. Initializing to an empty DB", db_path_in, err); 
     }
     
 }
 
 exports.save_db = async db_path_out => {
     const db_to_save = dbs[_get_db_index(db_path_out)]; if (!db_to_save) {
-        LOG.error(`Nothing to save in save_db call. The DB index called to save was ${_get_db_index_file(db_path_out)}.`);
+        _log_error("Nothing to save in save_db call", db_path_out, "No database found");
         return;
     }
 
     try {await fspromises.writeFile(_get_db_index_file(db_path_out), JSON.stringify(db_to_save))}
-    catch (err) {
-        LOG.error(`Vector DB path ${_get_db_index_file(db_path_out)} write error. The error was ${err}.`); 
-    }
+    catch (err) {_log_error("Vector DB write error", db_path_out, err);}
 }
 
 exports.create = exports.add = async (vector, metadata, text, embedding_generator, db_path) => {
     if ((!vector) && embeddingGenerator && text) vector = await embedding_generator(text);
-    if (!vector) {LOG.error(`No vector found or generated for VectoDB create.`); return;}    // nothing to do
+    if (!vector) {  // nothing to do
+        _log_error("No vector found or generated for VectoDB update, skipping create/add operation", db_path, "Either embedding generator failed or no text was provided to embed"); 
+        return;
+    }
 
     dbs[_get_db_index(db_path)].vector_index.push(vector);
-    dbs[_get_db_index(db_path)].metadatas[vector.toString()] = metadata;
-    await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");
+    dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)] = metadata;
+    
+    try {await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");}
+    catch (err) {_log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be saved`, db_path, err);}
 
     save_db_as_async_or_via_queued_task(db_path);   // DB modified so save it as a queued server or async task
 }
 
 exports.read = async (vector, db_path) => {
-    const metadata = dbs[_get_db_index(db_path)].metadatas[vector.toString()];
-    let text; try {text = fspromises.readFile(_get_db_index_text_file(vector, db_path), "utf8");} catch (err) {
-        LOG.warn(`No text found or error reading text for the vector ${vector} for db_path ${db_path}. The error was ${err}.`);
-    }
+    const metadata = dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)];
+    let text; try {text = fspromises.readFile(_get_db_index_text_file(vector, db_path), "utf8");} 
+    catch (err) { _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} not found or error reading`, 
+        db_path, err); }
     return {vector, metadata, text};
 }
 
 exports.update = async (vector, metadata, text, embedding_generator, db_path) => {
     if ((!vector) && embeddingGenerator && text) vector = await embedding_generator(text);
-    if (!vector) {LOG.error(`No vector found or generated for VectoDB update.`); return;}    // nothing to do
+    if (!vector) {  // nothing to do
+        _log_error("No vector found or generated for VectoDB update, skipping update operation", db_path, "Either embedding generator failed or no text was provided to embed"); 
+        return;
+    }    
 
-    dbs[_get_db_index(db_path)].metadatas[vector.toString()] = metadata; 
-    await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");
+    dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)] = metadata; 
+    
+    try {await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");}
+    catch (err) {_log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be saved`, db_path, err);}
 
     save_db_as_async_or_via_queued_task(db_path);   // DB modified so save it as a queued server or async task
 }
@@ -123,10 +131,9 @@ exports.delete = async (vector, db_path) => {
     const foundAtIndex = dbs[_get_db_index(db_path)].vector_index.indexOf(vector); 
     if (foundAtIndex == -1) return; // not found
     dbs[_get_db_index(db_path)].vector_index.splice(foundAtIndex, 1); 
-    delete dbs[_get_db_index(db_path)].metadatas[vector.toString()];
+    delete dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)];
     try {await fspromises.unlink(_get_db_index_text_file(vector, db_path));} catch (err) {
-        LOG.warn(`Error deleting text document corresponding to the vector ${vector} at db_path ${db_path}. The error was ${err}.`);
-    }
+        _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be deleted`, db_path, err);}
     
     save_db_as_async_or_via_queued_task(db_path);   // DB modified so save it as a queued server or async task
 }
@@ -136,7 +143,7 @@ exports.query = async function(vectorToFindSimilarTo, topK, min_distance, db_pat
     for (const vectorToCompareTo of dbs[_get_db_index(db_path)].vector_index) similarities.push({
         vector: vectorToCompareTo, 
         similarity: _cosine_similarity(vectorToCompareTo, vectorToFindSimilarTo),
-        metadata: documents[vectorToCompareTo.toString()]});
+        metadata: documents[_get_vector_hash(vectorToCompareTo)]});
     similarities.sort(a,b => a.similarity - b.similarity);
     const result = [...similarities.slice(0, topK)]; similarities = []; // try to free memory asap
 
@@ -145,9 +152,8 @@ exports.query = async function(vectorToFindSimilarTo, topK, min_distance, db_pat
 
     for (const result of results) try {
         result.text = await fspromises.readFile(_get_db_index_text_file(result.vector, db_path), "utf8");
-    } catch (err) {
-        LOG.warn(`No text found for the vector ${result.vector.toString()} for db_path ${db_path}. The error was ${err}.`);
-    }
+    } catch (err) { _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} not found or error reading`, 
+        db_path, err); };
 
     return result; 
 }
@@ -183,4 +189,12 @@ const _get_db_index = db_path => path.resolve(db_path);
 
 const _get_db_index_file = db_path => path.resolve(`${db_path}/${DB_INDEX_NAME}`);
 
-const _get_db_index_text_file = (vector, db_path) => path.resolve(`${db_path}/texts/${vector.toString()}`);
+const _get_db_index_text_file = (vector, db_path) => path.resolve(`${db_path}/texts/${_get_vector_hash(vector)}`);
+
+function _get_vector_hash(vector) {
+    const shasum = crypto.createHash("sha1"); shasum.update(vector.toString());
+    const hash = shasum.digest("hex"); return hash;
+}
+
+const _log_error = (message, db_path, error) => (LOG||console).error(
+    `${message}. The vector DB is ${_get_db_index(db_path)} and the DB index file is ${_get_db_index_file(db_path)}. The error was ${error}.`);
