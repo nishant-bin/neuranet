@@ -39,7 +39,10 @@
 const fs = require("fs");
 const path = require("path");
 const fspromises = fs.promises;
-const queue_executor = require(`${CONSTANTS.LIBDIR}/queueExecutor.js`);
+let queue_executor;  try {queue_executor = require(`${CONSTANTS.LIBDIR}/queueExecutor.js`);} catch (err) {
+    // allow running outside Monkshu servers.
+    LOG.warn(`Queue executor is not available. The AI Vector DB is running outside Tekmonks Monkshu Enterprise Server most probably. The error is ${err}. This is a benign error for stand alone Vector DB implementations and can be ignored.`);
+};
 
 const dbs = {}, DB_INDEX_NAME = "index.json";
 
@@ -95,7 +98,7 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
     dbs[_get_db_index(db_path)].metadatas[vector.toString()] = metadata;
     await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");
 
-    queue_executor.add(exports.save_db, [db_path], true);   // DB modified so save it as a queued server task
+    save_db_as_async_or_via_queued_task(db_path);   // DB modified so save it as a queued server or async task
 }
 
 exports.read = async (vector, db_path) => {
@@ -113,7 +116,7 @@ exports.update = async (vector, metadata, text, embedding_generator, db_path) =>
     dbs[_get_db_index(db_path)].metadatas[vector.toString()] = metadata; 
     await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");
 
-    queue_executor.add(exports.save_db, [db_path], true);   // DB modified so save it as a queued server task
+    save_db_as_async_or_via_queued_task(db_path);   // DB modified so save it as a queued server or async task
 }
 
 exports.delete = async (vector, db_path) => {
@@ -125,7 +128,7 @@ exports.delete = async (vector, db_path) => {
         LOG.warn(`Error deleting text document corresponding to the vector ${vector} at db_path ${db_path}. The error was ${err}.`);
     }
     
-    queue_executor.add(exports.save_db, [db_path], true);   // DB modified so save it as a queued server task
+    save_db_as_async_or_via_queued_task(db_path);   // DB modified so save it as a queued server or async task
 }
 
 exports.query = async function(vectorToFindSimilarTo, topK, min_distance, db_path) {
@@ -169,6 +172,11 @@ function _cosine_similarity(v1, v2) {
     const lengthV2 = Math.sqrt(v2.reduce((accumulator, val) => accumulator + (val*val) ));
     const cosine_similarity = vector_product/(lengthV1*lengthV2);
     return cosine_similarity;
+}
+
+const save_db_as_async_or_via_queued_task = path => {
+    if (queue_executor) queue_executor.add(exports.save_db, [path], true); 
+    else exports.save_db(path);
 }
 
 const _get_db_index = db_path => path.resolve(db_path);
