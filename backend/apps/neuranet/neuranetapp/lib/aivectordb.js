@@ -92,16 +92,22 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
     if ((!vector) && embeddingGenerator && text) vector = await embedding_generator(text);
     if (!vector) {  // nothing to do
         _log_error("No vector found or generated for VectoDB update, skipping create/add operation", db_path, "Either embedding generator failed or no text was provided to embed"); 
-        return;
+        return false;
     }
 
     dbs[_get_db_index(db_path)].vector_index.push(vector);
     dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)] = metadata;
     
     try {await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");}
-    catch (err) {_log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be saved`, db_path, err);}
+    catch (err) {
+        dbs[_get_db_index(db_path)].vector_index.pop(); 
+        delete dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)];
+        _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be saved`, db_path, err);
+        return false;
+    }
 
     save_db_as_async_or_via_queued_task(db_path);   // DB modified so save it as a queued server or async task
+    return vector;
 }
 
 exports.read = async (vector, db_path) => {
@@ -116,15 +122,21 @@ exports.update = async (vector, metadata, text, embedding_generator, db_path) =>
     if ((!vector) && embeddingGenerator && text) vector = await embedding_generator(text);
     if (!vector) {  // nothing to do
         _log_error("No vector found or generated for VectoDB update, skipping update operation", db_path, "Either embedding generator failed or no text was provided to embed"); 
-        return;
+        return false;
     }    
 
+    const old_metadata = dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)];
     dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)] = metadata; 
     
     try {await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");}
-    catch (err) {_log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be saved`, db_path, err);}
+    catch (err) {
+        dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)] = old_metadata; // un-update
+        _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be saved`, db_path, err);
+        return false;
+    }
 
     save_db_as_async_or_via_queued_task(db_path);   // DB modified so save it as a queued server or async task
+    return vector;
 }
 
 exports.delete = async (vector, db_path) => {
@@ -158,10 +170,33 @@ exports.query = async function(vectorToFindSimilarTo, topK, min_distance, db_pat
     return result; 
 }
 
+exports.injest = async function(metadata, document, chunk_size, overlap, embedding_generator, db_path) {
+    let split_start = 0, split_end = (split_start+chunk_size) < document.length ? 
+        (split_start+chunk_size) : document.length;
+
+    const _deleteAllCreatedVectors = async vectors => {for (const vector of vectors) await exports.delete(vector, db_path);}
+
+    const vectorsToReturn = [];
+    while (split_end <= document.length) {
+        const split = document.substring(split_start, split_end);
+        split_start = split_end - overlap; split_end = (split_start+chunk_size) < document.length ? 
+            (split_start+chunk_size) : document.length;
+        const createdVector = await exports.create(undefined, metadata, split, embedding_generator, db_path);
+        if (!createdVector) {
+            _log_error("Unable to inject, creation failed", db_path, "Adding the new chunk failed");
+            await _deleteAllCreatedVectors(vectorsToReturn);
+            return false;
+        } else vectorsToReturn.push(createdVector);
+    }
+
+    return vectorsToReturn;
+}
+
 exports.get_vectordb = async function(path, embedding_generator) {
     await exports.initAsync(path); 
     return {
         create: async (vector, metadata, text) => exports.create(vector, metadata, text, embedding_generator, path),
+        injest: async (metadata, document, chunk_size, overlap)=> exports.injest(metadata, document, chunk_size, overlap, embedding_generator, path),
         read: async vector => exports.read(vector, path),
         update: async (vector, metadata, text) => exports.update(vector, metadata, text, embedding_generator, path),
         delete: async vector =>  exports.delete(vector, path),
