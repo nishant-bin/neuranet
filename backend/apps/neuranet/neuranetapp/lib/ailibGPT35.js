@@ -53,11 +53,12 @@ exports.process = async function(data, promptFile, apiKey, model) {
 
     LOG.info(`The AI response for request ${JSON.stringify(data)} and prompt object ${JSON.stringify(promptObject)} was ${JSON.stringify(response)}`);
 
-    const finishReason = utils.getObjProperty(response, modelObject.response_finishreason),
+    const finishReason = modelObject.response_finishreason ?
+            utils.getObjProperty(response, modelObject.response_finishreason) : null,
         messageContent = utils.getObjProperty(response, modelObject.response_contentpath);
     if (!messageContent) {
         LOG.error(`Response from AI engine for request ${data} and prompt ${prompt} is missing content.`); return null; }
-    else if (finishReason != "stop") {
+    else if (modelObject.response_finishreason && (!modelObject.response_ok_finish_reasons.includes[finishReason])) {
         LOG.error(`Response from AI engine for request ${data} and prompt ${prompt} didn't stop properly.`); return null; }
     else return {airesponse: messageContent, metric_cost: modelObject.response_cost_of_query_path?
         utils.getObjProperty(response, modelObject.response_cost_of_query_path) : undefined};

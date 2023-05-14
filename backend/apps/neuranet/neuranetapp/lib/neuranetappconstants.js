@@ -16,3 +16,4 @@ exports.RESPONSESDIR = path.resolve(`${APPROOT}/sample_responses`);
 exports.TEMPDIR = path.resolve(`${APPROOT}/temp`);
 exports.THIRDPARTYDIR = path.resolve(`${APPROOT}/3p`);
 exports.DBDIR = path.resolve(LOGINAPP_CONSTANTS.DB_DIR);
+exports.VECTORDBPATH = path.resolve(`${LOGINAPP_CONSTANTS.APP_ROOT}/db/vectordb.json`);

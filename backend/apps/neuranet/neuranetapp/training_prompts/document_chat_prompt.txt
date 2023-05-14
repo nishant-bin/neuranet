@@ -1,0 +1,11 @@
+Answer the following question only using the documents provided below.
+Question:
+{{{question}}}
+
+Documents:
+{{#documents}}
+{{{content}}}
+
+{{/documents}}
+
+Answer:

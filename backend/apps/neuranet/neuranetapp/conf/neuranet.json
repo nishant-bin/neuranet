@@ -15,6 +15,7 @@
             },
             "response_contentpath": "data.choices[0].message.content",
             "response_finishreason": "data.choices[0].finish_reason",
+            "response_ok_finish_reasons": ["stop"],
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "sql_ai_response.json",
             "read_ai_response_from_samples": false,
@@ -31,6 +32,7 @@
             "request_contentpath": "messages",
             "response_contentpath": "data.choices[0].message.content",
             "response_finishreason": "data.choices[0].finish_reason",
+            "response_ok_finish_reasons": ["stop"],
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "chat_ai_response.json",
             "read_ai_response_from_samples": false,
@@ -47,6 +49,7 @@
             },
             "response_contentpath": "data.choices[0].message.content",
             "response_finishreason": "data.choices[0].finish_reason",
+            "response_ok_finish_reasons": ["stop"],
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "code_ai_response.json",
             "read_ai_response_from_samples": false,
@@ -64,11 +67,26 @@
             },
             "response_contentpath": "data.choices[0].message.content",
             "response_finishreason": "data.choices[0].finish_reason",
+            "response_ok_finish_reasons": ["stop"],
             "response_cost_of_query_path": "data.usage.total_tokens",
             "sample_ai_response": "chaincode_model_response.json",
             "read_ai_response_from_samples": false,
             "token_approximation_uplift": 1.10,
             "price_per_unit": "0.000002"
+        },
+
+        "embedding-openai-ada002": {
+            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/embeddings"}, 
+            "request":{ 
+                "model": "text-embedding-ada-002", 
+                "input":"${__ORG_NEURANET_PROMPT__}"
+            },
+            "response_contentpath": "data[0].embedding",
+            "response_cost_of_query_path": "usage.total_tokens",
+            "sample_ai_response": "embedding_ai_response.json",
+            "read_ai_response_from_samples": true,
+            "token_approximation_uplift": 1.10,
+            "price_per_unit": "0.0000004"
         }
     }
 }
