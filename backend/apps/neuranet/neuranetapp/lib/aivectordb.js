@@ -192,14 +192,17 @@ exports.injest = async function(metadata, document, chunk_size, overlap, embeddi
     return vectorsToReturn;
 }
 
+exports.uninjest = async (vectors, db_path) => { for (const vector of vectors) await exports.delete(vector, db_path); }
+
 exports.get_vectordb = async function(path, embedding_generator) {
     await exports.initAsync(path); 
     return {
         create: async (vector, metadata, text) => exports.create(vector, metadata, text, embedding_generator, path),
-        injest: async (metadata, document, chunk_size, overlap)=> exports.injest(metadata, document, chunk_size, overlap, embedding_generator, path),
+        injest: async (metadata, document, chunk_size, overlap) => exports.injest(metadata, document, chunk_size, overlap, embedding_generator, path),
         read: async vector => exports.read(vector, path),
         update: async (vector, metadata, text) => exports.update(vector, metadata, text, embedding_generator, path),
         delete: async vector =>  exports.delete(vector, path),
+        uninjest: async vectors => exports.uninjest(vectors, db_path),
         query: async (vectorToFindSimilarTo, topK, min_distance) => exports.query(vectorToFindSimilarTo, topK, min_distance, path),
         flush_db: async _ => exports.save_db(path),
         get_path: _ => path, get_embedding_generator: _ => embedding_generator
