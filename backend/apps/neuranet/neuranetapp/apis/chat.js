@@ -20,10 +20,12 @@ const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
+const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
 	MODEL_DEFAULT = "chat-gpt35-turbo", CHAT_SESSION_UPDATE_TIMESTAMP_KEY = "__last_update",
-	CHAT_SESSION_MEMORY_KEY_PREFIX = "__org_monkshu_neuranet_chatsession";
+	CHAT_SESSION_MEMORY_KEY_PREFIX = "__org_monkshu_neuranet_chatsession", PROMPT_FILE = "chat_prompt.txt",
+	DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
 
 exports.doService = async jsonReq => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
@@ -36,26 +38,20 @@ exports.doService = async jsonReq => {
 	}
 
 	const aiKey = crypt.decrypt(NEURANET_CONSTANTS.CONF.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
-		aiModelToUse = jsonReq.model || MODEL_DEFAULT,
-		aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${NEURANET_CONSTANTS.CONF.ai_models[aiModelToUse].driver.module}`;
-	let aiLibrary; try{aiLibrary = require(aiModuleToUse);} catch (err) {
+		aiModelToUse = jsonReq.model || MODEL_DEFAULT, aiModelObject = await aiutils.getAIModel(aiModelToUse),
+		aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObject.driver.module}`;
+	let aiLibrary; try{aiLibrary = utils.requireWithDebug(aiModuleToUse, DEBUG_MODE);} catch (err) {
 		LOG.error("Bad AI Library or model - "+aiModuleToUse); 
 		return {reason: REASONS.BAD_MODEL, ...CONSTANTS.FALSE_RESULT};
 	}
 	
-	let chatsession = []; const sessionID = jsonReq.session_id||Date.now(), 
-		sessionKey = `${CHAT_SESSION_MEMORY_KEY_PREFIX}_${jsonReq.id}`; 
-	if (jsonReq.maintain_session) {
-		const idSessions = DISTRIBUTED_MEMORY.get(sessionKey, {}); chatsession = idSessions[sessionID]||[];
-		LOG.debug(`Distributed memory key for this session is: ${sessionKey}.`);
-		LOG.debug(`Chat session saved previously is ${JSON.stringify(chatsession)}.`); 
-	}
+	const {chatsession, sessionID, sessionKey} = exports.getUsersChatSession(jsonReq.id, jsonReq.session_id);
 
 	const finalSessionObject = _jsonifyContentsInThisSession([...chatsession, ...(utils.clone(jsonReq.session))]); 
 	finalSessionObject[finalSessionObject.length-1].last = true;
 
 	const response = await aiLibrary.process({session: finalSessionObject}, 
-		`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/chat_prompt.txt`, aiKey, aiModelToUse);
+		`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${PROMPT_FILE}`, aiKey, aiModelToUse);
 
 	if (!response) {
 		LOG.error(`AI library error processing request ${JSON.stringify(jsonReq)}`); 
@@ -65,7 +61,8 @@ exports.doService = async jsonReq => {
 		const {aiResponse, promptSummary, responseSummary} = _unmarshallAIResponse(response.airesponse, 
 			jsonReq.session.at(-1).content);
 		if (jsonReq.maintain_session) {
-			chatsession.push({"role": "user", "content": promptSummary}, {"role": "assistant", "content": responseSummary});
+			chatsession.push({"role": aiModelObject.user_role, "content": promptSummary}, 
+				{"role": aiModelObject.assistant_role, "content": responseSummary});
 			chatsession[CHAT_SESSION_UPDATE_TIMESTAMP_KEY] = Date.now();
 			const idSessions = DISTRIBUTED_MEMORY.get(sessionKey, {}); idSessions[sessionID] = chatsession;
 			DISTRIBUTED_MEMORY.set(sessionKey, idSessions);
@@ -73,6 +70,15 @@ exports.doService = async jsonReq => {
 		}
 		return {response: aiResponse, reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT, session_id: sessionID};
 	}
+}
+
+exports.getUsersChatSession = (userid, session_id_in) => {
+	let chatsession = []; const sessionID = session_id_in||Date.now(), 
+		sessionKey = `${CHAT_SESSION_MEMORY_KEY_PREFIX}_${userid}`; 
+	const idSessions = DISTRIBUTED_MEMORY.get(sessionKey, {}); chatsession = idSessions[sessionID]||[];
+	LOG.debug(`Distributed memory key for this session is: ${sessionKey}.`);
+	LOG.debug(`Chat session saved previously is ${JSON.stringify(chatsession)}.`); 
+	return {chatsession, sessionID, sessionKey};
 }
 
 const _jsonifyContentsInThisSession = session => {

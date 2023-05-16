@@ -39,15 +39,16 @@
 const fs = require("fs");
 const path = require("path");
 const fspromises = fs.promises;
+const crypto = require("crypto");
 let queue_executor;  try {queue_executor = require(`${CONSTANTS.LIBDIR}/queueExecutor.js`);} catch (err) {
     // allow running outside Monkshu servers.
     (LOG||console).warn(`Queue executor is not available. The AI Vector DB is running outside Tekmonks Monkshu Enterprise Server most probably. The error is ${err}. This is a benign error for stand alone Vector DB implementations and can be ignored.`);
 };
 
-const dbs = {}, DB_INDEX_NAME = "index.json";
+const dbs = {}, DB_INDEX_NAME = "dbindex.json", DB_INDEX_OBJECT_TEMPLATE = {vector_index: [], metadatas: {}};
 
 exports.initSync = db_path_in => {
-    dbs[_get_db_index(db_path_in)] = {vector_index: [], metadatas: {}}; // init to an empty index
+    dbs[_get_db_index(db_path_in)] = {...DB_INDEX_OBJECT_TEMPLATE}; // init to an empty db
 
     if (!fs.existsSync(db_path_in)) {
         _log_error("Vector DB path folder does not exist. Initializing to an empty DB", db_path_in, "Folder not found"); 
@@ -57,14 +58,14 @@ exports.initSync = db_path_in => {
     
     try {
         const db = require(_get_db_index_file(db_path_in)); 
-        dbs[_get_db_index(db_path_in)] = {vector_index: db.vector_index, metadatas: db.metadatas};
+        dbs[_get_db_index(db_path_in)] = db;
     } catch (err) {
-        _log_error("Vector DB index does not exist. Initializing to an empty DB", db_path_in, err); 
+        _log_error("Vector DB index does not exist, or read error. Initializing to an empty DB", db_path_in, err); 
     }
 }
 
 exports.initAsync = async db_path_in => {
-    dbs[_get_db_index(db_path_in)] = {vector_index: [], metadatas: {}}; // init to an empty index
+    dbs[_get_db_index(db_path_in)] = {...DB_INDEX_OBJECT_TEMPLATE}; // init to an empty db
 
     try {await fspromises.access(db_path_in, fs.constants.R_OK)} catch (err) {
         _log_error("Vector DB path folder does not exist. Initializing to an empty DB", db_path_in, err); 
@@ -72,8 +73,11 @@ exports.initAsync = async db_path_in => {
         return;
     }
 
-    try {dbs[_get_db_index(db_path_in)] = JSON.parse(await fspromises.readFile(_get_db_index_file(db_path_in), "utf8"))} catch (err) {
-        _log_error("Vector DB index does not exist. Initializing to an empty DB", db_path_in, err); 
+    try {
+        const db = JSON.parse(await fspromises.readFile(_get_db_index_file(db_path_in), "utf8"));
+        dbs[_get_db_index(db_path_in)] = db
+    } catch (err) {
+        _log_error("Vector DB index does not exist, or read error. Initializing to an empty DB", db_path_in, err); 
     }
     
 }
@@ -85,13 +89,16 @@ exports.save_db = async db_path_out => {
     }
 
     try {await fspromises.writeFile(_get_db_index_file(db_path_out), JSON.stringify(db_to_save))}
-    catch (err) {_log_error("Vector DB write error", db_path_out, err);}
+    catch (err) {_log_error("Error saving the database index in save_db call", db_path_out, err);}
 }
 
 exports.create = exports.add = async (vector, metadata, text, embedding_generator, db_path) => {
-    if ((!vector) && embeddingGenerator && text) vector = await embedding_generator(text);
+    if ((!vector) && embeddingGenerator && text) try {vector = await embedding_generator(text);} catch (err) {
+        _log_error("Vector embedding generation failed", db_path, err); 
+        return false;
+    }
     if (!vector) {  // nothing to do
-        _log_error("No vector found or generated for VectoDB update, skipping create/add operation", db_path, "Either embedding generator failed or no text was provided to embed"); 
+        _log_error("No vector found or generated for Vector DB update, skipping create/add operation", db_path, "Either the embedding generator failed or no text was provided to embed"); 
         return false;
     }
 
@@ -112,36 +119,29 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
 
 exports.read = async (vector, db_path) => {
     const metadata = dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)];
-    let text; try {text = fspromises.readFile(_get_db_index_text_file(vector, db_path), "utf8");} 
+    let text; try {text = await fspromises.readFile(_get_db_index_text_file(vector, db_path), "utf8");} 
     catch (err) { _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} not found or error reading`, 
         db_path, err); }
     return {vector, metadata, text};
 }
 
 exports.update = async (vector, metadata, text, embedding_generator, db_path) => {
-    if ((!vector) && embeddingGenerator && text) vector = await embedding_generator(text);
-    if (!vector) {  // nothing to do
-        _log_error("No vector found or generated for VectoDB update, skipping update operation", db_path, "Either embedding generator failed or no text was provided to embed"); 
-        return false;
-    }    
-
-    const old_metadata = dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)];
-    dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)] = metadata; 
+    if (!vector) {_log_error("Update called without a proper index vector", db_path, "Vector to update not provided"); return false;}
     
-    try {await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");}
-    catch (err) {
+    const old_metadata = dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)];
+    if (!exports.add(vector, metadata, text, embedding_generator, db_path)) {   // re-adding actually overwrites everything, so it is an update
         dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)] = old_metadata; // un-update
-        _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be saved`, db_path, err);
         return false;
-    }
-
-    save_db_as_async_or_via_queued_task(db_path);   // DB modified so save it as a queued server or async task
-    return vector;
+    } else return vector;
 }
 
 exports.delete = async (vector, db_path) => {
     const foundAtIndex = dbs[_get_db_index(db_path)].vector_index.indexOf(vector); 
-    if (foundAtIndex == -1) return; // not found
+    if (foundAtIndex == -1) {
+        _log_error("Delete called on a vector which is not part of the database", db_path, "Vector not found");
+        return; // not found
+    }
+
     dbs[_get_db_index(db_path)].vector_index.splice(foundAtIndex, 1); 
     delete dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)];
     try {await fspromises.unlink(_get_db_index_text_file(vector, db_path));} catch (err) {
@@ -150,29 +150,38 @@ exports.delete = async (vector, db_path) => {
     save_db_as_async_or_via_queued_task(db_path);   // DB modified so save it as a queued server or async task
 }
 
-exports.query = async function(vectorToFindSimilarTo, topK, min_distance, db_path) {
+exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, db_path) {
     const similarities = [];
     for (const vectorToCompareTo of dbs[_get_db_index(db_path)].vector_index) similarities.push({
         vector: vectorToCompareTo, 
         similarity: _cosine_similarity(vectorToCompareTo, vectorToFindSimilarTo),
         metadata: documents[_get_vector_hash(vectorToCompareTo)]});
     similarities.sort(a,b => a.similarity - b.similarity);
-    const result = [...similarities.slice(0, topK)]; similarities = []; // try to free memory asap
+    const results = [...similarities.slice(0, topK)]; similarities = []; // try to free memory asap
 
     // filter for minimum distance if asked
-    if (min_distance) result = result.filter(value => value >= min_distance);
+    if (min_distance) results = results.filter(similarity_object => similarity_object.similarity >= min_distance);
 
-    for (const result of results) try {
-        result.text = await fspromises.readFile(_get_db_index_text_file(result.vector, db_path), "utf8");
+    // filter the results further by conditioning on the metadata, if a filter was provided
+    if (metadata_filter_function) results = results.filter(similarity_object => metadata_filter_function(similarity_object.metadata));
+
+    for (const similarity_object of results) try {
+        similarity_object.text = await fspromises.readFile(_get_db_index_text_file(results.vector, db_path), "utf8");
     } catch (err) { _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} not found or error reading`, 
         db_path, err); };
 
-    return result; 
+    return results; 
 }
 
-exports.injest = async function(metadata, document, chunk_size, overlap, embedding_generator, db_path) {
+exports.ingest = async function(metadata, document, chunk_size, split_separator, overlap, embedding_generator, db_path) {
+    const _find_split_separator = (split_start, raw_split_point) => {
+        const split_point = document.substring(split_start, raw_split_point).lastIndexOf(split_separator);
+        if (split_point == -1) return raw_split_point;    // seperator not found -- so go with it all as is
+        else return split_point;
+    }
+
     let split_start = 0, split_end = (split_start+chunk_size) < document.length ? 
-        (split_start+chunk_size) : document.length;
+        _find_split_separator(split_start, split_start+chunk_size) : document.length;
 
     const _deleteAllCreatedVectors = async vectors => {for (const vector of vectors) await exports.delete(vector, db_path);}
 
@@ -180,7 +189,7 @@ exports.injest = async function(metadata, document, chunk_size, overlap, embeddi
     while (split_end <= document.length) {
         const split = document.substring(split_start, split_end);
         split_start = split_end - overlap; split_end = (split_start+chunk_size) < document.length ? 
-            (split_start+chunk_size) : document.length;
+            _find_split_separator(split_start, split_start+chunk_size) : document.length;
         const createdVector = await exports.create(undefined, metadata, split, embedding_generator, db_path);
         if (!createdVector) {
             _log_error("Unable to inject, creation failed", db_path, "Adding the new chunk failed");
@@ -192,18 +201,18 @@ exports.injest = async function(metadata, document, chunk_size, overlap, embeddi
     return vectorsToReturn;
 }
 
-exports.uninjest = async (vectors, db_path) => { for (const vector of vectors) await exports.delete(vector, db_path); }
+exports.uningest = async (vectors, db_path) => { for (const vector of vectors) await exports.delete(vector, db_path); }
 
 exports.get_vectordb = async function(path, embedding_generator) {
     await exports.initAsync(path); 
     return {
         create: async (vector, metadata, text) => exports.create(vector, metadata, text, embedding_generator, path),
-        injest: async (metadata, document, chunk_size, overlap) => exports.injest(metadata, document, chunk_size, overlap, embedding_generator, path),
+        ingest: async (metadata, document, chunk_size, split_separator, overlap) => exports.ingest(metadata, document, chunk_size, split_separator, overlap, embedding_generator, path),
         read: async vector => exports.read(vector, path),
         update: async (vector, metadata, text) => exports.update(vector, metadata, text, embedding_generator, path),
         delete: async vector =>  exports.delete(vector, path),
-        uninjest: async vectors => exports.uninjest(vectors, db_path),
-        query: async (vectorToFindSimilarTo, topK, min_distance) => exports.query(vectorToFindSimilarTo, topK, min_distance, path),
+        uningest: async vectors => exports.uningest(vectors, db_path),
+        query: async (vectorToFindSimilarTo, topK, min_distance, metadata_filter_function) => exports.query(vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, path),
         flush_db: async _ => exports.save_db(path),
         get_path: _ => path, get_embedding_generator: _ => embedding_generator
     }

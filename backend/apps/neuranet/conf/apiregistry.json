@@ -24,5 +24,8 @@
     "/apps/{{app}}/convertsql" : "/neuranetapp/apis/convertsql.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
     "/apps/{{app}}/convertcode" : "/neuranetapp/apis/convertcode.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
     "/apps/{{app}}/convertcodechain" : "/neuranetapp/apis/convertcodechain.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
-    "/apps/{{app}}/chat" : "/neuranetapp/apis/chat.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id"
+    "/apps/{{app}}/chat" : "/neuranetapp/apis/chat.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
+    
+    "/apps/{{app}}/knowledgebasechat" : "/neuranetapp/apis/chat_knowledge_base.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389",
+    "/apps/{{app}}/indexdoc" : "/neuranetapp/apis/indexdoc.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389"
 }

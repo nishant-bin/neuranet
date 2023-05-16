@@ -6,13 +6,11 @@
 const fs = require("fs");
 const mustache = require("mustache");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
-const vectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/vectordb.js`);
 const loginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`);
 
 exports.initSync = _ => {
     _readConfSync();
     loginhandler.init(); 
-    vectordb.initSync(NEURANET_CONSTANTS.VECTORDBPATH);
 }
 
 function _readConfSync() {
