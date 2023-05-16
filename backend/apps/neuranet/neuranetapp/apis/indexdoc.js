@@ -7,7 +7,7 @@
  * 	id - the user ID
  *  db - optional but strongly recommended to ensure split databases for 
  *       faster responses, database id/name to injest into 
- *  document - the document to injest
+ *  document - the document to ingest
  *  metadata - the document metadata
  *  model - (optional) the AI model to use to create the embeddings
  * 
@@ -37,7 +37,7 @@ exports.doService = async jsonReq => {
 	}
 
     const aiModelToUseForEmbeddings = jsonReq.model || MODEL_DEFAULT, 
-		aiModelObjectForEmbeddings = aiutils.getAIModel(aiModelToUseForEmbeddings), 
+		aiModelObjectForEmbeddings = await aiutils.getAIModel(aiModelToUseForEmbeddings), 
 		vectorDB_ID = jsonReq.db||aiModelObjectForEmbeddings.default_vector_db,
         embeddingsGenerator = text => embedding.createEmbeddingVector(jsonReq.id, text, aiModelToUseForEmbeddings); 
     const vectordb = aivectordb.get_vectordb(`${NEURANET_CONSTANTS.VECTORDBPATH}/${vectorDB_ID}`, embeddingsGenerator);

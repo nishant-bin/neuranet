@@ -41,7 +41,7 @@ exports.doService = async jsonReq => {
 		if (sessionObject.role == aiModelObjectForChat.user_role) allPreviousUserPrompts.push(sessionObject.content);
 	const userPromptsConcatenated = [...allPreviousUserPrompts, jsonReq.question].join("\n\n");
 	const aiModelToUseForEmbeddings = aiModelObjectForChat.embeddings_model, 
-		aiModelObjectForEmbeddings = aiutils.getAIModel(aiModelToUseForEmbeddings), 
+		aiModelObjectForEmbeddings = await aiutils.getAIModel(aiModelToUseForEmbeddings), 
 		knowledgebaseDB = jsonReq.db || aiModelObjectForEmbeddings.default_vector_db,
 		embeddingsGenerator = text => embedding.createEmbeddingVector(jsonReq.id, text, aiModelToUseForEmbeddings); 
 	const vectorForUserPrompts = embeddingsGenerator(userPromptsConcatenated);
