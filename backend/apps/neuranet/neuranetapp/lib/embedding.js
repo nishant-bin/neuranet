@@ -41,4 +41,4 @@ async function createEmbeddingVector(id, text, model) {
 	}
 }
 
-module.exports = {createEmbeddingVector};
+module.exports = {createEmbeddingVector, REASONS};

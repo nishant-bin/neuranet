@@ -6,17 +6,17 @@
 
     "INSERT INTO quotas (id, quota) VALUES ('_default_', '0.3')",
 
-    "CREATE TABLE views(org varchar not null, view varchar not null)",
+    "CREATE TABLE views(domain varchar not null, view varchar not null)",
 
-    "INSERT INTO views (org, view) VALUES ('_org_monkshu_loginapp_defaultorg', 'chooser')",
+    "INSERT INTO views (domain, view) VALUES ('_org_monkshu_loginapp_defaultdomain', 'chooser')",
 
-    "INSERT INTO views (org, view) VALUES ('Tekmonks', 'gencode')",
+    "INSERT INTO views (domain, view) VALUES ('tekmonks.com', 'gencode')",
 
-    "INSERT INTO views (org, view) VALUES ('Tekmonks', 'search')",
+    "INSERT INTO views (domain, view) VALUES ('tekmonks.com', 'search')",
 
-    "INSERT INTO views (org, view) VALUES ('Tekmonks', 'sqltranslate')",
+    "INSERT INTO views (domain, view) VALUES ('tekmonks.com', 'sqltranslate')",
 
-    "INSERT INTO views (org, view) VALUES ('Tekmonks', 'chat')",
+    "INSERT INTO views (domain, view) VALUES ('tekmonks.com', 'chat')",
 
     "CREATE TABLE usage(timestamp TIMESTAMP DEFAULT (strftime('%s', 'now')), id varchar not null, usage integer not null, model varchar not null)",
 	

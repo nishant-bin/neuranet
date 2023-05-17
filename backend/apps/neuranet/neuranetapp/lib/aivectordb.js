@@ -52,7 +52,7 @@ exports.initSync = db_path_in => {
 
     if (!fs.existsSync(db_path_in)) {
         _log_error("Vector DB path folder does not exist. Initializing to an empty DB", db_path_in, "Folder not found"); 
-        fs.mkdirSync(db_path_in);
+        fs.mkdirSync(db_path_in, {recursive:true});
         return;
     }
     
@@ -69,7 +69,7 @@ exports.initAsync = async db_path_in => {
 
     try {await fspromises.access(db_path_in, fs.constants.R_OK)} catch (err) {
         _log_error("Vector DB path folder does not exist. Initializing to an empty DB", db_path_in, err); 
-        await fspromises.mkdir(db_path_in);
+        await fspromises.mkdir(db_path_in, {recursive:true});
         return;
     }
 
@@ -93,7 +93,7 @@ exports.save_db = async db_path_out => {
 }
 
 exports.create = exports.add = async (vector, metadata, text, embedding_generator, db_path) => {
-    if ((!vector) && embeddingGenerator && text) try {vector = await embedding_generator(text);} catch (err) {
+    if ((!vector) && embedding_generator && text) try {vector = await embedding_generator(text);} catch (err) {
         _log_error("Vector embedding generation failed", db_path, err); 
         return false;
     }
@@ -102,18 +102,20 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
         return false;
     }
 
-    dbs[_get_db_index(db_path)].vector_index.push(vector);
-    dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)] = metadata;
-    
-    try {await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");}
-    catch (err) {
-        dbs[_get_db_index(db_path)].vector_index.pop(); 
-        delete dbs[_get_db_index(db_path)].metadatas[_get_vector_hash(vector)];
-        _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be saved`, db_path, err);
-        return false;
-    }
+    const dbToUse = dbs[_get_db_index(db_path)];
+    const hash = _get_vector_hash(vector); if (!dbToUse.metadatas[hash]) {  // only add the vector if we already don't have it
+        dbToUse.vector_index.push(vector); dbToUse.metadatas[hash] = metadata;
+        
+        try {await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");}
+        catch (err) {
+            dbToUse.vector_index.pop(); delete dbToUse.metadatas[hash];
+            _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be saved`, db_path, err);
+            return false;
+        }
 
-    save_db_as_async_or_via_queued_task(db_path);   // DB modified so save it as a queued server or async task
+        save_db_as_async_or_via_queued_task(db_path);   // DB modified so save it as a queued server or async task
+    }
+    
     return vector;
 }
 
@@ -151,13 +153,14 @@ exports.delete = async (vector, db_path) => {
 }
 
 exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, db_path) {
-    const similarities = [];
-    for (const vectorToCompareTo of dbs[_get_db_index(db_path)].vector_index) similarities.push({
+    let similarities = [], dbToUse = dbs[_get_db_index(db_path)];
+    for (const vectorToCompareTo of dbToUse.vector_index) similarities.push({
         vector: vectorToCompareTo, 
         similarity: _cosine_similarity(vectorToCompareTo, vectorToFindSimilarTo),
-        metadata: documents[_get_vector_hash(vectorToCompareTo)]});
-    similarities.sort(a,b => a.similarity - b.similarity);
-    const results = [...similarities.slice(0, topK)]; similarities = []; // try to free memory asap
+        metadata: dbToUse.metadatas[_get_vector_hash(vectorToCompareTo)]});
+    similarities.sort((a,b) => a.similarity - b.similarity);
+    let results = [...similarities.slice(0, topK < similarities.length ? topK : similarities.length)]; 
+    similarities = []; // try to free memory asap
 
     // filter for minimum distance if asked
     if (min_distance) results = results.filter(similarity_object => similarity_object.similarity >= min_distance);
@@ -166,7 +169,7 @@ exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metada
     if (metadata_filter_function) results = results.filter(similarity_object => metadata_filter_function(similarity_object.metadata));
 
     for (const similarity_object of results) try {
-        similarity_object.text = await fspromises.readFile(_get_db_index_text_file(results.vector, db_path), "utf8");
+        similarity_object.text = await fspromises.readFile(_get_db_index_text_file(similarity_object.vector, db_path), "utf8");
     } catch (err) { _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} not found or error reading`, 
         db_path, err); };
 
@@ -175,7 +178,8 @@ exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metada
 
 exports.ingest = async function(metadata, document, chunk_size, split_separator, overlap, embedding_generator, db_path) {
     const _find_split_separator = (split_start, raw_split_point) => {
-        const split_point = document.substring(split_start, raw_split_point).lastIndexOf(split_separator);
+        const rawChunk = document.substring(split_start, raw_split_point);
+        const split_point = split_start+rawChunk.lastIndexOf(split_separator);
         if (split_point == -1) return raw_split_point;    // seperator not found -- so go with it all as is
         else return split_point;
     }
@@ -186,8 +190,8 @@ exports.ingest = async function(metadata, document, chunk_size, split_separator,
     const _deleteAllCreatedVectors = async vectors => {for (const vector of vectors) await exports.delete(vector, db_path);}
 
     const vectorsToReturn = [];
-    while (split_end <= document.length) {
-        const split = document.substring(split_start, split_end);
+    while (split_end <= document.length && (split_start != split_end)) {
+        const split = document.substring(split_start, split_end).trim();
         split_start = split_end - overlap; split_end = (split_start+chunk_size) < document.length ? 
             _find_split_separator(split_start, split_start+chunk_size) : document.length;
         const createdVector = await exports.create(undefined, metadata, split, embedding_generator, db_path);
@@ -236,7 +240,7 @@ const _get_db_index = db_path => path.resolve(db_path);
 
 const _get_db_index_file = db_path => path.resolve(`${db_path}/${DB_INDEX_NAME}`);
 
-const _get_db_index_text_file = (vector, db_path) => path.resolve(`${db_path}/texts/${_get_vector_hash(vector)}`);
+const _get_db_index_text_file = (vector, db_path) => path.resolve(`${db_path}/text_${_get_vector_hash(vector)}.txt`);
 
 function _get_vector_hash(vector) {
     const shasum = crypto.createHash("sha1"); shasum.update(vector.toString());

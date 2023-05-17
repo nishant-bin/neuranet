@@ -17,9 +17,14 @@
  * 
  * (C) 2023 TekMonks. All rights reserved.
  */
+
+const mustache = require("mustache");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
+const chatAPI = require(`${NEURANET_CONSTANTS.APIDIR}/chat.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
+const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
+const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
 
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
 		LIMIT: "limit", NOKNOWLEDGE: "noknowledge"}, CHAT_MODEL_DEFAULT = "chat-knowledgebase-gpt35-turbo", 
@@ -43,17 +48,27 @@ exports.doService = async jsonReq => {
 	const aiModelToUseForEmbeddings = aiModelObjectForChat.embeddings_model, 
 		aiModelObjectForEmbeddings = await aiutils.getAIModel(aiModelToUseForEmbeddings), 
 		knowledgebaseDB = jsonReq.db || aiModelObjectForEmbeddings.default_vector_db,
-		embeddingsGenerator = text => embedding.createEmbeddingVector(jsonReq.id, text, aiModelToUseForEmbeddings); 
-	const vectorForUserPrompts = embeddingsGenerator(userPromptsConcatenated);
+		embeddingsGenerator = async text => {
+			const response = await embedding.createEmbeddingVector(jsonReq.id, text, aiModelToUseForEmbeddings); 
+			if (response.reason != embedding.REASONS.OK) return null;
+			else return response.embedding;
+		}
+	const vectorForUserPrompts = await embeddingsGenerator(userPromptsConcatenated);
+	if (!vectorForUserPrompts) {
+		LOG.error(`Embedding vector generation failed for ${userPromptsConcatenated}. Can't continue.`);
+		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
+	}
 
-	const vectordb = aivectordb.get_vectordb(`${NEURANET_CONSTANTS.VECTORDBPATH}/${knowledgebaseDB}`, embeddingsGenerator);
-	const similarityResultsForPrompt = vectordb.query(vectorForUserPrompts, aiModelObjectForChat.topK, aiModelObjectForChat.min_distance);
+	let vectordb; try { vectordb = await aivectordb.get_vectordb(`${NEURANET_CONSTANTS.VECTORDBPATH}/${knowledgebaseDB}`, 
+		embeddingsGenerator) } catch(err) { LOG.error(`Can't instantiate the vector DB ${knowledgebaseDB}. Unable to continue.`); 
+			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; }
+	const similarityResultsForPrompt = await vectordb.query(vectorForUserPrompts, aiModelObjectForChat.topK, aiModelObjectForChat.min_distance);
 	if ((!similarityResultsForPrompt) || (!similarityResultsForPrompt.length)) return {reason: REASONS.NOKNOWLEDGE, ...CONSTANTS.FALSE_RESULT};
 	const documents = [], metadatasForResponse = []; for (const similarityResult of similarityResultsForPrompt) {
-		documents.push(similarityResult.text); metadatasForResponse.push(similarityResult.metadata) };
+		documents.push({content: similarityResult.text}); metadatasForResponse.push(similarityResult.metadata) };
 
 	const knowledgebasePromptTemplate = await aiutils.getPrompt(`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${PROMPT_FILE_KNOWLEDGEBASE}`);
-	const knowledegebaseWithQuestion = mustance.render(knowledgebasePromptTemplate, {documents, question: jsonReq.question});
+	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, {documents, question: jsonReq.question});
 
 	const jsonReqChat = { id: jsonReq.id, maintain_session: true, session_id: jsonReq.session_id,
 		session: [{"role": aiModelObjectForChat.user_role, "content": knowledegebaseWithQuestion}], model: aiModelToUseForChat };

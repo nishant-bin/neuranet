@@ -10,15 +10,15 @@ const DB_PATH = path.resolve(`${NEURANET_CONSTANTS.DBDIR}/neuranet.db`);
 const DB_CREATION_SQLS = require(`${NEURANET_CONSTANTS.DBDIR}/neuranetapp_dbschema.json`);
 const db = require(`${CONSTANTS.LIBDIR}/db.js`).getDBDriver("sqlite", DB_PATH, DB_CREATION_SQLS);
 
-const DEFAULT_VIEW_ORG = "_org_monkshu_loginapp_defaultorg";
+const DEFAULT_VIEWS_DOMAIN = "_org_monkshu_loginapp_defaultdomain";
 
 exports.initDB = async _ => await db.init();
 
-exports.getViewsForOrg = async org => {
-	const defaultViews = await db.getQuery("SELECT view FROM views WHERE org=? COLLATE NOCASE", [DEFAULT_VIEW_ORG]);
-	const orgViews = await db.getQuery("SELECT view FROM views WHERE org=? COLLATE NOCASE", [org]);
+exports.getViewsForDomain = async domain => {
+	const defaultViews = await db.getQuery("SELECT view FROM views WHERE domain=? COLLATE NOCASE", [DEFAULT_VIEWS_DOMAIN]);
+	const domainViews = await db.getQuery("SELECT view FROM views WHERE domain=? COLLATE NOCASE", [domain]);
 
-	const selectedViews = orgViews && orgViews.length > 0 ? _flattenArray(orgViews, "view") : 
+	const selectedViews = domainViews && domainViews.length > 0 ? _flattenArray(domainViews, "view") : 
 		_flattenArray(defaultViews, "view");
 
 	return selectedViews;

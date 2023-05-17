@@ -16,7 +16,7 @@ exports.init = _ => {
 }
 
 exports.viewInjector = async function(result) {
-    if (result.tokenflag) try { result.views = await dblayer.getViewsForOrg(result.org); }
+    if (result.tokenflag) try { result.views = await dblayer.getViewsForDomain(result.domain); }
     catch (err) {return false;}
     return true;
 }

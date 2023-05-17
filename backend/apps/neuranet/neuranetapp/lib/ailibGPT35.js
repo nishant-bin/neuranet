@@ -17,7 +17,7 @@ exports.process = async function(data, promptFile, apiKey, model) {
     const modelObject = await aiutils.getAIModel(model); 
     if (!modelObject) { LOG.error(`Bad model object - ${modelObject}.`); return null; }
 
-    const tokencount_request = await countTokens(prompt, modelObject.request.model, modelObject.token_approximation_uplift);
+    const tokencount_request = await exports.countTokens(prompt, modelObject.request.model, modelObject.token_approximation_uplift);
     if (tokencount_request > modelObject.request.max_tokens - 1) {
         LOG.error(`Request too large for the model's context length - the token count is ${tokencount_request}, the model's max context length is ${modelObject.request.model}.`); 
         LOG.error(`The request prompt was ${JSON.stringify(prompt)}`);
@@ -55,9 +55,10 @@ exports.process = async function(data, promptFile, apiKey, model) {
     const finishReason = modelObject.response_finishreason ?
             utils.getObjProperty(response, modelObject.response_finishreason) : null,
         messageContent = utils.getObjProperty(response, modelObject.response_contentpath);
+        
     if (!messageContent) {
         LOG.error(`Response from AI engine for request ${data} and prompt ${prompt} is missing content.`); return null; }
-    else if (modelObject.response_finishreason && (!modelObject.response_ok_finish_reasons.includes[finishReason])) {
+    else if (modelObject.response_finishreason && (!modelObject.response_ok_finish_reasons.includes(finishReason))) {
         LOG.error(`Response from AI engine for request ${data} and prompt ${prompt} didn't stop properly.`); return null; }
     else return {airesponse: messageContent, metric_cost: modelObject.response_cost_of_query_path?
         utils.getObjProperty(response, modelObject.response_cost_of_query_path) : undefined};

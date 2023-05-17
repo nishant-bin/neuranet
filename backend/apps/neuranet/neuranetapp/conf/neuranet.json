@@ -94,7 +94,7 @@
             "user_role": "user",
             "assistant_role": "assistant",
             "sample_ai_response": "chat_ai_response.json",
-            "read_ai_response_from_samples": false,
+            "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "price_per_unit": "0.000002"
         },
