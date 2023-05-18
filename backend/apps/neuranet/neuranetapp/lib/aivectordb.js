@@ -170,8 +170,10 @@ exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metada
 
     for (const similarity_object of results) try {
         similarity_object.text = await fspromises.readFile(_get_db_index_text_file(similarity_object.vector, db_path), "utf8");
-    } catch (err) { _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} not found or error reading`, 
-        db_path, err); };
+    } catch (err) { 
+        _log_error(`Vector DB text file ${_get_db_index_text_file(similarity_object.vector, db_path)} not found or error reading`, db_path, err); 
+        return false;
+    };
 
     return results; 
 }
