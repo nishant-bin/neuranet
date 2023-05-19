@@ -13,37 +13,49 @@ const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
 const aivectordb_test_path = `${__dirname}/vector_db/test`;
 
 exports.runTestsAsync = async function(argv) {
-    LOG.console(`Test case for VectorDB called.\n`);
-    if (!argv[0]) {
-        LOG.console("Missing test file path.\n");
+    if ((!argv[0]) || (argv[0].toLowerCase() != "ingest")) {
+        LOG.console(`Skipping vector DB ingestion test case, not called.\n`)
         return;
     }
+    if (!argv[1]) {
+        LOG.console("Missing test file path.\n");
+        return;
+    } 
 
-    const vectorDB = await aivectordb.get_vectordb(aivectordb_test_path);
-    const fileToParse = path.resolve(argv[0]), _getFileReadStream = path => path.toLowerCase().endsWith(".gz") ?
+    LOG.console(`Test case for VectorDB ingestion called to ingest file ${argv[1]}.\n`);
+
+    const vectorDB = await aivectordb.get_vectordb(aivectordb_test_path, undefined, false);
+    const fileToParse = path.resolve(argv[1]), _getFileReadStream = path => path.toLowerCase().endsWith(".gz") ?
         fs.createReadStream(fileToParse).pipe(zlib.createGunzip()) : fs.createReadStream(fileToParse);
     
-    let numRecordsProcessed = 0, numRecordsIngested = 0;
+    let numRecordsProcessed = 0, numRecordsIngested = 0, waiting_ingestions = 0; 
     return new Promise(resolve => csvparser.parse(_getFileReadStream(fileToParse), {
-        step: function(results, _parser) { 
+        step: async function(results, _parser) { 
+            waiting_ingestions++;
             const csvLine = results.data;
 
             let vectorThisResult; if (csvLine.combined_info_search) 
                 try {vectorThisResult = JSON.parse(csvLine.combined_info_search)} catch (err) {};
-            if (vectorThisResult && csvLine.overview) {
-                vectorDB.create(vectorThisResult, {link: csvLine.homepage, title: csvLine.title}, csvLine.overview);
+            if (vectorThisResult && csvLine.overview && (await vectorDB.create(vectorThisResult, 
+                    {link: csvLine.homepage, title: csvLine.title}, csvLine.overview)) == vectorThisResult) {
                 const message = `${++numRecordsProcessed} --- ${csvLine.title} - Ingested.`; numRecordsIngested++;
                 LOG.console(`${message}\n`); LOG.info(message)
             } else {
                 const message = `${++numRecordsProcessed} --- ${csvLine.title} - Not Ingested As ${vectorThisResult?"Overview missing":"Vector Parse Failed"}.`;
-                LOG.error(`${message}\n`); LOG.info(message)
+                LOG.console(`${message}\n`); LOG.error(message);
             }
+            waiting_ingestions--;
         },
         header: true,
         dynamicTyping: true,
         complete: _ => {
-            const message = `Completed successfully ${numRecordsProcessed} records. Total ingested ${numRecordsIngested}. Total errors ${numRecordsProcessed - numRecordsIngested}.`;
-            LOG.info(message); LOG.console(`${message}\n`); resolve();
+            const completionTimer = setInterval(async _=> {if (waiting_ingestions == 0) {
+                clearInterval(completionTimer);
+                await vectorDB.flush_db(); 
+                const message = `Completed successfully ${numRecordsProcessed} records. Total ingested ${numRecordsIngested}. Total errors ${numRecordsProcessed - numRecordsIngested}.`;
+                LOG.info(message); LOG.console(`${message}\n`); 
+                resolve();
+            }}, 100);
         },
         error: error => {LOG.error(error); LOG.console("Error: "+error+".\n"); resolve();}
     }));
