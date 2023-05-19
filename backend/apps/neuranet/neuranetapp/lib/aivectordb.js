@@ -29,6 +29,9 @@
  * sufficient for a million typical documents - spread across how many ever indexes 
  * as needed.
  * 
+ * Flat indexing takes about 200 ms on a 2 core, 6 GB RAM box with 5,000 documents to
+ * search. May be faster on modern processors or GPUs.
+ * 
  * TODO: An upcoming new algorithm for fast, 100% accurate exhaustive search would be
  * added by Tekmonks once testing is completed. Making this the easiest, and a really 
  * fast vector database for all types of production loads and AI applications.
