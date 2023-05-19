@@ -4,3 +4,4 @@ debug.log
 backend/apps/*/logs/remotelog.ndjson
 backend/apps/*/db/*.db*
 backend/**/conf/hostname.json
+backend/apps/neuranet/tests/vector_db/**/*
