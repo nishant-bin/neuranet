@@ -68,5 +68,5 @@ const _showErrorNoCenter = async error => { await monkshu_env.components['dialog
 const _showMessage = async message => { await monkshu_env.components['dialog-box'].showDialog(`${COMPONENT_PATH}/dialogs/message.html`, 
 	true, false, {message, CONF:conf}, "dialog", []); monkshu_env.components['dialog-box'].hideDialog("dialog"); }
 
-export const neuranet_sql = {trueWebComponentMode: true, elementConnected, convert}
+export const neuranet_sql = {trueWebComponentMode: true, elementConnected, convert, showAlert: _showMessage}
 monkshu_component.register("neuranet-sql", `${COMPONENT_PATH}/neuranet-sql.html`, neuranet_sql);

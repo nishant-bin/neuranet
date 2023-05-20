@@ -113,8 +113,8 @@ div#mainworkspace {flex-direction: column;}
     </select>
 
     <span id="controls">
-        <input id="validatesql" type="checkbox">
-        <label for="validatesql" style="word-wrap:break-word">Skip validation</label>
+        <input id="validatesql" type="checkbox" onclick="if (this.checked) monkshu_env.components['neuranet-sql'].showAlert('{{i18n.ValidateSQLWarning}}')">
+        <label for="validatesql" style="word-wrap:break-word">{{i18n.ValidateSQL}}</label>
     </span>
 
     <select id="targetdb">
