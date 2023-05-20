@@ -32,7 +32,7 @@
  * Flat indexing takes about 200 ms on a 2 core, 6 GB RAM box with 5,000 documents to
  * search. May be faster on modern processors or GPUs. 
  * 
- * Can we multithreaded, if selected during creation. Will use worker threads for queries
+ * Can be multithreaded, if selected during creation. Will use worker threads for queries
  * if multithreaded (typically this is SLOWER!);
  * 
  * TODO: An upcoming new algorithm for fast, 100% accurate exhaustive search would be
