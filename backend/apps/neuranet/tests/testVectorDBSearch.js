@@ -25,7 +25,7 @@ exports.runTestsAsync = async function(argv) {
     LOG.console(`Test case for VectorDB search called with query file ${argv[1]}.\n`);
     const queryFile = require(argv[1]);
 
-    const vectorDB = await aivectordb.get_vectordb(aivectordb_test_path, undefined, false);
+    const vectorDB = await aivectordb.get_vectordb(aivectordb_test_path, undefined, multithreaded, false);
     LOG.console(`Searching for ${queryFile.text}, top ${topK} results with a minimum distance of ${minDistance}.\n`);
     const timeStart = Date.now();
     const results = await vectorDB.query(queryFile.vector, topK, minDistance, undefined, notext, multithreaded);

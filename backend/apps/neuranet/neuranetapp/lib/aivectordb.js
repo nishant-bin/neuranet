@@ -48,29 +48,32 @@ const fspromises = fs.promises;
 const crypto = require("crypto");
 const cpucores = os.cpus().length*2;    // assume 2 cpu-threads per core (hyperthreaded cores)
 const maxthreads_for_search = cpucores - 1; // leave 1 thread for the main program
-const workerpool = require("workerpool").pool(undefined, {minWorkers: "max", maxWorkers: maxthreads_for_search});
+const worker_threads = require("worker_threads");
 
-const dbs = {}, DB_INDEX_NAME = "dbindex.json", DB_INDEX_OBJECT_TEMPLATE = {index:{}, dirty: false};
+const dbs = {}, DB_INDEX_NAME = "dbindex.json", DB_INDEX_OBJECT_TEMPLATE = {index:{}, dirty: false},
+    workers = [];
 
-exports.initSync = db_path_in => {
+let dbs_worker, isMultithreaded = false;
+
+if (!worker_threads.isMainThread) worker_threads.parentPort.on("message", async message => {
+    let result;
+    if (message.function == "setDatabase") result = _worker_setDatabase(...message.arguments);
+    if (message.function == "calculate_cosine_similarity") result = _worker_calculate_cosine_similarity(...message.arguments);
+    worker_threads.parentPort.postMessage({id: message.id, result});
+});
+
+exports.initAsync = async (db_path_in, multithreaded) => {
     dbs[_get_db_index(db_path_in)] = {...DB_INDEX_OBJECT_TEMPLATE}; // init to an empty db
-
-    if (!fs.existsSync(db_path_in)) {
-        _log_error("Vector DB path folder does not exist. Initializing to an empty DB", db_path_in, "Folder not found"); 
-        fs.mkdirSync(db_path_in, {recursive:true});
-        return;
-    }
+    isMultithreaded = multithreaded;
     
-    try {
-        const db = require(_get_db_index_file(db_path_in)); 
-        dbs[_get_db_index(db_path_in)] = db;
-    } catch (err) {
-        _log_error("Vector DB index does not exist, or read error. Initializing to an empty DB", db_path_in, err); 
+    if (isMultithreaded) {  // create worker threads if we are multithreaded
+        const workersOnlinePromises = [];
+        for (let i = 0; i < maxthreads_for_search; i++) workersOnlinePromises.push(new Promise(resolve => { //create workers
+            const worker = new worker_threads.Worker(__filename);
+            workers.push(worker); worker.on("online", resolve);
+        }));
+        await Promise.all(workersOnlinePromises);  // make sure all are online
     }
-}
-
-exports.initAsync = async db_path_in => {
-    dbs[_get_db_index(db_path_in)] = {...DB_INDEX_OBJECT_TEMPLATE}; // init to an empty db
 
     try {await fspromises.access(db_path_in, fs.constants.R_OK)} catch (err) {
         _log_error("Vector DB path folder does not exist. Initializing to an empty DB", db_path_in, err); 
@@ -80,11 +83,11 @@ exports.initAsync = async db_path_in => {
 
     try {
         const db = JSON.parse(await fspromises.readFile(_get_db_index_file(db_path_in), "utf8"));
-        dbs[_get_db_index(db_path_in)] = db
+        dbs[_get_db_index(db_path_in)] = db;
+        await _update_db_for_worker_threads();
     } catch (err) {
         _log_error("Vector DB index does not exist, or read error. Initializing to an empty DB", db_path_in, err); 
     }
-    
 }
 
 exports.save_db = async db_path_out => {
@@ -126,7 +129,7 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
         }
     }
     
-    dbToUse.dirty = true;
+    dbToUse.dirty = true; if (isMultithreaded) await _update_db_for_worker_threads();
     return vector;
 }
 
@@ -165,7 +168,7 @@ exports.delete = async (vector, db_path) => {
     try {
         await fspromises.unlink(_get_db_index_text_file(vector, db_path));
         delete dbToUse.index[hash];
-        dbToUse.dirty = true;
+        dbToUse.dirty = true; if (isMultithreaded) await _update_db_for_worker_threads();
         return true;
     } catch (err) {
         _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be deleted`, db_path, err);
@@ -173,9 +176,9 @@ exports.delete = async (vector, db_path) => {
     }
 }
 
-exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, multithreaded, db_path) {
+exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, db_path) {
     const dbToUse = dbs[_get_db_index(db_path)];
-    let similarities = multithreaded ? await _search_multithreaded(dbToUse, vectorToFindSimilarTo) : 
+    let similarities = isMultithreaded ? await _search_multithreaded(db_path, vectorToFindSimilarTo) : 
         _search_singlethreaded(dbToUse, vectorToFindSimilarTo);
     similarities.sort((a,b) => b.similarity - a.similarity);
     const results = []; for (const similarity_object of similarities) {
@@ -230,8 +233,8 @@ exports.uningest = async (vectors, db_path) => { for (const vector of vectors) a
 
 exports.free = async db_path => {await flush_db(path); delete dbs[_get_db_index(db_path)];}   // free memory and unload
 
-exports.get_vectordb = async function(path, embedding_generator, autosave=true, autosave_frequency=500) {
-    await exports.initAsync(path); 
+exports.get_vectordb = async function(path, embedding_generator, isMultithreaded, autosave=true, autosave_frequency=500) {
+    await exports.initAsync(path, isMultithreaded); 
     let save_timer; if (autosave) save_timer = setInterval(_=>exports.save_db(path), autosave_frequency);
     return {
         create: async (vector, metadata, text) => exports.create(vector, metadata, text, embedding_generator, path),
@@ -240,12 +243,27 @@ exports.get_vectordb = async function(path, embedding_generator, autosave=true, 
         update: async (vector, metadata, text) => exports.update(vector, metadata, text, embedding_generator, path),
         delete: async vector =>  exports.delete(vector, path),
         uningest: async vectors => exports.uningest(vectors, db_path),
-        query: async (vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, multithreaded) => exports.query(
-            vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, multithreaded, path),
+        query: async (vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext) => exports.query(
+            vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, path),
         flush_db: async _ => exports.save_db(path),
         get_path: _ => path, get_embedding_generator: _ => embedding_generator,
         unload: async _ => {if (save_timer) clearInterval(save_timer); await exports.free(path);}
     }
+}
+
+function _worker_calculate_cosine_similarity(dbPath, startIndex, endIndex, vectorToFindSimilarTo, lengthOfVectorToFindSimilarTo) {
+    const db = dbs_worker[_get_db_index(dbPath)], arrayToCompareTo = Object.values(db.index).slice(startIndex, endIndex);
+    const similarities = []; for (const entryToCompareTo of arrayToCompareTo) similarities.push({   // calculate cosine similarities
+        vector: entryToCompareTo.vector, 
+        similarity: _cosine_similarity(entryToCompareTo.vector, vectorToFindSimilarTo, 
+            entryToCompareTo.length, lengthOfVectorToFindSimilarTo),
+        metadata: entryToCompareTo.metadata});
+    return similarities;
+}
+
+function _worker_setDatabase(dbsIn) {
+    dbs_worker = dbsIn;
+    (global.LOG ? global.LOG.console : console.log)(`DB set called on worker - ${this}`);
 }
 
 function _search_singlethreaded(dbToUse, vectorToFindSimilarTo) {
@@ -266,16 +284,16 @@ const _cosine_similarity = (v1, v2, lengthV1, lengthV2) => {
     return cosine_similarity;
 }
 
-async function _search_multithreaded(dbToUse, vectorToFindSimilarTo) {
+async function _search_multithreaded(dbPath, vectorToFindSimilarTo) {
     const lengthOfVectorToFindSimilarTo = _getVectorLength(vectorToFindSimilarTo);
-    const entries = Object.values(dbToUse.index), splitLength = entries.length/maxthreads_for_search, splits = []; 
-    for (let split_num = 0;  split_num < maxthreads_for_search; split_num++) 
-        splits.push(entries.slice(split_num*splitLength, ((split_num*splitLength)+splitLength > entries.length) ||
-            (split_num ==  maxthreads_for_search - 1) ? entries.length : (split_num*splitLength)+splitLength));
-    let similarities = []; const searchPromises = []; for (const split of splits) {  // run in threads to maximize CPU cores
+    const entries = Object.values(dbs[_get_db_index(dbPath)].index), splitLength = entries.length/maxthreads_for_search; 
+    let similarities = []; const searchPromises = []; for (let split_num = 0;  split_num < maxthreads_for_search; 
+            split_num++) {
+        const start = split_num*splitLength, end = ((split_num*splitLength)+splitLength > entries.length) ||
+            (split_num ==  maxthreads_for_search - 1) ? entries.length : (split_num*splitLength)+splitLength;
         try{
-            searchPromises.push( ( async _ => similarities.push( ...(await workerpool.exec( 
-                _calculate_cosine_similarity_via_worker, [split, vectorToFindSimilarTo, lengthOfVectorToFindSimilarTo])) ) )());
+            searchPromises.push( ( async _ => similarities.push( ...(await _callWorker(workers[split_num],
+                "calculate_cosine_similarity", [dbPath, start, end, vectorToFindSimilarTo, lengthOfVectorToFindSimilarTo])) ) )());
         } catch (err) {
             _log_error(`Error during similarity search in worker pools, the error is ${err}. Aborting.`);
             return false;
@@ -283,23 +301,6 @@ async function _search_multithreaded(dbToUse, vectorToFindSimilarTo) {
     }
 
     await Promise.all(searchPromises);  // wait for all search promises to finish
-    return similarities;
-}
-
-function _calculate_cosine_similarity_via_worker(arrayToCompareTo, vectorToFindSimilarTo, lengthOfVectorToFindSimilarTo) {
-    const _cosine_similarity = (v1, v2, lengthV1, lengthV2) => {
-        if (v1.length != v2.length) throw Error(`Can't calculate cosine similarity of vectors with unequal dimensions, v1 dimensions are ${v1.length} and v2 dimensions are ${v2.length}.`);
-        const vector_product = v1.reduce((accumulator, v1Value, v1Index) => accumulator + (v1Value * v2[v1Index]), 0);
-        if (!lengthV1) lengthV1 = _getVectorLength(v1); if (!lengthV2) lengthV2 = _getVectorLength(v2);
-        const cosine_similarity = vector_product/(lengthV1*lengthV2);
-        return cosine_similarity;
-    }
-    
-    const similarities = []; for (const entryToCompareTo of arrayToCompareTo) similarities.push({   // calculate cosine similarities
-        vector: entryToCompareTo.vector, 
-        similarity: _cosine_similarity(entryToCompareTo.vector, vectorToFindSimilarTo, 
-            entryToCompareTo.length, lengthOfVectorToFindSimilarTo),
-        metadata: entryToCompareTo.metadata});
     return similarities;
 }
 
@@ -314,6 +315,17 @@ const _get_db_index_text_file = (vector, db_path) => path.resolve(`${db_path}/te
 function _get_vector_hash(vector) {
     const shasum = crypto.createHash("sha1"); shasum.update(vector.toString());
     const hash = shasum.digest("hex"); return hash;
+}
+
+const _update_db_for_worker_threads = async _ => {for (const worker of workers) await _callWorker(worker, "setDatabase", 
+    [dbs])}; // send DB to all workers
+
+async function _callWorker(worker, functionToCall, argumentsToSend) {
+    return new Promise(resolve => {
+        const id = Date.now();
+        worker.postMessage({id, function: functionToCall, arguments: argumentsToSend});
+        worker.on("message", message => {if (message.id == id) resolve(message.result)});
+    })
 }
 
 const _log_error = (message, db_path, error) => (LOG||console).error(
