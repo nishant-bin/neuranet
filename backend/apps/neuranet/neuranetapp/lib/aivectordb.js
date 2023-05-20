@@ -264,7 +264,7 @@ function _worker_calculate_cosine_similarity(dbPath, startIndex, endIndex, vecto
 
 function _worker_setDatabase(dbsIn) {
     dbs_worker = dbsIn;
-    (global.LOG ? global.LOG.console : console.log)(`DB set called on worker - ${this}`);
+    (global.LOG||console).info(`DB set called on vector DB worker.`);
 }
 
 function _search_singlethreaded(dbToUse, vectorToFindSimilarTo) {
@@ -329,5 +329,5 @@ async function _callWorker(worker, functionToCall, argumentsToSend) {
     })
 }
 
-const _log_error = (message, db_path, error) => (LOG||console).error(
+const _log_error = (message, db_path, error) => (global.LOG||console).error(
     `${message}. The vector DB is ${_get_db_index(db_path)} and the DB index file is ${_get_db_index_file(db_path)}. The error was ${error}.`);
