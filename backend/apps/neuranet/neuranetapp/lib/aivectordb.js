@@ -30,7 +30,9 @@
  * as needed.
  * 
  * Flat indexing takes about 200 ms on a 2 core, 6 GB RAM box with 5,000 documents to
- * search. May be faster on modern processors or GPUs.
+ * search. May be faster on modern processors or GPUs. 
+ * 
+ * Uses workerpool npm for multithreading via thread pools (used in querying for searches).
  * 
  * TODO: An upcoming new algorithm for fast, 100% accurate exhaustive search would be
  * added by Tekmonks once testing is completed. Making this the easiest, and a really 
@@ -39,10 +41,14 @@
  * (C) 2023 TekMonks. All rights reserved.
  * License: See the enclosed LICENSE file.
  */
+const os = require("os");
 const fs = require("fs");
 const path = require("path");
 const fspromises = fs.promises;
 const crypto = require("crypto");
+const cpucores = os.cpus().length*2;    // assume 2 cpu-threads per core (hyperthreaded cores)
+const maxthreads_for_search = cpucores - 1; // leave 1 thread for the main program
+const workerpool = require("workerpool").pool(undefined, {minWorkers: "max", maxWorkers: maxthreads_for_search});
 
 const dbs = {}, DB_INDEX_NAME = "dbindex.json", DB_INDEX_OBJECT_TEMPLATE = {index:{}, dirty: false};
 
@@ -167,25 +173,19 @@ exports.delete = async (vector, db_path) => {
     }
 }
 
-exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, db_path) {
-    let similarities = []; 
-    const dbToUse = dbs[_get_db_index(db_path)], lengthOfVectorToFindSimilarTo = _getVectorLength(vectorToFindSimilarTo);
-    
-    for (const entryToCompareTo of Object.values(dbToUse.index)) similarities.push({   // calculate cosine similarities
-        vector: entryToCompareTo.vector, 
-        similarity: _cosine_similarity(entryToCompareTo.vector, vectorToFindSimilarTo, 
-            entryToCompareTo.length, lengthOfVectorToFindSimilarTo),
-        metadata: entryToCompareTo.metadata});
-
+exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, multithreaded, db_path) {
+    const dbToUse = dbs[_get_db_index(db_path)];
+    let similarities = multithreaded ? await _search_multithreaded(dbToUse, vectorToFindSimilarTo) : 
+        _search_singlethreaded(dbToUse, vectorToFindSimilarTo);
     similarities.sort((a,b) => b.similarity - a.similarity);
-    let results = [...similarities.slice(0, topK < similarities.length ? topK : similarities.length)]; 
+    const results = []; for (const similarity_object of similarities) {
+        if (results.length == topK) break;  // done filtering
+        if (min_distance && (similarity_object.similarity < min_distance)) break; // filter for minimum distance if asked
+        // filter the results further by conditioning on the metadata, if a filter was provided
+        if (metadata_filter_function && (!metadata_filter_function(similarity_object.metadata))) continue;
+        results.push(similarity_object);
+    }
     similarities = []; // try to free memory asap
-
-    // filter for minimum distance if asked
-    if (min_distance) results = results.filter(similarity_object => similarity_object.similarity >= min_distance);
-
-    // filter the results further by conditioning on the metadata, if a filter was provided
-    if (metadata_filter_function) results = results.filter(similarity_object => metadata_filter_function(similarity_object.metadata));
 
     if (!notext) for (const similarity_object of results) try { // read associated text, unless told not to
         similarity_object.text = await fspromises.readFile(_get_db_index_text_file(similarity_object.vector, db_path), "utf8");
@@ -240,20 +240,67 @@ exports.get_vectordb = async function(path, embedding_generator, autosave=true, 
         update: async (vector, metadata, text) => exports.update(vector, metadata, text, embedding_generator, path),
         delete: async vector =>  exports.delete(vector, path),
         uningest: async vectors => exports.uningest(vectors, db_path),
-        query: async (vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext) => exports.query(
-            vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, path),
+        query: async (vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, multithreaded) => exports.query(
+            vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, multithreaded, path),
         flush_db: async _ => exports.save_db(path),
         get_path: _ => path, get_embedding_generator: _ => embedding_generator,
         unload: async _ => {if (save_timer) clearInterval(save_timer); await exports.free(path);}
     }
 }
 
-function _cosine_similarity(v1, v2, lengthV1, lengthV2) {
+function _search_singlethreaded(dbToUse, vectorToFindSimilarTo) {
+    let similarities = []; const lengthOfVectorToFindSimilarTo = _getVectorLength(vectorToFindSimilarTo);
+    for (const entryToCompareTo of Object.values(dbToUse.index)) similarities.push({   // calculate cosine similarities
+        vector: entryToCompareTo.vector, 
+        similarity: _cosine_similarity(entryToCompareTo.vector, vectorToFindSimilarTo, 
+            entryToCompareTo.length, lengthOfVectorToFindSimilarTo),
+        metadata: entryToCompareTo.metadata});
+    return similarities;
+}
+
+const _cosine_similarity = (v1, v2, lengthV1, lengthV2) => {
     if (v1.length != v2.length) throw Error(`Can't calculate cosine similarity of vectors with unequal dimensions, v1 dimensions are ${v1.length} and v2 dimensions are ${v2.length}.`);
     const vector_product = v1.reduce((accumulator, v1Value, v1Index) => accumulator + (v1Value * v2[v1Index]), 0);
     if (!lengthV1) lengthV1 = _getVectorLength(v1); if (!lengthV2) lengthV2 = _getVectorLength(v2);
     const cosine_similarity = vector_product/(lengthV1*lengthV2);
     return cosine_similarity;
+}
+
+async function _search_multithreaded(dbToUse, vectorToFindSimilarTo) {
+    const lengthOfVectorToFindSimilarTo = _getVectorLength(vectorToFindSimilarTo);
+    const entries = Object.values(dbToUse.index), splitLength = entries.length/maxthreads_for_search, splits = []; 
+    for (let split_num = 0;  split_num < maxthreads_for_search; split_num++) 
+        splits.push(entries.slice(split_num*splitLength, ((split_num*splitLength)+splitLength > entries.length) ||
+            (split_num ==  maxthreads_for_search - 1) ? entries.length : (split_num*splitLength)+splitLength));
+    let similarities = []; const searchPromises = []; for (const split of splits) {  // run in threads to maximize CPU cores
+        try{
+            searchPromises.push( ( async _ => similarities.push( ...(await workerpool.exec( 
+                _calculate_cosine_similarity_via_worker, [split, vectorToFindSimilarTo, lengthOfVectorToFindSimilarTo])) ) )());
+        } catch (err) {
+            _log_error(`Error during similarity search in worker pools, the error is ${err}. Aborting.`);
+            return false;
+        }
+    }
+
+    await Promise.all(searchPromises);  // wait for all search promises to finish
+    return similarities;
+}
+
+function _calculate_cosine_similarity_via_worker(arrayToCompareTo, vectorToFindSimilarTo, lengthOfVectorToFindSimilarTo) {
+    const _cosine_similarity = (v1, v2, lengthV1, lengthV2) => {
+        if (v1.length != v2.length) throw Error(`Can't calculate cosine similarity of vectors with unequal dimensions, v1 dimensions are ${v1.length} and v2 dimensions are ${v2.length}.`);
+        const vector_product = v1.reduce((accumulator, v1Value, v1Index) => accumulator + (v1Value * v2[v1Index]), 0);
+        if (!lengthV1) lengthV1 = _getVectorLength(v1); if (!lengthV2) lengthV2 = _getVectorLength(v2);
+        const cosine_similarity = vector_product/(lengthV1*lengthV2);
+        return cosine_similarity;
+    }
+    
+    const similarities = []; for (const entryToCompareTo of arrayToCompareTo) similarities.push({   // calculate cosine similarities
+        vector: entryToCompareTo.vector, 
+        similarity: _cosine_similarity(entryToCompareTo.vector, vectorToFindSimilarTo, 
+            entryToCompareTo.length, lengthOfVectorToFindSimilarTo),
+        metadata: entryToCompareTo.metadata});
+    return similarities;
 }
 
 const _getVectorLength = v => Math.sqrt(v.reduce((accumulator, val) => accumulator + (val*val) ));

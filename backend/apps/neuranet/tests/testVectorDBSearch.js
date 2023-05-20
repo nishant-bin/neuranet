@@ -19,7 +19,8 @@ exports.runTestsAsync = async function(argv) {
         LOG.console("Missing query test file path.\n");
         return;
     } 
-    const notext = (argv[2]||"").toLowerCase() == "notext" ? true : false;
+    const multithreaded = (argv[2]||"").toLowerCase() == "multithreaded" ? true : false;
+    const notext = (argv[3]||"").toLowerCase() == "notext" ? true : false;
 
     LOG.console(`Test case for VectorDB search called with query file ${argv[1]}.\n`);
     const queryFile = require(argv[1]);
@@ -27,7 +28,7 @@ exports.runTestsAsync = async function(argv) {
     const vectorDB = await aivectordb.get_vectordb(aivectordb_test_path, undefined, false);
     LOG.console(`Searching for ${queryFile.text}, top ${topK} results with a minimum distance of ${minDistance}.\n`);
     const timeStart = Date.now();
-    const results = await vectorDB.query(queryFile.vector, topK, minDistance, undefined, notext);
+    const results = await vectorDB.query(queryFile.vector, topK, minDistance, undefined, notext, multithreaded);
     const timeTaken = Date.now() - timeStart;
 
     for (const result of results) delete result.vector; // we don't want to show the massive result vectors
