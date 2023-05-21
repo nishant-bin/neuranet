@@ -32,8 +32,9 @@
  * Flat indexing takes about 200 ms on a 2 core, 6 GB RAM box with 5,000 documents to
  * search. May be faster on modern processors or GPUs. 
  * 
- * Can be multithreaded, if selected during creation. Will use worker threads for queries
- * if multithreaded (typically this is SLOWER!);
+ * Can be multithreaded, if selected during initialization. Will use worker threads 
+ * for queries if multithreaded. Multithreading is on a per database level, however
+ * will use (cores-1)*memory if enabled even for one sub-database.
  * 
  * TODO: An upcoming new algorithm for fast, 100% accurate exhaustive search would be
  * added by Tekmonks once testing is completed. Making this the easiest, and a really 
@@ -54,7 +55,7 @@ const worker_threads = require("worker_threads");
 const dbs = {}, DB_INDEX_NAME = "dbindex.json", DB_INDEX_OBJECT_TEMPLATE = {index:{}, dirty: false},
     workers = [];
 
-let dbs_worker, isMultithreaded = false;
+let dbs_worker, workers_initialized = false;
 
 if (!worker_threads.isMainThread) worker_threads.parentPort.on("message", async message => {
     let result;
@@ -64,10 +65,10 @@ if (!worker_threads.isMainThread) worker_threads.parentPort.on("message", async 
 });
 
 exports.initAsync = async (db_path_in, multithreaded) => {
-    dbs[_get_db_index(db_path_in)] = {...DB_INDEX_OBJECT_TEMPLATE}; // init to an empty db
-    isMultithreaded = multithreaded;
+    dbs[_get_db_index(db_path_in)] = {...DB_INDEX_OBJECT_TEMPLATE, multithreaded}; // init to an empty db
     
-    if (isMultithreaded) {  // create worker threads if we are multithreaded
+    if (multithreaded && (!workers_initialized)) {  // create worker threads if we are multithreaded
+        workers_initialized = true;
         const workersOnlinePromises = [];
         for (let i = 0; i < maxthreads_for_search; i++) workersOnlinePromises.push(new Promise(resolve => { //create workers
             const worker = new worker_threads.Worker(__filename);
@@ -130,7 +131,7 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
         }
     }
     
-    dbToUse.dirty = true; if (isMultithreaded) await _update_db_for_worker_threads();
+    dbToUse.dirty = true; if (dbToUse.multithreaded) await _update_db_for_worker_threads();
     return vector;
 }
 
@@ -169,7 +170,7 @@ exports.delete = async (vector, db_path) => {
     try {
         await fspromises.unlink(_get_db_index_text_file(vector, db_path));
         delete dbToUse.index[hash];
-        dbToUse.dirty = true; if (isMultithreaded) await _update_db_for_worker_threads();
+        dbToUse.dirty = true; if (dbToUse.multithreaded) await _update_db_for_worker_threads();
         return true;
     } catch (err) {
         _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be deleted`, db_path, err);
@@ -177,10 +178,15 @@ exports.delete = async (vector, db_path) => {
     }
 }
 
-exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, db_path) {
-    const dbToUse = dbs[_get_db_index(db_path)];
-    let similarities = isMultithreaded ? await _search_multithreaded(db_path, vectorToFindSimilarTo) : 
+exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, db_path, benchmarkIterations) {
+    const dbToUse = dbs[_get_db_index(db_path)]; _log_info(`Searching ${Object.values(dbToUse.index).length} vectors.`, db_path);
+    let similarities; if (benchmarkIterations) {
+        _log_error(`Vector DB is in benchmarking mode. Performance will be affected. Iterations = ${benchmarkIterations}. DB index size = ${Object.values(dbToUse.index).length} vectors. Total simulated index size to be searched = ${parseInt(process.env.__ORG_MONKSHU_VECTORDB_BENCHMARK_ITERATIONS)*Object.values(dbToUse.index).length} vectors.`, db_path);
+        for (let i = 0; i < benchmarkIterations; i++) similarities = dbToUse.multithreaded ? 
+            await _search_multithreaded(db_path, vectorToFindSimilarTo) : _search_singlethreaded(dbToUse, vectorToFindSimilarTo);
+    } else similarities = dbToUse.multithreaded ? await _search_multithreaded(db_path, vectorToFindSimilarTo) : 
         _search_singlethreaded(dbToUse, vectorToFindSimilarTo);
+    
     similarities.sort((a,b) => b.similarity - a.similarity);
     const results = []; for (const similarity_object of similarities) {
         if (results.length == topK) break;  // done filtering
@@ -244,8 +250,8 @@ exports.get_vectordb = async function(path, embedding_generator, isMultithreaded
         update: async (vector, metadata, text) => exports.update(vector, metadata, text, embedding_generator, path),
         delete: async vector =>  exports.delete(vector, path),
         uningest: async vectors => exports.uningest(vectors, db_path),
-        query: async (vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext) => exports.query(
-            vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, path),
+        query: async (vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, benchmarkIterations) => exports.query(
+            vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, path, benchmarkIterations),
         flush_db: async _ => exports.save_db(path),
         get_path: _ => path, get_embedding_generator: _ => embedding_generator,
         unload: async _ => {if (save_timer) clearInterval(save_timer); await exports.free(path);}
@@ -279,7 +285,7 @@ function _search_singlethreaded(dbToUse, vectorToFindSimilarTo) {
 
 const _cosine_similarity = (v1, v2, lengthV1, lengthV2) => {
     if (v1.length != v2.length) throw Error(`Can't calculate cosine similarity of vectors with unequal dimensions, v1 dimensions are ${v1.length} and v2 dimensions are ${v2.length}.`);
-    const vector_product = v1.reduce((accumulator, v1Value, v1Index) => accumulator + (v1Value * v2[v1Index]), 0);
+    let vector_product = 0; for (let i = 0; i < v1.length; i++) vector_product += v1[i]*v2[i];
     if (!lengthV1) lengthV1 = _getVectorLength(v1); if (!lengthV2) lengthV2 = _getVectorLength(v2);
     const cosine_similarity = vector_product/(lengthV1*lengthV2);
     return cosine_similarity;
@@ -330,4 +336,6 @@ async function _callWorker(worker, functionToCall, argumentsToSend) {
 }
 
 const _log_error = (message, db_path, error) => (global.LOG||console).error(
-    `${message}. The vector DB is ${_get_db_index(db_path)} and the DB index file is ${_get_db_index_file(db_path)}. The error was ${error}.`);
+    `${message}. The vector DB is ${_get_db_index(db_path)} and the DB index file is ${_get_db_index_file(db_path)}. The error was ${error||"no information"}.`);
+const _log_info= (message, db_path) => (global.LOG||console).info(
+    `${message}. The vector DB is ${_get_db_index(db_path)} and the DB index file is ${_get_db_index_file(db_path)}.`);

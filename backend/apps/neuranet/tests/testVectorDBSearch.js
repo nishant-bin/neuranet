@@ -21,6 +21,7 @@ exports.runTestsAsync = async function(argv) {
     } 
     const multithreaded = (argv[2]||"").toLowerCase() == "multithreaded" ? true : false;
     const notext = (argv[3]||"").toLowerCase() == "notext" ? true : false;
+    const benchmarkIterations = argv[4]?parseInt(argv[4]):undefined;
 
     LOG.console(`Test case for VectorDB search called with query file ${argv[1]}.\n`);
     const queryFile = require(argv[1]);
@@ -28,7 +29,7 @@ exports.runTestsAsync = async function(argv) {
     const vectorDB = await aivectordb.get_vectordb(aivectordb_test_path, undefined, multithreaded, false);
     LOG.console(`Searching for ${queryFile.text}, top ${topK} results with a minimum distance of ${minDistance}.\n`);
     const timeStart = Date.now();
-    const results = await vectorDB.query(queryFile.vector, topK, minDistance, undefined, notext, multithreaded);
+    const results = await vectorDB.query(queryFile.vector, topK, minDistance, undefined, notext, benchmarkIterations);
     const timeTaken = Date.now() - timeStart;
 
     for (const result of results) delete result.vector; // we don't want to show the massive result vectors

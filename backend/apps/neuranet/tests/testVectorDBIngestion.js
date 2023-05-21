@@ -24,10 +24,15 @@ exports.runTestsAsync = async function(argv) {
 
     LOG.console(`Test case for VectorDB ingestion called to ingest file ${argv[1]}.\n`);
 
-    const vectorDB = await aivectordb.get_vectordb(aivectordb_test_path, undefined, false);
-    const fileToParse = path.resolve(argv[1]), _getFileReadStream = path => path.toLowerCase().endsWith(".gz") ?
+    const vectorDB = await aivectordb.get_vectordb(aivectordb_test_path, undefined, false, false);
+    const fileToParse = path.resolve(argv[1]); 
+    await _ingestCVSFile(vectorDB, fileToParse);
+}
+
+function _ingestCVSFile(vectorDB, fileToParse) {
+    const _getFileReadStream = path => path.toLowerCase().endsWith(".gz") ?
         fs.createReadStream(fileToParse).pipe(zlib.createGunzip()) : fs.createReadStream(fileToParse);
-    
+
     let numRecordsProcessed = 0, numRecordsIngested = 0, waiting_ingestions = 0; 
     return new Promise(resolve => csvparser.parse(_getFileReadStream(fileToParse), {
         step: async function(results, _parser) { 
