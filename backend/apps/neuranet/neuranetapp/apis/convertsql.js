@@ -49,8 +49,8 @@ exports.doService = async jsonReq => {
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 	} else {
 		dblayer.logUsage(jsonReq.id, response.metric_cost, aiModelToUse);
-		const sql = response.airesponse; const validationResult = await sqlvalidator.validate(sql, jsonReq.dbto, 
-			undefined, jsonReq.use_simple_validator);
+		const sql = response.airesponse; const validationResult = jsonReq.skipvalidation ? {isOK:true} :
+			await sqlvalidator.validate(sql, jsonReq.dbto, undefined, jsonReq.use_simple_validator);
 		return {sql, reason: REASONS.OK, possible_error: validationResult.isOK?undefined:true, 
 			parser_error: validationResult.isOK?undefined:validationResult.errors, ...CONSTANTS.TRUE_RESULT};
 	}
