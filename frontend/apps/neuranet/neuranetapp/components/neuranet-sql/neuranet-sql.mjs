@@ -33,7 +33,7 @@ async function convert(elementImg) {
 	const orgImgOnclick = elementImg.onclick; elementImg.onclick = _ => {};
 	const convertedResponse = dbfrom == dbto ? {sql: requestSQL, result: true} : await apiman.rest(
 		`${host.getAttribute("backendurl")}/${API_CONVERT}`, "POST", {request: requestSQL, dbfrom, dbto, id: userid, 
-			skipvalidation: validate, use_simple_validator: conf.SIMPLE_VALIDATOR}, true, false, false, 
+			skipvalidation: !validate, use_simple_validator: conf.SIMPLE_VALIDATOR}, true, false, false, 
 			false, false, conf.GENSQL_API_TIMEOUT);
 	elementImg.src = `${COMPONENT_PATH}/img/bot.svg`; elementImg.onclick = orgImgOnclick; texteditorRequest.readOnly = false; 
 
