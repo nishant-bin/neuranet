@@ -11,7 +11,7 @@ import {util} from "/framework/js/util.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 import {monkshu_component} from "/framework/js/monkshu_component.mjs";
 
-const SESSION_OBJ_TEMPLATE = {"role": "user", "content": ""}, COMPONENT_PATH = util.getModulePath(import.meta); 
+const COMPONENT_PATH = util.getModulePath(import.meta); 
 let sessionID, API_CHAT, USER_ID;
 
 async function elementConnected(host) {
@@ -26,36 +26,26 @@ async function elementRendered(host) {
 }
 
 async function send(containedElement) {
-    const shadowRoot = chat_box.getShadowRootByContainedElement(containedElement);
+    const shadowRoot = chat_box.getShadowRootByContainedElement(containedElement), host = chat_box.getHostElement(containedElement);
     const userMessageArea = shadowRoot.querySelector("textarea#messagearea"), userPrompt = userMessageArea.value.trim();
     if (userPrompt == "") return;    // empty prompt, ignore
-
-    const sessionRequest = {...SESSION_OBJ_TEMPLATE}; sessionRequest.content = userPrompt;
 
     const textareaEdit = shadowRoot.querySelector("textarea#messagearea"), buttonSendImg = shadowRoot.querySelector("img#send");
     textareaEdit.classList.add("readonly"); textareaEdit.setAttribute("readonly", "true"); buttonSendImg.src = `${COMPONENT_PATH}/img/spinner.svg`; 
     const oldInsertion = _insertAIResponse(shadowRoot, userMessageArea, userPrompt);
-    let result = await apiman.rest(`${API_CHAT}`, "POST", {id: USER_ID, session: [sessionRequest], 
-        maintain_session: true, session_id: sessionID}, true);
+    const onRequest = host.getAttribute("onrequest");
+    const requestProcessor = _createAsyncFunction(`return await ${onRequest};`), request = await requestProcessor({prompt: userPrompt});
+    const result = await apiman.rest(`${API_CHAT}`, "POST", request, true);
     
-    const host = chat_box.getHostElement(containedElement), onResultChecker = host.getAttribute("oncheckresult");
-    const functionCode = `let result = resultIn; return await ${onResultChecker};`;
-    const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-    const resultChecker = onResultChecker ? result => new AsyncFunction("resultIn", functionCode)(result) : undefined;
-    
-    let responseOK = (result && result.result);
-    if (resultChecker) {
-        const checkResult = await resultChecker(result);
-        if (!checkResult.ok) result = {response: checkResult.error||"Error"};
-        responseOK = checkResult.ok;    // if response checked is provided use it to override our evaluation of the result
-    } else if ((!result) || (!result.response)) result = {response: "Error"};
+    const onResult = host.getAttribute("onresult"), resultProcessor = _createAsyncFunction(`return await ${onResult};`), 
+        checkResult = await resultProcessor({result});
+    _insertAIResponse(shadowRoot, userMessageArea, userPrompt, checkResult[checkResult.ok?"response":"error"], oldInsertion);
 
-    sessionID = result.session_id;  // save session ID so that backend can maintain session
-    _insertAIResponse(shadowRoot, userMessageArea, userPrompt, result.response, oldInsertion);
-
-    // continue chat only if this response was OK.
-    if (responseOK) { textareaEdit.classList.remove("readonly"); textareaEdit.removeAttribute("readonly"); buttonSendImg.src = `${COMPONENT_PATH}/img/send.svg`; } 
-    else { buttonSendImg.onclick = ''; buttonSendImg.src = `${COMPONENT_PATH}/img/senddisabled.svg`; }   // sending more messages is now disabled as this chat is dead
+    if (!checkResult.ok) {  // sending more messages is now disabled as this chat is dead due to error
+        buttonSendImg.onclick = ''; buttonSendImg.src = `${COMPONENT_PATH}/img/senddisabled.svg`;
+    } else { // enable sending more messages
+        textareaEdit.classList.remove("readonly"); textareaEdit.removeAttribute("readonly"); buttonSendImg.src = `${COMPONENT_PATH}/img/send.svg`;
+    }   
 }
 
 function _insertAIResponse(shadowRoot, userMessageArea, userPrompt, aiResponse, oldInsertion) {
@@ -73,6 +63,12 @@ function _insertAIResponse(shadowRoot, userMessageArea, userPrompt, aiResponse, 
     userMessageArea.value = ""; // clear text area for the next prompt
 
     return insertionDiv;
+}
+
+const _createAsyncFunction = (code) => {
+    const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+    const newFunction = context => new AsyncFunction(Object.keys(context).join(","), code)(...Object.values(context));
+    return newFunction;
 }
 
 export const chat_box = {trueWebComponentMode: true, elementConnected, elementRendered, send}

@@ -18,9 +18,7 @@ let loginappMain;
 const main = async (data, mainLoginAppModule) => {
     window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {main: neuranetapp};
     loginappMain = mainLoginAppModule; loginappMain.addGoHomeListener(gohome);
-
     APP_CONSTANTS.VIEWS_PATH = util.resolveURL(`${APP_CONSTANTS.EMBEDDED_APP_PATH}/views`);
-    APP_CONSTANTS.EMBEDDED_APP_MAIN = neuranetapp;
     await _createdata(data); 
     data.maincontent = await router.loadHTML(MAIN_HTML, {...data}); 
 }
@@ -62,11 +60,4 @@ const showMessage = message => loginappMain.showMessage(message);
 
 const showError = error => {LOG.error(error); showMessage(error);}
 
-async function checkAndReportChatErrors(result) {
-    if (!result) return {error: (await i18n.get("ChatAIError")), ok: false}
-    if ((!result.result) && (result.reason == "limit")) return {error: (await i18n.get("ErrorConvertingAIQuotaLimit")), ok: false};
-    if (!result.result) return {error: (await i18n.get("ChatAIError")), ok: false};
-    return {ok: true};
-}
-
-export const neuranetapp = {main, openView, gohome, onlogout, showMessage, showError, checkAndReportChatErrors};
+export const neuranetapp = {main, openView, gohome, onlogout, showMessage, showError};
