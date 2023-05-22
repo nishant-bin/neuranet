@@ -64,8 +64,8 @@ exports.doService = async jsonReq => {
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; }
 	const similarityResultsForPrompt = await vectordb.query(vectorForUserPrompts, aiModelObjectForChat.topK, aiModelObjectForChat.min_distance);
 	if ((!similarityResultsForPrompt) || (!similarityResultsForPrompt.length)) return {reason: REASONS.NOKNOWLEDGE, ...CONSTANTS.FALSE_RESULT};
-	const documents = [], metadatasForResponse = []; for (const similarityResult of similarityResultsForPrompt) {
-		documents.push({content: similarityResult.text}); metadatasForResponse.push(similarityResult.metadata) };
+	const documents = [], metadatasForResponse = []; for (const [i,similarityResult] of similarityResultsForPrompt.entries()) {
+		documents.push({content: similarityResult.text, document_index: i+1}); metadatasForResponse.push(similarityResult.metadata) };
 
 	const knowledgebasePromptTemplate = await aiutils.getPrompt(`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${PROMPT_FILE_KNOWLEDGEBASE}`);
 	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, {documents, question: jsonReq.question});

@@ -1,0 +1,176 @@
+<style>
+::-webkit-scrollbar {
+    width: 0.5em !important;
+    height: 0.5em !important;
+    scroll-behavior: smooth !important;
+}
+
+::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
+    margin: 2em;
+    border-radius: 1em !important;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: darkgrey !important;
+    border-radius: 1em !important;
+    background-clip: padding-box;
+}
+
+div#body {
+    padding: 0em 3em 3em 3em;
+    height: 100%;
+    width: 100%;
+    overflow: auto;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+div#chat {
+    width: 100%;
+    border: 1px solid #03B3FF;
+    border-radius: 0.5em;
+    box-sizing: border-box;
+    height: 70%;
+    margin-bottom: 2em;
+    padding: 0.5em;
+    display: flex;
+    flex-direction: row;
+}
+div#chatscroller {
+    overflow-x: hidden;
+    width: 100%;
+    overflow-y: auto;
+}
+div#chatmainarea {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    padding-right: 0.5em;
+    box-sizing: border-box;
+}
+div#start {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: 100%;
+    user-select: none;
+}
+div#chat > div.visible {display: flex;}
+div#chat > div.hidden {display: none;}
+img#mainimage {
+    height: 100%;
+    width: 100%;
+    padding: 2em;
+    box-sizing: border-box;
+}
+span#mainspan {
+    flex-grow: 1;
+    text-align: center;
+    color: #03B3FF;
+    font-size: xx-large;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    font-weight: 400;
+    overflow: hidden;
+}
+
+div#message {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    flex-grow: 1;
+    height: calc(30% - 2em);
+    overflow: auto;
+    position: relative;
+}
+textarea#messagearea {
+    width: 100%;
+    height: 100%;
+    outline: none;
+    border: 1px solid #03B3FF;
+    resize: none;
+    border-radius: 0.5em;
+    padding: 1em 7em 1em 1em;
+    font-family: sans-serif;
+    color: #0082ba;
+}
+img#send {
+    position: absolute;
+    right: 2em;
+    top: calc((100% - 3em) / 2);
+    height: 3em;
+    width: 3em;
+}
+
+span#usercontentholder, span#aicontentholder {
+    display: flex;
+    flex-direction: row;
+}
+span#usercontentholder img, span#aicontentholder img {
+    width: 3.36em; 
+    height: 2em;
+    margin-top: 1em;
+}
+img#waitspin {
+    margin-top: 0 !important;
+    height: 2em !important;
+    width: auto !important;
+}
+span#aicontentholder {margin: 0.5em 0em;}
+span#userprompt, span#airesponse {
+    padding: 1em;
+    box-sizing: border-box;
+    min-height: 4em;
+    color: #005C84;
+    border-radius: 0.2em;
+    border: 1px solid #AED6E9;
+    white-space: break-spaces;
+}
+span#spacer {flex-grow: 1;}
+span#userprompt {background-color: #C8EDFF;}
+span#airesponse {background-color: #EAF8FF;}
+
+textarea.readonly {
+    background-color: #f4f4f4;
+    color: #d6dfe3;
+}
+</style>
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_START}}}
+	div#start {flex-direction: column;}
+    div#body {padding: 0em 0.5em 1em 0.5em;}
+    span#mainimage {max-height: 50%}
+    span#mainspan {font-size: x-large; font-weight: 200;}
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_END}}}
+
+<div id="body">
+
+<div id="chat">
+    <div id="chatscroller" class="hidden">
+    <div id="chatmainarea" readonly></div>
+    </div>
+
+    <div id="start" class="visible">
+        <span id="mainimage"><img id="mainimage" src="{{{COMPONENT_PATH}}}/img/brain.svg"></span>
+        <span id="mainspan"><p>{{{i18n.NeuralNetReady}}}</p><p>{{i18n.TypeMessage}}</p></span>
+    </div>
+</div>
+
+<div id="message">
+    <textarea id="messagearea"></textarea>
+    <img id="send" onclick="monkshu_env.components['chat-box'].send(this)" src="{{{COMPONENT_PATH}}}/img/send.svg">
+</div>
+
+<template id="chatresponse_insertion_template">
+    <div id="insertiondiv">
+    <span id="usercontentholder"> <img src="{{{COMPONENT_PATH}}}/img/userchatimg.svg"><span id="userprompt"></span> </span>
+    <span id="aicontentholder"><span id="spacer"></span><span id="airesponse"><img id="waitspin" src="{{{COMPONENT_PATH}}}/img/chatspin.svg"></span><img src="{{{COMPONENT_PATH}}}/img/aichatimg.svg"> </span>
+    </div>
+</template>
+
+</div>
