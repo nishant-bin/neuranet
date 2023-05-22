@@ -62,11 +62,11 @@ const showMessage = message => loginappMain.showMessage(message);
 
 const showError = error => {LOG.error(error); showMessage(error);}
 
-async function checkAndReportStandardAIErrors(result) {
-    if (!result) {showError(await i18n.get("ChatAIError")); return false;}
-    if ((!result.result) && (result.reason == "limit")) {showError(await i18n.get("ErrorConvertingAIQuotaLimit")); return false;}
-    if (!result.result) {showError(await i18n.get("ChatAIError")); return false;}
-    return true;
+async function checkAndReportChatErrors(result) {
+    if (!result) return {error: (await i18n.get("ChatAIError")), ok: false}
+    if ((!result.result) && (result.reason == "limit")) return {error: (await i18n.get("ErrorConvertingAIQuotaLimit")), ok: false};
+    if (!result.result) return {error: (await i18n.get("ChatAIError")), ok: false};
+    return {ok: true};
 }
 
-export const neuranetapp = {main, openView, gohome, onlogout, showMessage, showError, checkAndReportStandardAIErrors};
+export const neuranetapp = {main, openView, gohome, onlogout, showMessage, showError, checkAndReportChatErrors};
