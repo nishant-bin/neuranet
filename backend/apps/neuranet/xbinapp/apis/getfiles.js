@@ -1,0 +1,39 @@
+/**
+ * Returns file listings from the given path. 
+ * (C) 2020 TekMonks. All rights reserved.
+ */
+const path = require("path");
+const fspromises = require("fs").promises;
+const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
+const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
+const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
+
+exports.doService = async (jsonReq, _, headers) => {
+	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return CONSTANTS.FALSE_RESULT;}
+	
+	LOG.debug("Got getfiles request for path: " + jsonReq.path);
+
+	const fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${jsonReq.path}`);
+	if (!await cms.isSecure(headers, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
+
+	const _ignoreFile = fullpathOrFilename => XBIN_CONSTANTS.XBIN_IGNORE_PATH_SUFFIXES.includes(path.extname(fullpathOrFilename));
+
+	try {
+		let retObj = {entries:[], result: true};
+		const entries = await fspromises.readdir(fullpath);
+		for (const entry of entries) {	
+			const entryPath = path.resolve(`${fullpath}/${entry}`); if (_ignoreFile(entryPath)) continue;	// ignore our own working files
+			if (!(await uploadfile.isFileConsistentOnDisk(entryPath))) {
+				LOG.error(`Error reading file entry ${fullpath}/${entry}. Skipping from listing. Error is inconsistent file.`); continue; }
+			let stats; try {stats = await uploadfile.getFileStats(entryPath);} catch (err) {
+				LOG.error(`Error reading file entry ${fullpath}/${entry}. Skipping from listing. Error is ${err}`); continue; }
+			stats.xbintype == XBIN_CONSTANTS.XBIN_FILE?stats.file=true:null; 
+			stats.xbintype == XBIN_CONSTANTS.XBIN_FOLDER?stats.directory=true:null; 
+
+			retObj.entries.push({name: entry, path: `${jsonReq.path}/${entry}`, stats});
+		}
+		return retObj;
+	} catch (err) {LOG.error(`Error reading path: ${fullpath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}
+}
+
+const validateRequest = jsonReq => (jsonReq && jsonReq.path);

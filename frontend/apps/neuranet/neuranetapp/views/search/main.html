@@ -1,22 +1,89 @@
-<!--
-/* A user manager component.
-* (C) 2021 TekMonks. All rights reserved.
-* License: See enclosed license file.
-*/
--->
-
 <style>
-div#main {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
+::-webkit-scrollbar {
+    width: 0.5em !important;
+    height: 0.5em !important;
+    scroll-behavior: smooth !important;
+}
+
+::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
+    margin: 2em;
+    border-radius: 1em !important;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: darkgrey !important;
+    border-radius: 1em !important;
+    background-clip: padding-box;
+}
+
+div#maincontainer {
+    width: 100%;
     height: 100%;
-    color: #4FB4ED;
-    font-weight: bolder;
+    display: flex; 
+    flex-direction: row;
+}
+
+chat-box#enterprisechat {width: 60%}
+
+span#filecontainerheader { 
+    height: 2em;
+    background-color: #03B3FF;
+    display: flex;
+    align-items: center;
+    padding: 0em 1em;
+    color: #ffffff;
+    margin-bottom: 1em;
+}
+
+div#filecontainer {
+    border: 1px solid #03B3FF;
+    flex-grow: 1;
+    margin: 0em 3em 3em 0em;
+    border-radius: 0.5em;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+file-manager#fm {
+    padding: 0em 1em;
+    display: block;
+    height: calc(100% - 3em);
 }
 </style>
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_START}}}
-
+div#maincontent {
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: block;
+}
+div#maincontainer {
+    flex-direction: column;
+    height: calc(200% + 3.2em);
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+chat-box#enterprisechat {
+    width: 100%; 
+    height: 100%;
+}
+div#filecontainer {
+    width: calc(100% - 1em);
+    height: calc(100% - 6em);
+    margin: 4em 0.5em 2em 0.5em;
+    flex-grow: 0;
+}
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_END}}}
 
-<div id="main">{{i18n.NotImplemented}}</div>
+<div id="maincontainer">
+<chat-box id="enterprisechat" chatapi="{{APP_CONSTANTS.BACKEND}}/apps/{{APP_CONSTANTS.APP_NAME}}/knowledgebasechat"
+    onresult="window.monkshu_env.apps.neuranetapp.search_main.processResponse(result, 'enterprisechat')"
+    onrequest="window.monkshu_env.apps.neuranetapp.search_main.getChatRequest(prompt, 'enterprisechat')"></chat-box>
+
+<div id="filecontainer">
+    <span id="filecontainerheader">Knowledge Base</span>
+    <file-manager id="fm"></file-manager>
+</div>
+
+</div>

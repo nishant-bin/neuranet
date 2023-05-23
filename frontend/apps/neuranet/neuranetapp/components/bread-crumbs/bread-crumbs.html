@@ -1,0 +1,52 @@
+<!--
+/* Breadcrumb component.
+ * (C) 2022 TekMonks. All rights reserved.
+ * License: See enclosed license file.
+ */
+ -->
+
+<style>
+body{
+    margin: 0; padding: 0;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    display: flex;
+    height: 100%;
+    flex-direction: row;
+    color: var(--font-color);
+}
+
+span#crumbseperator {
+    align-items: center;
+    display: flex;
+}
+span#crumbseperator:last-of-type {display: none;}
+
+span.crumb {
+    align-items: center;
+    display: flex;
+    cursor: pointer;
+}
+span.crumb img {
+    height: 50%;
+    margin-right: 0.2em
+}
+</style>
+
+{{{styleBody}}}
+
+{{#showNestedCrumbs}}
+<span-with-menu styleBody="div#menu{font-size: 0.8em; margin-left: 0.25em;} div.menuitem {padding: 0.8em !important; cursor: pointer !important;} div.menuitem:hover {background-color: var(--font-color) !important;} div.cancel {background-color: var(--font-color) !important;}">...
+    {{#nestedcrumbs}}
+    <menu-item onclick='monkshu_env.components["bread-crumbs"].doCrumbAction("{{{actionID}}}", "{{{hostID}}}")' 
+        label="{{{name}}}" icon="{{{icon}}}" iconhover="{{{iconhover}}}"></menu-item>
+    {{/nestedcrumbs}}
+</span-with-menu>
+<span id="crumbseperator">&nbsp;&gt;&nbsp;</span>
+{{/showNestedCrumbs}}
+
+{{#singlecrumbs}}
+<span class="crumb" onclick='monkshu_env.components["bread-crumbs"].doCrumbAction("{{{actionID}}}", "{{{hostID}}}")'><img src="{{{icon}}}">{{{name}}}</span>
+<span id="crumbseperator">&nbsp;&gt;&nbsp;</span>
+{{/singlecrumbs}}
