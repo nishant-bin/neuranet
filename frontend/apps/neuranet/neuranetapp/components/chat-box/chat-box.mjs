@@ -34,10 +34,10 @@ async function send(containedElement) {
     textareaEdit.classList.add("readonly"); textareaEdit.setAttribute("readonly", "true"); buttonSendImg.src = `${COMPONENT_PATH}/img/spinner.svg`; 
     const oldInsertion = _insertAIResponse(shadowRoot, userMessageArea, userPrompt);
     const onRequest = host.getAttribute("onrequest");
-    const requestProcessor = _createAsyncFunction(`return await ${onRequest};`), request = await requestProcessor({prompt: userPrompt});
+    const requestProcessor = util.createAsyncFunction(`return await ${onRequest};`), request = await requestProcessor({prompt: userPrompt});
     const result = await apiman.rest(`${API_CHAT}`, "POST", request, true);
     
-    const onResult = host.getAttribute("onresult"), resultProcessor = _createAsyncFunction(`return await ${onResult};`), 
+    const onResult = host.getAttribute("onresult"), resultProcessor = util.createAsyncFunction(`return await ${onResult};`), 
         checkResult = await resultProcessor({result});
     _insertAIResponse(shadowRoot, userMessageArea, userPrompt, checkResult[checkResult.ok?"response":"error"], oldInsertion);
 
@@ -63,12 +63,6 @@ function _insertAIResponse(shadowRoot, userMessageArea, userPrompt, aiResponse, 
     userMessageArea.value = ""; // clear text area for the next prompt
 
     return insertionDiv;
-}
-
-const _createAsyncFunction = (code) => {
-    const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-    const newFunction = context => new AsyncFunction(Object.keys(context).join(","), code)(...Object.values(context));
-    return newFunction;
 }
 
 export const chat_box = {trueWebComponentMode: true, elementConnected, elementRendered, send}
