@@ -6,6 +6,7 @@ const fspromises = require("fs").promises;
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
+const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const db = require(`${XBIN_CONSTANTS.LIB_DIR}/xbindb.js`).getDB();
 const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
 
@@ -39,6 +40,10 @@ exports.doService = async (jsonReq, _, headers) => {
 				await db.runCmd("UPDATE shares SET fullpath = ? WHERE fullpath = ?", [fullpath, oldfullpath]);	// update shares
 			}, true);
 		}
+
+		blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_RENAMED, oldPath, newPath, 
+			ip: utils.getLocalIPs()[0], isDirectory: newStats.xbintype == XBIN_CONSTANTS.XBIN_FOLDER, 
+			id: cms.getID(headers), org: cms.getOrg(headers)});
 
         return CONSTANTS.TRUE_RESULT;
 	} catch (err) {LOG.error(`Error renaming  path: ${oldPath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}

@@ -39,7 +39,6 @@ exports.downloadFile = async (fileReq, servObject, headers, url) => {
 		if (stats.xbintype == XBIN_CONSTANTS.XBIN_FOLDER) { isFolder = true; fullpath = await _zipDirectory(fullpath); 
 			stats = await fspromises.stat(fullpath); }
 
-		const zippable = isFolder?false:uploadfile.isZippable(fullpath);
 		let respHeaders = {}; APIREGISTRY.injectResponseHeaders(url, {}, headers, respHeaders, servObject);
 		respHeaders["content-disposition"] = "attachment;filename=" + path.basename(isFolder?`${fileReq.fullpath}.zip`:fullpath);
 		respHeaders["content-length"] = stats.size;   
@@ -47,10 +46,7 @@ exports.downloadFile = async (fileReq, servObject, headers, url) => {
 		servObject.server.statusOK(respHeaders, servObject, true);
 
 		_updateWriteStatus(decodeURIComponent(fileReq.reqid), stats.size, null);
-		let readStream = fs.createReadStream(fullpath, {highWaterMark: CONF.DOWNLOAD_READ_BUFFER_SIZE||DEFAULT_READ_BUFFER_SIZE, 
-			flags:"r", autoClose:true});
-		if (CONF.DISK_SECURED && (!isFolder)) readStream = readStream.pipe(crypt.getDecipher(CONF.SECURED_KEY)); // decrypt the file before sending if it is encrypted
-		if (zippable && (!isFolder)) readStream = readStream.pipe(zlib.createGunzip());	
+		const readStream = exports.getReadStream(fullpath, isFolder);
         const writable = readStream.pipe(servObject.res, {end:true});
 		readStream.on("data",chunk =>_updateWriteStatus(fileReq.reqid, undefined, chunk.length));
 		writable.on("close", _=>{
@@ -71,6 +67,15 @@ exports.readUTF8File = async function (headers, inpath) {
 	if (CONF.DISK_SECURED) dataRead = await _readEncryptedUTF8Data(dataRead, zippable);
 	else dataRead = dataRead.toString("utf8");
 	return dataRead;
+}
+
+exports.getReadStream = async function(fullpath, pathIsATemporarilyZippedFolderForDownloading) {
+	const zippable = pathIsATemporarilyZippedFolderForDownloading?false:uploadfile.isZippable(fullpath);
+	let readStream = fs.createReadStream(fullpath, {highWaterMark: CONF.DOWNLOAD_READ_BUFFER_SIZE||DEFAULT_READ_BUFFER_SIZE, 
+		flags:"r", autoClose:true});
+	if (CONF.DISK_SECURED && (!pathIsATemporarilyZippedFolderForDownloading)) readStream = readStream.pipe(crypt.getDecipher(CONF.SECURED_KEY)); // decrypt the file before sending if it is encrypted
+	if (zippable) readStream = readStream.pipe(zlib.createGunzip());	// gunzip if zipped
+	return readStream;
 }
 
 function _readEncryptedUTF8Data(buffer, zippable) {

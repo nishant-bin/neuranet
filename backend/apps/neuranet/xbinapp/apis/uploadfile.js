@@ -12,6 +12,7 @@ const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const CONF = require(`${XBIN_CONSTANTS.CONF_DIR}/xbin.json`);
 const quotas = require(`${XBIN_CONSTANTS.LIB_DIR}/quotas.js`);
+const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const addablereadstream = require(`${XBIN_CONSTANTS.LIB_DIR}/addablereadstream.js`)
 const ADDABLE_STREAM_TIMEOUT = CONF.UPLOAD_STREAM_MAX_WAIT||120000;	// 2 minutes to receive new data else we timeout
 
@@ -39,7 +40,11 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 		} 
 	
 		await _appendOrWrite(temppath, bufferToWrite, jsonReq.startOfFile, jsonReq.endOfFile, exports.isZippable(fullpath));
-		if (jsonReq.endOfFile) await fspromises.rename(temppath, fullpath);
+		if (jsonReq.endOfFile) {
+			await fspromises.rename(temppath, fullpath);
+			blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: fullpath, 
+				ip: utils.getLocalIPs()[0], id: cms.getID(headers), org: cms.getOrg(headers)});
+		}
 
 		await exports.updateFileStats(fullpath, jsonReq.path, bufferToWrite.length, jsonReq.endOfFile, XBIN_CONSTANTS.XBIN_FILE);
 
@@ -63,7 +68,7 @@ exports.writeUTF8File = async function (headers, inpath, data) {
 
 	await _appendOrWrite(fullpath, data, true, true, exports.isZippable(fullpath));
 
-	exports.updateFileStats(fullpath, inpath, data.length, true, XBIN_CONSTANTS.XBIN_FILE);
+	exports.updateFileStats(fullpath, inpath, data.length, true, XBIN_CONSTANTS.XBIN_FILE);	
 }
 
 exports.updateFileStats = async function (fullpathOrRequestHeaders, remotepath, dataLengthWritten, transferFinished, type, commentin) {

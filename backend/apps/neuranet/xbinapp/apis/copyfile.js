@@ -6,6 +6,7 @@ const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const quotas = require(`${XBIN_CONSTANTS.LIB_DIR}/quotas.js`);
+const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
 
 exports.doService = async (jsonReq, _, headers) => {
@@ -28,8 +29,13 @@ exports.doService = async (jsonReq, _, headers) => {
 		const stats = await uploadfile.getFileStats(fromPath); 
 		if (!(await quotas.checkQuota(headers, stats.size)).result) {LOG.error("Quota is full write failed."); return;}
 		
-		await utils.copyFileOrFolder(fromPath, toPath, async (_from, to, relativePath) => {
-			if (!uploadfile.isMetaDataFile(to)) return;
+		await utils.copyFileOrFolder(fromPath, toPath, async (_from, to, relativePath, statsFrom) => {
+			if (!uploadfile.isMetaDataFile(to)) {	// not a metadata file
+				blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, 
+					path: to, ip: utils.getLocalIPs()[0], isDirectory: statsFrom.isDirectory(), 
+					id: cms.getID(headers), org: cms.getOrg(headers)});
+				return;
+			}
 			const newRemotePath = uploadfile.normalizeRemotePath(jsonReq.to+"/"+relativePath), 
 				copiedFile = uploadfile.getFileForMetaDataFile(to);
 			await uploadfile.updateDiskFileMetadataRemotePaths(copiedFile, newRemotePath);

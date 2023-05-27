@@ -6,11 +6,14 @@
 const fs = require("fs");
 const mustache = require("mustache");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
-const loginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`);
 
 exports.initSync = _ => {
-    _readConfSync();
+    _readConfSync();    // the files below need constants to be setup properly so require them after conf is setup
+
+    const fileindexer = require(`${NEURANET_CONSTANTS.LIBDIR}/fileindexer.js`);
+    const loginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`);
     loginhandler.init(); 
+    fileindexer.init();
 }
 
 function _readConfSync() {

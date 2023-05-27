@@ -105,13 +105,13 @@
                 "model": "text-embedding-ada-002", 
                 "input":"${__ORG_NEURANET_PROMPT__}"
             },
-            "split_separator": " ",
+            "split_separators": ["\n\n","\n"," "],
             "overlap": 0,
             "chunk_size": 750,
             "default_vector_db": "default_db",
             "response_contentpath": "data[0].embedding",
             "response_cost_of_query_path": "usage.total_tokens",
-            "sample_ai_response": "embedding_ai_response.json",
+            "sample_ai_response": "module(genRandomEmbedding.js),embedding_ai_response.json,1536,data[0].embedding",
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "price_per_unit": "0.0000004"

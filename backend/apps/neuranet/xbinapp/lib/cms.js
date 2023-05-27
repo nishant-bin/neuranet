@@ -31,14 +31,20 @@ exports.init = _ => {
 	});
 }
 
-exports.getCMSRoot = async function(headers) {
-	const loginID = login.getID(headers); if (!loginID) throw "No login for CMS root"; 
-	const org = login.getOrg(headers)||"unknown";
+exports.getCMSRoot = async function(headersOrLoginIDAndOrg) {
+	const headersOrLoginIDAndOrgIsHeaders = !(headersOrLoginIDAndOrg.xbin_org &&  headersOrLoginIDAndOrg.xbin_id);
+	const loginID = headersOrLoginIDAndOrgIsHeaders ? login.getID(headersOrLoginIDAndOrg) : headersOrLoginIDAndOrg.xbin_id; 
+	if (!loginID) throw "No login for CMS root"; 
+	const org = headersOrLoginIDAndOrgIsHeaders ? (login.getOrg(headersOrLoginIDAndOrg)||"unknown") : headersOrLoginIDAndOrg.xbin_org;
 	const cmsRootToReturn = _getPathForIDAndOrg(loginID, org);
 	try { await fspromises.access(cmsRootToReturn, fs.F_OK); } catch (err) { await fspromises.mkdir(cmsRootToReturn, {recursive: true}); }
 	LOG.info(`Returning CMS home as ${cmsRootToReturn} for id ${loginID} of org ${org}.`);
 	return cmsRootToReturn;
 }
+
+exports.getID = headers => login.getID(headers);
+
+exports.getOrg = headers => login.getOrg(headers);
 
 exports.isSecure = async (headers, path) => XBIN_CONSTANTS.isSubdirectory(path, await this.getCMSRoot(headers));
 

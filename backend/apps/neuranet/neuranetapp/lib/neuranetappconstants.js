@@ -17,3 +17,6 @@ exports.TEMPDIR = path.resolve(`${APPROOT}/temp`);
 exports.THIRDPARTYDIR = path.resolve(`${APPROOT}/3p`);
 exports.DBDIR = path.resolve(LOGINAPP_CONSTANTS.DB_DIR);
 exports.VECTORDBPATH = path.resolve(`${LOGINAPP_CONSTANTS.APP_ROOT}/db/vectordb`);
+
+exports.NEURANETEVENT = "__org_monkshu_neuranet_event";
+exports.EVENTS = Object.freeze({VECTORDB_FILE_PROCESSED: "vectordb_file_processed"});

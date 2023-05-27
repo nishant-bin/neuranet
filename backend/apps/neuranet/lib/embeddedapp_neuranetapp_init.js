@@ -4,8 +4,11 @@
  */
 
 const APP_NAME = "neuranetapp"; // change this to the embedded app name
+const xbin_init = require(`${__dirname}/embeddedapp_xbin_init.js`);
 
 exports.initSync = function() {
+    xbin_init.initSync();   // because we rely on XBin's constants in Neuranet
+
     global.LOGINAPP_CONSTANTS.EMBEDDED_APP_NAME = APP_NAME;
 
     const EMBEDDED_APP_LIBDIR = `${LOGINAPP_CONSTANTS.APP_ROOT}/${APP_NAME}/lib`;

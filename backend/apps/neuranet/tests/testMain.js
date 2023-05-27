@@ -67,9 +67,10 @@ function setupServerEnvironmentForTesting() {
 	
 	/* Try to init the apps themselves */
 	LOG.info("Initializing the apps.");
-	try {require(CONSTANTS.LIBDIR+"/app.js").initAppsSync();} catch (err) {
-		LOG.console(`Error initializing the apps ${err}.`);
-		LOG.error(`Error initializing the apps ${err}.`);
+	try {require(CONSTANTS.LIBDIR+"/app.js").initAppsSync()} catch (err) {
+		LOG.console(`Error initializing the apps ${err}.${err.stack?"\n"+err.stack+"\n":""}`);
+		LOG.error(`Error initializing the apps ${err}.${err.stack?"\n"+err.stack:""}`);
+		throw err;	// stop the test environment as app init failed
 	}
 
 	/* Log the start */
