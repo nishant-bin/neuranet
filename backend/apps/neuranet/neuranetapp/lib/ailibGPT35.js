@@ -66,8 +66,8 @@ exports.process = async function(data, promptFile, apiKey, model) {
 }
 
 exports.countTokens = async function(string, AImodel, uplift=1.05) {
-    let count, encoderLib; try {encoderLib = require("gpt-3-encoder")} catch (err) {LOG.warn(`GPT3 encoder library not available for estimation, using approximate estimation method instead. The error is ${err}.`);}
-    if (AImodel.includes("gpt-3") && encoderLib) {
+    let count, encoderLib; try {encoderLib = require("gpt-tokenizer")} catch (err) {LOG.warn(`GPT3 encoder library not available for estimation, using approximate estimation method instead. The error is ${err}.`);}
+    if ((AImodel.includes("gpt-3") || AImodel.includes("gpt-4")) && encoderLib) {
         const encoded = encoderLib.encode(string);
         count = encoded.length;
     } else {

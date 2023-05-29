@@ -78,8 +78,11 @@ function _getRequestChain(request) {
 	return requestChain;
 }
 
-const _checkValidAGIChain = request => 
-	request.trim().split(AGI_CHAIN_BOUNDARY)[0].startsWith(AGI_CHAIN_BOUNDARY);
+const _checkValidAGIChain = request => {
+	const splits = request.trim().split(AGI_CHAIN_BOUNDARY);
+	const isAGIChain = splits.length > 1;
+	return isAGIChain;
+}
 
 async function _getPolledResponse(url, requestType, initialRequest, waitRequest, apimanOptions, timeout, streamer) {	
 	return new Promise(async resolve => {
