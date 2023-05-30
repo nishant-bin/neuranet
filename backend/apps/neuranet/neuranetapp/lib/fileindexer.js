@@ -69,29 +69,34 @@ async function _ingestfile(pathIn, id, org) {
 }
 
 async function _uningestfile(path, id, org) {
-    let vectordb; try { vectordb = await _getVectorDBForIDAndOrg(id, org, embeddingsGenerator) } catch(err) { 
+    let vectordb; try { vectordb = await exports.getVectorDBForIDAndOrg(id, org) } catch(err) { 
         LOG.error(`Can't instantiate the vector DB ${vectordb}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
-    const queryResults = aivectordb.query(undefined, -1, undefined, metadata => metadata.fullpath == path, true);
+    const queryResults = await vectordb.query(undefined, -1, undefined, metadata => metadata.fullpath == path, true);
     const vectorsDropped = []; if (queryResults) for (const result of queryResults) {
-        vectorsDropped.push(result.vector); vectordb.delete(result.vector);
+        try {await vectordb.delete(result.vector);} catch (err) {
+            LOG.error(`Error dropping vector for file ${path} for ID ${id} failed. Some vectors were dropped. Database needs recovery for this file.`);
+            LOG.debug(`The vector which failed was ${result.vector}.`);
+            return {vectors: vectorsDropped, reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
+        }
+        vectorsDropped.push(result.vector); 
     } else {
         LOG.error(`Queyring vector DB for file ${path} for ID ${id} failed.`);
-        return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
+        return {vectors: vectorsDropped, reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
     return {vectors: vectorsDropped, reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
 }
 
 async function _renamefile(from, to, id, org) {
-    let vectordb; try { vectordb = await _getVectorDBForIDAndOrg(id, org, embeddingsGenerator) } catch(err) { 
+    let vectordb; try { vectordb = await exports.getVectorDBForIDAndOrg(id, org) } catch(err) { 
         LOG.error(`Can't instantiate the vector DB ${vectordb}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
-    const queryResults = aivectordb.query(undefined, -1, undefined, metadata => metadata.fullpath == from, true);
+    const queryResults = vectordb.query(undefined, -1, undefined, metadata => metadata.fullpath == from, true);
     const vectorsRenamed = []; if (queryResults) for (const result of queryResults) {
         const metadata = result.metadata; metadata.link = path.relative(cms.getCMSRoot({xbin_id: id, xbin_org: org}), to); metadata.fullpath = to;
         if (!vectordb.update(result.vector, metadata)) {

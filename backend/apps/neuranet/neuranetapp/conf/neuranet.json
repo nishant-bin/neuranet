@@ -74,6 +74,7 @@
             "sample_ai_response": "chaincode_model_response.json",
             "read_ai_response_from_samples": false,
             "token_approximation_uplift": 1.10,
+            "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.000002"
         },
 

@@ -10,14 +10,16 @@ const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 
-const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}", SAMPLE_MODULE_PREFIX = "module(";
+const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}", SAMPLE_MODULE_PREFIX = "module(", DEFAULT_GPT_CHARS_PER_TOKEN = 4,
+    INTERNAL_TOKENIZER = "internal", DEFAULT_GPT_TOKENIZER = "gpt-tokenizer", DEFAULT_TOKEN_UPLIFT = 1.05;
 
 exports.process = async function(data, promptFile, apiKey, model) {
     const prompt = mustache.render(await aiutils.getPrompt(promptFile), data).replace(/\r\n/gm,"\n");   // create the prompt
     const modelObject = await aiutils.getAIModel(model); 
     if (!modelObject) { LOG.error(`Bad model object - ${modelObject}.`); return null; }
 
-    const tokencount_request = await exports.countTokens(prompt, modelObject.request.model, modelObject.token_approximation_uplift);
+    const tokencount_request = await exports.countTokens(prompt, modelObject.request.model, 
+        modelObject.token_approximation_uplift, modelObject.tokenizer);
     if (tokencount_request > modelObject.request.max_tokens - 1) {
         LOG.error(`Request too large for the model's context length - the token count is ${tokencount_request}, the model's max context length is ${modelObject.request.model}.`); 
         LOG.error(`The request prompt was ${JSON.stringify(prompt)}`);
@@ -65,16 +67,22 @@ exports.process = async function(data, promptFile, apiKey, model) {
         utils.getObjProperty(response, modelObject.response_cost_of_query_path) : undefined};
 }
 
-exports.countTokens = async function(string, AImodel, uplift=1.05) {
-    let count, encoderLib; try {encoderLib = require("gpt-tokenizer")} catch (err) {LOG.warn(`GPT3 encoder library not available for estimation, using approximate estimation method instead. The error is ${err}.`);}
-    if ((AImodel.includes("gpt-3") || AImodel.includes("gpt-4")) && encoderLib) {
+exports.countTokens = async function(string, AImodel, uplift=DEFAULT_TOKEN_UPLIFT, tokenizer) {
+    let count, encoderLib; try {
+        if (tokenizer.toLowerCase() != INTERNAL_TOKENIZER) encoderLib = require(tokenizer||DEFAULT_GPT_TOKENIZER);
+    } catch (err) {
+        LOG.warn(`GPT3 encoder library not available for estimation, using approximate estimation method instead. The error is ${err}.`);
+    }
+    if ((AImodel.toLowerCase().includes("gpt-3") || AImodel.toLowerCase().includes("gpt-4")) && encoderLib) {
         const encoded = encoderLib.encode(string);
         count = encoded.length;
     } else {
         if (encoderLib) LOG.warn(`${AImodel} is not supported using encoder, using the approximate estimation method to calculate tokens.`);
-        count = (string.length/4); 
+        count = (string.length/DEFAULT_GPT_CHARS_PER_TOKEN); 
     }
-    return Math.ceil(count*uplift);
+    const tokenCount = Math.ceil(count*uplift);
+    LOG.info(`Token count is ${tokenCount}. Tokenizer used is ${encoderLib?tokenizer||DEFAULT_GPT_TOKENIZER:INTERNAL_TOKENIZER}.`);
+    return tokenCount;
 }
 
 async function _getSampleResponse(sampleAIReponseDirective) {

@@ -202,11 +202,11 @@ exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metada
             dbToUse, vectorToFindSimilarTo, (!filter_metadata_last)?metadata_filter_function:undefined);
     let similarities; if (benchmarkIterations) {
         _log_error(`Vector DB is in benchmarking mode. Performance will be affected. Iterations = ${benchmarkIterations}. DB index size = ${Object.values(dbToUse.index).length} vectors. Total simulated index size to be searched = ${parseInt(process.env.__ORG_MONKSHU_VECTORDB_BENCHMARK_ITERATIONS)*Object.values(dbToUse.index).length} vectors.`, db_path);
-        for (let i = 0; i < benchmarkIterations; i++) similarities = _searchSimilarities();
-    } else similarities = _searchSimilarities();
+        for (let i = 0; i < benchmarkIterations; i++) similarities = await _searchSimilarities();
+    } else similarities = await _searchSimilarities();
         
     if (vectorToFindSimilarTo) similarities.sort((a,b) => b.similarity - a.similarity);
-    const results = []; for (const similarity_object of similarities) {
+    const results = []; for (const similarity_object of similarities) { // maybe we can multithread this as well as it is all CPU
         if (results.length == topK) break;  // done filtering
         if (vectorToFindSimilarTo && min_distance && (similarity_object.similarity < min_distance)) break; // filter for minimum distance if asked
         // filter the results further by conditioning on the metadata, if a filter was provided
@@ -338,7 +338,8 @@ const _cosine_similarity = (v1, v2, lengthV1, lengthV2) => {
 // End: Cosine similarity calculator
 
 function _search_singlethreaded(dbToUse, vectorToFindSimilarTo, metadata_filter_function) {
-    let similarities = []; const lengthOfVectorToFindSimilarTo = _getVectorLength(vectorToFindSimilarTo);
+    let similarities = []; const lengthOfVectorToFindSimilarTo = vectorToFindSimilarTo?
+        _getVectorLength(vectorToFindSimilarTo):undefined;
     for (const entryToCompareTo of Object.values(dbToUse.index)) 
         if (metadata_filter_function && metadata_filter_function(entryToCompareTo.metadata)) similarities.push({   // calculate cosine similarities
             vector: entryToCompareTo.vector, 
@@ -349,7 +350,7 @@ function _search_singlethreaded(dbToUse, vectorToFindSimilarTo, metadata_filter_
 }
 
 async function _search_multithreaded(dbPath, vectorToFindSimilarTo, metadata_filter_function) {
-    const lengthOfVectorToFindSimilarTo = _getVectorLength(vectorToFindSimilarTo);
+    const lengthOfVectorToFindSimilarTo = vectorToFindSimilarTo?_getVectorLength(vectorToFindSimilarTo):undefined;
     const entries = Object.values(dbs[_get_db_index(dbPath)].index), splitLength = entries.length/maxthreads_for_search; 
     
     const _getSimilaritiesFromWorker = async (worker, start, end) => await _callWorker(worker,
