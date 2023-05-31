@@ -96,9 +96,10 @@ async function _renamefile(from, to, id, org) {
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
-    const queryResults = vectordb.query(undefined, -1, undefined, metadata => metadata.fullpath == from, true);
-    const vectorsRenamed = []; if (queryResults) for (const result of queryResults) {
-        const metadata = result.metadata; metadata.link = path.relative(cms.getCMSRoot({xbin_id: id, xbin_org: org}), to); metadata.fullpath = to;
+    const queryResults = await vectordb.query(undefined, -1, undefined, metadata => metadata.fullpath == from, true);
+    const vectorsRenamed = [], cmsRoot = await cms.getCMSRoot({xbin_id: id, xbin_org: org}); 
+    if (queryResults) for (const result of queryResults) {
+        const metadata = result.metadata; metadata.cmspath = path.relative(cmsRoot, to); metadata.fullpath = to;
         if (!vectordb.update(result.vector, metadata)) {
             LOG.error(`Renaming the vector file paths failed for path ${to} of ID ${id}.`);
             return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 

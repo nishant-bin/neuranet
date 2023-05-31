@@ -41,7 +41,7 @@ exports.doService = async (jsonReq, _, headers) => {
 			}, true);
 		}
 
-		blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_RENAMED, oldPath, newPath, 
+		blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_RENAMED, from: oldPath, to: newPath, 
 			ip: utils.getLocalIPs()[0], isDirectory: newStats.xbintype == XBIN_CONSTANTS.XBIN_FOLDER, 
 			id: cms.getID(headers), org: cms.getOrg(headers)});
 
