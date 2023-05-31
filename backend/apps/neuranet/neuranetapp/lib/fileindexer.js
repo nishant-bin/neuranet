@@ -1,5 +1,6 @@
 /**
- * Will index documents in and out of vector databases.
+ * Will index XBin documents in and out of vector databases.
+ * Bridge between XBin and Neuranet knowledgebases.
  * (C) 2023 Tekmonks Corp. All rights reserved.
  * License: See enclosed LICENSE file.
  */
