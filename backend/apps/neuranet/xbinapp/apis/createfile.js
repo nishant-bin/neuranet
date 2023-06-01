@@ -24,7 +24,7 @@ exports.doService = async (jsonReq, _, headers) => {
 			id: cms.getID(headers), org: cms.getOrg(headers)});
 
         return CONSTANTS.TRUE_RESULT;
-	} catch (err) {LOG.error(`Error creating  path: ${fullpath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}
+	} catch (err) {LOG.error(`Error creating  path: ${fullpath}, error is: ${err}.`); return CONSTANTS.FALSE_RESULT;}
 }
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.path);

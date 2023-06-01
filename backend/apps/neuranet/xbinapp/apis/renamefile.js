@@ -29,6 +29,8 @@ exports.doService = async (jsonReq, _, headers) => {
 		await db.runCmd("UPDATE shares SET fullpath = ? WHERE fullpath = ?", [newpath, oldpath]);	// update shares
 	}
 
+	const ip = utils.getLocalIPs()[0], id = cms.getID(headers), org = cms.getOrg(headers);
+
 	try {
 		await _renameFile(oldPath, newPath, jsonReq.new);
 		const newStats = await uploadfile.getFileStats(newPath); 
@@ -37,16 +39,16 @@ exports.doService = async (jsonReq, _, headers) => {
 				if (XBIN_CONSTANTS.XBIN_IGNORE_PATH_SUFFIXES.includes(path.extname(fullpath))) return;
 				const remotePathNew = jsonReq.new+"/"+relativePath, oldfullpath = path.resolve(oldPath+"/"+relativePath);
 				await uploadfile.updateDiskFileMetadataRemotePaths(fullpath, remotePathNew);
+				_broadcastFileRenamed(oldfullpath, fullpath, ip, id, org);
 				await db.runCmd("UPDATE shares SET fullpath = ? WHERE fullpath = ?", [fullpath, oldfullpath]);	// update shares
 			}, true);
-		}
-
-		blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_RENAMED, from: oldPath, to: newPath, 
-			ip: utils.getLocalIPs()[0], isDirectory: newStats.xbintype == XBIN_CONSTANTS.XBIN_FOLDER, 
-			id: cms.getID(headers), org: cms.getOrg(headers)});
+		} else _broadcastFileRenamed(oldPath, newPath, ip, id, org);
 
         return CONSTANTS.TRUE_RESULT;
 	} catch (err) {LOG.error(`Error renaming  path: ${oldPath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}
 }
+
+const _broadcastFileRenamed = (from, to, ip, id, org) => blackboard.publish(XBIN_CONSTANTS.XBINEVENT, 
+	{type: XBIN_CONSTANTS.EVENTS.FILE_RENAMED, from, to, ip, id, org});
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.old && jsonReq.new);

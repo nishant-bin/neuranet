@@ -29,10 +29,10 @@ exports.doService = async (jsonReq, _, headers) => {
 		const stats = await uploadfile.getFileStats(fromPath); 
 		if (!(await quotas.checkQuota(headers, stats.size)).result) {LOG.error("Quota is full write failed."); return;}
 		
-		await utils.copyFileOrFolder(fromPath, toPath, async (_from, to, relativePath, statsFrom) => {
+		await utils.copyFileOrFolder(fromPath, toPath, async (_from, to, relativePath) => {
 			if (!uploadfile.isMetaDataFile(to)) {	// not a metadata file
 				blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, 
-					path: to, ip: utils.getLocalIPs()[0], isDirectory: statsFrom.isDirectory(), 
+					path: toPath, ip: utils.getLocalIPs()[0], isDirectory: stats.xbintype == XBIN_CONSTANTS.XBIN_FOLDER, 
 					id: cms.getID(headers), org: cms.getOrg(headers)});
 				return;
 			}
