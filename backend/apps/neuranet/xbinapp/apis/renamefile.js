@@ -48,7 +48,7 @@ exports.doService = async (jsonReq, _, headers) => {
 	} catch (err) {LOG.error(`Error renaming  path: ${oldPath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}
 }
 
-const _broadcastFileRenamed = (from, to, ip, id, org) => blackboard.publish(XBIN_CONSTANTS.XBINEVENT, 
-	{type: XBIN_CONSTANTS.EVENTS.FILE_RENAMED, from, to, ip, id, org});
+const _broadcastFileRenamed = (from, to, ip, id, org) => 
+	blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_RENAMED, from, to, ip, id, org});
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.old && jsonReq.new);

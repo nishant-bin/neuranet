@@ -3,8 +3,8 @@
  * (C) 2022 TekMonks. All rights reserved.
  */
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
-const login = require(`${XBIN_CONSTANTS.API_DIR}/login.js`);
 const quotas = require(`${XBIN_CONSTANTS.LIB_DIR}/quotas.js`);
+const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
 
 exports.doService = async (jsonReq, _servObject, headers, _url) => {
     if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return CONSTANTS.FALSE_RESULT;}

@@ -26,16 +26,17 @@ exports.doService = async (jsonReq, _, headers) => {
 }
 
 async function rmrf(path, id, org, ip) {
-	if ((await fspromises.stat(path)).isFile()) {
+	const _deleteFile = async path => {
 		await unlinkFileAndRemoveFromDB(path); 
 		blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_DELETED, path, id, org, ip});
-		return;
 	}
+
+	if ((await fspromises.stat(path)).isFile()) { await _deleteFile(path); return; }
 
 	const entries = await fspromises.readdir(path);
 	for (const entry of entries) {
 		const stats = await uploadfile.getFileStats(`${path}/${entry}`);
-		if (stats.xbintype == XBIN_CONSTANTS.XBIN_FILE) await unlinkFileAndRemoveFromDB(`${path}/${entry}`); 
+		if (stats.xbintype == XBIN_CONSTANTS.XBIN_FILE) await _deleteFile(`${path}/${entry}`); 
 		else if (stats.xbintype == XBIN_CONSTANTS.XBIN_FOLDER) await rmrf(`${path}/${entry}`);
 	}
 	await fspromises.rmdir(path); try {await uploadfile.deleteDiskFileMetadata(path);} catch (err) {};
