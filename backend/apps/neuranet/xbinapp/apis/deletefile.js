@@ -3,6 +3,7 @@
  */
 const path = require("path");
 const fspromises = require("fs").promises;
+const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
@@ -28,7 +29,7 @@ exports.doService = async (jsonReq, _, headers) => {
 async function rmrf(path, id, org, ip) {
 	const _deleteFile = async path => {
 		await unlinkFileAndRemoveFromDB(path); 
-		blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_DELETED, path, id, org, ip});
+		blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_DELETED, path, id, org, ip, isxbin: true});
 	}
 
 	if ((await fspromises.stat(path)).isFile()) { await _deleteFile(path); return; }

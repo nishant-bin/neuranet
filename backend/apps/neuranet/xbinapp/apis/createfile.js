@@ -2,6 +2,7 @@
  * (C) 2020 TekMonks. All rights reserved.
  */
 const path = require("path");
+const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
@@ -21,7 +22,7 @@ exports.doService = async (jsonReq, _, headers) => {
 
 		blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: fullpath, 
 			ip: utils.getLocalIPs()[0], isDirectory: (jsonReq.isDirectory && jsonReq.isDirectory != "false"),
-			id: cms.getID(headers), org: cms.getOrg(headers)});
+			id: cms.getID(headers), org: cms.getOrg(headers), isxbin: true});
 
         return CONSTANTS.TRUE_RESULT;
 	} catch (err) {LOG.error(`Error creating  path: ${fullpath}, error is: ${err}.`); return CONSTANTS.FALSE_RESULT;}

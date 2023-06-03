@@ -49,6 +49,6 @@ exports.doService = async (jsonReq, _, headers) => {
 }
 
 const _broadcastFileRenamed = (from, to, ip, id, org) => 
-	blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_RENAMED, from, to, ip, id, org});
+	blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_RENAMED, from, to, ip, id, org, isxbin: true});
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.old && jsonReq.new);

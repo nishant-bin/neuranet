@@ -5,6 +5,7 @@
  * (C) 2020 TekMonks. All rights reserved.
  */
 const path = require("path");
+const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
@@ -24,7 +25,7 @@ exports.doService = async (jsonReq, _, headers) => {
 			await uploadfile.writeUTF8File(headers, jsonReq.path, Buffer.isBuffer(jsonReq.data) ? 
 				jsonReq.data : Buffer.from(jsonReq.data, "utf8"));	// it is a write operation
 			blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_MODIFIED, path: fullpath, 
-				ip: utils.getLocalIPs()[0], id: cms.getID(headers), org: cms.getOrg(headers)});
+				ip: utils.getLocalIPs()[0], id: cms.getID(headers), org: cms.getOrg(headers), isxbin: true});
 		} else if (jsonReq.op == "updatecomment") await uploadfile.updateFileStats(	// update file comment
 			headers, jsonReq.path, undefined, true, undefined, jsonReq.comment);
 		return result;

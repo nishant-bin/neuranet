@@ -43,7 +43,7 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 		if (jsonReq.endOfFile) {
 			await fspromises.rename(temppath, fullpath);
 			blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: fullpath, 
-				ip: utils.getLocalIPs()[0], id: cms.getID(headers), org: cms.getOrg(headers)});
+				ip: utils.getLocalIPs()[0], id: cms.getID(headers), org: cms.getOrg(headers), isxbin: true});
 		}
 
 		await exports.updateFileStats(fullpath, jsonReq.path, bufferToWrite.length, jsonReq.endOfFile, XBIN_CONSTANTS.XBIN_FILE);

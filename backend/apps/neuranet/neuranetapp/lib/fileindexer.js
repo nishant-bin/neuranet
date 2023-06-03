@@ -16,6 +16,7 @@ const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
+const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
 
 REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
 	MODEL_DEFAULT = "embedding-openai-ada002";
@@ -30,20 +31,22 @@ async function _handleFileEvent(message) {
     }
 
     if (message.type == XBIN_CONSTANTS.EVENTS.FILE_CREATED && (!message.isDirectory)) 
-        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org), message.path, message.return_vectors);
+        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org), 
+            message.path, message.return_vectors, message.isxbin);
     else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_DELETED && (!message.isDirectory)) 
         awaitPromisePublishFileEvent(_uningestfile(path.resolve(message.path), message.id, message.org), message.path, message.return_vectors);
     else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_RENAMED && (!message.isDirectory)) 
         awaitPromisePublishFileEvent(_renamefile(path.resolve(message.from), path.resolve(message.to), message.id, message.org), message.from, message.return_vectors);
     else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_MODIFIED && (!message.isDirectory)) {
         await _uningestfile(path.resolve(message.path), message.id, message.org);
-        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org), message.path, message.return_vectors);
+        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org), message.path, 
+            message.return_vectors, message.isxbin);
     }
 }
 
-async function _ingestfile(pathIn, id, org) {
+async function _ingestfile(pathIn, id, org, isxbin) {
     if (!(await quota.checkQuota(id))) {
-		LOG.error(`Disallowing the ingest call for the path ${pathIn}, as the user ${id} is over their quota.`);
+		LOG.error(`Disallowing the ingest call for the path ${pathIn}, as the user ${id} of org ${org} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
 
@@ -54,46 +57,52 @@ async function _ingestfile(pathIn, id, org) {
 			else return response.embedding;
 		}
     let vectordb; try { vectordb = await exports.getVectorDBForIDAndOrg(id, org, embeddingsGenerator) } catch(err) { 
-        LOG.error(`Can't instantiate the vector DB ${vectorDB_ID}. Unable to continue.`); 
+        LOG.error(`Can't instantiate the vector DB ${vectorDB_ID} for ID ${id} and org ${org}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
     const cmsRoot = await cms.getCMSRoot({xbin_id: id, xbin_org: org}), metadata = {
         cmspath: encodeURI(path.relative(cmsRoot, pathIn).replaceAll("\\", "/")), id, date_created: Date.now(), fullpath: pathIn};
-	let ingestedVectors; try {ingestedVectors = await vectordb.ingeststream(metadata, fs.createReadStream(pathIn), 
+	let ingestedVectors; try {
+        ingestedVectors = await vectordb.ingeststream(metadata, isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn), 
         aiModelObjectForEmbeddings.encoding, aiModelObjectForEmbeddings.chunk_size, aiModelObjectForEmbeddings.split_separators, 
-        aiModelObjectForEmbeddings.overlap);} catch (err) {LOG.error(`Vector ingestion failed for path ${pathIn} with error ${err}.`);}
+        aiModelObjectForEmbeddings.overlap);
+    } catch (err) { LOG.error(`Vector ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); }
 
 	if (!ingestedVectors) {
-		LOG.error(`AI library error indexing document for path ${pathIn} and ID ${id} for vector DB ${vectordb}.`); 
+		LOG.error(`AI library error indexing document for path ${pathIn} and ID ${id} and org ${org} for vector DB ${vectordb}.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
-	} else return {vectors: ingestedVectors, reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
+	} else {
+        LOG.info(`Vector DB ingestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
+        return {vectors: ingestedVectors, reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
+    }
 }
 
-async function _uningestfile(path, id, org) {
+async function _uningestfile(pathIn, id, org) {
     let vectordb; try { vectordb = await exports.getVectorDBForIDAndOrg(id, org) } catch(err) { 
-        LOG.error(`Can't instantiate the vector DB ${vectordb}. Unable to continue.`); 
+        LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
-    const queryResults = await vectordb.query(undefined, -1, undefined, metadata => metadata.fullpath == path, true);
+    const queryResults = await vectordb.query(undefined, -1, undefined, metadata => metadata.fullpath == pathIn, true);
     const vectorsDropped = []; if (queryResults) for (const result of queryResults) {
         try {await vectordb.delete(result.vector);} catch (err) {
-            LOG.error(`Error dropping vector for file ${path} for ID ${id} failed. Some vectors were dropped. Database needs recovery for this file.`);
+            LOG.error(`Error dropping vector for file ${pathIn} for ID ${id} and org ${org} failed. Some vectors were dropped. Database needs recovery for this file.`);
             LOG.debug(`The vector which failed was ${result.vector}.`);
             return {vectors: vectorsDropped, reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
         }
         vectorsDropped.push(result.vector); 
     } else {
-        LOG.error(`Queyring vector DB for file ${path} for ID ${id} failed.`);
+        LOG.error(`Queyring vector DB for file ${pathIn} for ID ${id} and org ${org} failed.`);
         return {vectors: vectorsDropped, reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
+    LOG.info(`Vector DB uningestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
     return {vectors: vectorsDropped, reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
 }
 
 async function _renamefile(from, to, id, org) {
     let vectordb; try { vectordb = await exports.getVectorDBForIDAndOrg(id, org) } catch(err) { 
-        LOG.error(`Can't instantiate the vector DB ${vectordb}. Unable to continue.`); 
+        LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
@@ -102,14 +111,15 @@ async function _renamefile(from, to, id, org) {
     if (queryResults) for (const result of queryResults) {
         const metadata = result.metadata; metadata.cmspath = path.relative(cmsRoot, to); metadata.fullpath = to;
         if (!vectordb.update(result.vector, metadata)) {
-            LOG.error(`Renaming the vector file paths failed for path ${to} of ID ${id}.`);
+            LOG.error(`Renaming the vector file paths failed from path ${from} to path ${to} for ID ${id} and org ${org}.`);
             return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
         } else vectorsRenamed.push(result.vector); 
     } else {
-        LOG.error(`Queyring vector DB for file ${path} for ID ${id} failed.`);
+        LOG.error(`Queyring vector DB for file ${from} for ID ${id} and org ${org} failed.`);
         return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
+    LOG.info(`Rename of file from ${from} to ${to} for ID ${id} and org ${org} succeeded.`)
     return {vectors: vectorsRenamed, reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
 }
 

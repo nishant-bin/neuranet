@@ -12,7 +12,7 @@ import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 import {monkshu_component} from "/framework/js/monkshu_component.mjs";
 
 const COMPONENT_PATH = util.getModulePath(import.meta); 
-let sessionID, API_CHAT, USER_ID;
+let API_CHAT, USER_ID;
 
 async function elementConnected(host) {
     API_CHAT = host.getAttribute("chatapi"); USER_ID = host.getAttribute("user");

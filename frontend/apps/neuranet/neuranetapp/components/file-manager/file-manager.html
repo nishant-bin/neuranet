@@ -35,6 +35,7 @@ div#filemanager {
     position: relative;
     padding-top: 2.5em;
     box-sizing: border-box;
+    container-type: inline-size;
 }
 
 bread-crumbs#filepathcrumbs {
@@ -307,7 +308,7 @@ span.button {
     margin-top: 2em;
 }
 
-@media (max-width:960px) {	
+@container (max-width:960px) {	
 	div#notificationscrollpositioner {  /* On small screens widen notifications */
         width: 100%;
         left: 0%;
@@ -323,6 +324,7 @@ span.button {
         bottom: 0;
         width: 100%;
         margin: 0em;
+        height: calc(100% - 1em);
     }
 }
 </style>
@@ -402,7 +404,7 @@ span.button {
 <div id="progresscontainer">
     {{#files}}
     <div id="progress">
-        <span id="name">{{name}}</span>
+        <span id="name" title="{{name}}">{{name}}</span>
         <span id="bar" {{#cancelled}}class="cancelled"{{/cancelled}} {{#lastoperror}}class="cancelled"{{/lastoperror}}>
             {{^cancelled}}{{^lastoperror}}
                 <span id="percent" style="width: {{percent}}%!important"></span>
