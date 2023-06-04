@@ -6,8 +6,8 @@
  */
 const path = require("path");
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
-const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
+const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
 const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);

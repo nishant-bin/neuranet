@@ -349,6 +349,12 @@ function showMenu(element, documentMenuOnly, event) {
       shadowRoot.querySelector("div#contextmenu > span#getinfo").classList.remove("hidden");
    }
 
+   const disabledMenus = ((file_manager.getHostElement(element).getAttribute("disable"))||"").split(","); 
+   for (const disabledMenuItem of disabledMenus) { // disable menus if told to do so
+      const menuItem = shadowRoot.querySelector(`div#contextmenu > span#${disabledMenuItem}`);
+      if (menuItem) menuItem.classList.add("hidden");
+   }
+
    const contextMenu = shadowRoot.querySelector("div#contextmenu");
    contextMenu.style.top = (event?event.clientY:mouseY)+"px"; contextMenu.style.left = (event?event.clientX:mouseX)+"px"; 
    contextMenu.style.maxWidth = `calc(100vw - ${mouseX}px - 5px)`; contextMenu.classList.add("visible"); menuOpen = true;
