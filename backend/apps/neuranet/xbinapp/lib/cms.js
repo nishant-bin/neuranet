@@ -2,6 +2,7 @@
  * (C) 2020 TekMonks. All rights reserved.
  */
 const fs = require("fs");
+const path = require("path");
 const fspromises = fs.promises;
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
@@ -40,6 +41,12 @@ exports.getCMSRoot = async function(headersOrLoginIDAndOrg) {
 	try { await fspromises.access(cmsRootToReturn, fs.F_OK); } catch (err) { await fspromises.mkdir(cmsRootToReturn, {recursive: true}); }
 	LOG.info(`Returning CMS home as ${cmsRootToReturn} for id ${loginID} of org ${org}.`);
 	return cmsRootToReturn;
+}
+
+exports.getCMSRootRelativePath = async function(headersOrLoginIDAndOrg, fullpath) {
+	const cmsroot = exports.getCMSRoot(headersOrLoginIDAndOrg);
+	const relativePath = encodeURI(path.relative(cmsroot, fullpath).replaceAll("\\", "/"));
+	return relativePath;
 }
 
 exports.getID = headers => login.getID(headers);

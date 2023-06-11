@@ -168,6 +168,7 @@ span#mobilefooter > img {
 	<span id="name">{{i18n.Hi}} {{#_org_monkshu_session}}username{{/_org_monkshu_session}}!</span>
 	</span>
 	<span id="refresh"><img src="./img/reload.svg" onclick="location.reload()"></span>
+	{{#shownotifications}}<span id="notifications"><img src="./img/bell.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.showNotifications('{{{action}}}', event)"></span>{{/shownotifications}}
 	<span-with-menu id="gear" styleBody="url(./pages/menu.stylebody.css)"><img src="./img/settings.svg" style="height: 2em;width: 2em;vertical-align: middle;">
 		<menu-item onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.changePassword(this)" 
 			label="{{i18n.ChangePassword}}" icon="./img/changepassword_menu.svg"></menu-item>
@@ -189,6 +190,7 @@ span#mobilefooter > img {
 <span id="mobilefooter">
 	<img src="./img/mobilefooter_home.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.gohome()">
 	<img src="./img/mobilefooter_reload.svg" onclick="location.reload()">
+	{{#shownotifications}}<img src="./img/mobilefooter_bell.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.showNotifications('{{{action}}}', event, true)">{{/shownotifications}}
 	<span-with-menu id="gearmobile" bottommenu="true" styleBody="url(./pages/menu.stylebody.css)"><img src="./img/mobilefooter_settings.svg">
 		<menu-item onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.changePassword(this)" 
 			label="{{i18n.ChangePassword}}" icon="./img/changepassword_menu.svg"></menu-item>
@@ -203,5 +205,6 @@ span#mobilefooter > img {
 </span>
 
 <dialog-box id="dialog"></dialog-box>
+<context-menu id="contextmenumain"></context-menu>
 </body>
 </html>

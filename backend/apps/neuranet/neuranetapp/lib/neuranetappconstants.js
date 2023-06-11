@@ -19,4 +19,11 @@ exports.DBDIR = path.resolve(LOGINAPP_CONSTANTS.DB_DIR);
 exports.VECTORDBPATH = path.resolve(`${LOGINAPP_CONSTANTS.APP_ROOT}/db/vectordb`);
 
 exports.NEURANETEVENT = "__org_monkshu_neuranet_event";
-exports.EVENTS = Object.freeze({VECTORDB_FILE_PROCESSED: "vectordb_file_processed"});
+exports.EVENTS = Object.freeze({VECTORDB_FILE_PROCESSING: "vectordb_file_processing", 
+    VECTORDB_FILE_PROCESSED: "vectordb_file_processed"});
+exports.VECTORDB_FILE_PROCESSED_EVENT_TYPES = Object.freeze({
+    INGESTED: "vectordb_file_processed_ingested",
+    UNINGESTED: "vectordb_file_processed_uningested",
+    RENAMED: "vectordb_file_processed_renamed",
+    MODIFIED: "vectordb_file_processed_modified"
+});

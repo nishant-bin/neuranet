@@ -10,10 +10,12 @@ const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 exports.initSync = _ => {
     _readConfSync();    // the files below need constants to be setup properly so require them after conf is setup
 
+    const events = require(`${NEURANET_CONSTANTS.APIDIR}/events.js`);
     const fileindexer = require(`${NEURANET_CONSTANTS.LIBDIR}/fileindexer.js`);
     const loginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`);
     loginhandler.init(); 
     fileindexer.init();
+    events.init();
 }
 
 function _readConfSync() {

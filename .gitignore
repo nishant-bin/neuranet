@@ -6,3 +6,4 @@ backend/apps/*/db/*.db*
 backend/**/conf/hostname.json
 backend/apps/neuranet/tests/vector_db/**/*
 backend/apps/neuranet/db/vectordb/**/*
+backend/apps/neuranet/xbinapp/drive/**/*

@@ -88,6 +88,13 @@ async function gohome() {
     router.navigate(APP_CONSTANTS.MAIN_HTML);
 }
 
+async function showNotifications(action, event, bottom_menu) {
+    const notifications = await eval(action);
+    const context_menu = window.monkshu_env.components["context-menu"];
+    context_menu.showMenu("contextmenumain", notifications, event.clientX, event.clientY, bottom_menu?5:10, bottom_menu?5:10, 
+        null, true, bottom_menu, true);
+}
+
 const addGoHomeListener = listener => gohomeListeners.push(listener);
 
 async function _getTOTPQRCode(key) {
@@ -100,4 +107,4 @@ async function _getTOTPQRCode(key) {
 const showMessage = message => dialog().showMessage(message, "dialog");
 
 export const main = {toggleMenu, changePassword, showOTPQRCode, showLoginMessages, changeProfile, logoutClicked, 
-    interceptPageData, gohome, addGoHomeListener, showMessage}
+    interceptPageData, gohome, addGoHomeListener, showMessage, showNotifications}

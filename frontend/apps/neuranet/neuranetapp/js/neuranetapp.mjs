@@ -24,7 +24,7 @@ const main = async (data, mainLoginAppModule) => {
 }
 
 async function _createdata(data) {   
-    let viewPath, views; delete data.showhome;
+    let viewPath, views; delete data.showhome; delete data.shownotifications;
     const viewsAllowed = (session.get(APP_CONSTANTS.LOGIN_RESPONSE))?.views||[];
     if (!session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)) {
         viewPath = viewsAllowed.length == 1?`${APP_CONSTANTS.VIEWS_PATH}/${viewsAllowed[0]}` :

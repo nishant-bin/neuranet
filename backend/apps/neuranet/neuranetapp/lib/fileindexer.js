@@ -1,6 +1,10 @@
 /**
- * Will index XBin documents in and out of vector databases.
- * Bridge between XBin and Neuranet knowledgebases.
+ * Will index files including XBin documents in and out of 
+ * the AI vector databases.
+ * 
+ * Bridge between drive doucments including XBin and Neuranet 
+ * knowledgebases.
+ * 
  * (C) 2023 Tekmonks Corp. All rights reserved.
  * License: See enclosed LICENSE file.
  */
@@ -23,24 +27,35 @@ REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limi
 
 exports.init = _ => blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message));
 
-async function _handleFileEvent(message) {
+async function _handleFileEvent(message, type, id, org) {
     const awaitPromisePublishFileEvent = async (promise, path, return_vectors) => {
-        const result = await promise; 
+        // we have started processing a file
+        blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSING, 
+            path, result: result.result, vectors: return_vectors ? result.vectors : undefined, subtype: type, id, org});
+        const result = await promise;   // wait for it to complete
+        // we have finished processing this file
         blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED, 
-            path, result: result.result, vectors: return_vectors ? result.vectors : undefined});
+            path, result: result.result, vectors: return_vectors ? result.vectors : undefined, subtype: type, id, org,
+            cmspath: cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path)});
     }
 
     if (message.type == XBIN_CONSTANTS.EVENTS.FILE_CREATED && (!message.isDirectory)) 
-        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org), 
-            message.path, message.return_vectors, message.isxbin);
+        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.isxbin), 
+            message.path, message.return_vectors, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.INGESTED, 
+            message.id, message.org);
     else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_DELETED && (!message.isDirectory)) 
-        awaitPromisePublishFileEvent(_uningestfile(path.resolve(message.path), message.id, message.org), message.path, message.return_vectors);
+        awaitPromisePublishFileEvent(_uningestfile(path.resolve(message.path), message.id, message.org), 
+            message.path, message.return_vectors, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.UNINGESTED,
+            message.id, message.org);
     else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_RENAMED && (!message.isDirectory)) 
-        awaitPromisePublishFileEvent(_renamefile(path.resolve(message.from), path.resolve(message.to), message.id, message.org), message.from, message.return_vectors);
+        awaitPromisePublishFileEvent(_renamefile(path.resolve(message.from), path.resolve(message.to), message.id, 
+            message.org), message.from, message.return_vectors, 
+            NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.RENAMED, message.id, message.org);
     else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_MODIFIED && (!message.isDirectory)) {
         await _uningestfile(path.resolve(message.path), message.id, message.org);
-        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org), message.path, 
-            message.return_vectors, message.isxbin);
+        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.isxbin), 
+            message.path, message.return_vectors, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.MODIFIED,
+            message.id, message.org);
     }
 }
 
@@ -60,12 +75,12 @@ async function _ingestfile(pathIn, id, org, isxbin) {
         LOG.error(`Can't instantiate the vector DB ${vectorDB_ID} for ID ${id} and org ${org}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
-    const cmsRoot = await cms.getCMSRoot({xbin_id: id, xbin_org: org}), metadata = {
-        cmspath: encodeURI(path.relative(cmsRoot, pathIn).replaceAll("\\", "/")), id, date_created: Date.now(), fullpath: pathIn};
+    const metadata = {cmspath: cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn), id, 
+        date_created: Date.now(), fullpath: pathIn};
 	let ingestedVectors; try {
         ingestedVectors = await vectordb.ingeststream(metadata, isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn), 
-        aiModelObjectForEmbeddings.encoding, aiModelObjectForEmbeddings.chunk_size, aiModelObjectForEmbeddings.split_separators, 
-        aiModelObjectForEmbeddings.overlap);
+            aiModelObjectForEmbeddings.encoding, aiModelObjectForEmbeddings.chunk_size, aiModelObjectForEmbeddings.split_separators, 
+            aiModelObjectForEmbeddings.overlap);
     } catch (err) { LOG.error(`Vector ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); }
 
 	if (!ingestedVectors) {
