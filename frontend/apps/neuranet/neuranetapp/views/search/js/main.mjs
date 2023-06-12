@@ -25,8 +25,8 @@ async function getNotifications() {
 
     const eventsArray = []; if (events?.result) for (const event of Object.values(events.events)) eventsArray.push(event);
     
-    const eventsTemplate = document.querySelector("#notificationstemplate"), eventsHTML = eventsTemplate.innerHTML;
-    const matches = /<!--([\s\S]+)-->/g.exec(eventsHTML); const template = matches[1]; 
+    const eventsTemplate = document.querySelector("#notificationstemplate"), eventsHTML = eventsTemplate.innerHTML,
+        matches = /<!--([\s\S]+)-->/g.exec(eventsHTML), template = matches[1]; 
     const renderedEvents = (await router.getMustache()).render(template, {events:eventsArray.length?
         eventsArray:undefined}); return renderedEvents;
 }
