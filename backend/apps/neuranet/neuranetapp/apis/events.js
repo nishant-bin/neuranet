@@ -24,7 +24,7 @@ exports.doService = async jsonReq => {
     if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return CONSTANTS.FALSE_RESULT;}
 
     const usermemory = _getUserMemory(jsonReq.id, jsonReq.org);
-    return {...(usermemory||{}), ...CONSTANTS.TRUE_RESULT};
+    return {events: (usermemory||{}), ...CONSTANTS.TRUE_RESULT};
 }
 
 const _setUserMemory = (id, org, usermemory) => { const memory = MEM_TO_USE.get(EVENTS_KEY, {}); 

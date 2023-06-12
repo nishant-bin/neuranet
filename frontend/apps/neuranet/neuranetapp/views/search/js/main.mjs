@@ -9,8 +9,8 @@ import {router} from "/framework/js/router.mjs";
 import {session} from "/framework/js/session.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
-const API_GET_EVENTS = "events", VIEW_PATH = util.resolveURL(`${MODULE_PATH}/../`);
-let EVENTS_TEMPLATE;
+const API_GET_EVENTS = "events", MODULE_PATH = util.getModulePath(import.meta),
+    VIEW_PATH = util.resolveURL(`${MODULE_PATH}/../`);
 
 function initView(data) {
     window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {searchmain: main}; data.VIEW_PATH = VIEW_PATH;
@@ -19,14 +19,16 @@ function initView(data) {
 
 async function getNotifications() {
     const id = session.get(APP_CONSTANTS.USERID), org = session.get(APP_CONSTANTS.USERORG);
-    const events = await apiman.rest(`${APP_CONSTANTS.API_PATH}/${API_GET_EVENTS}`, "GET", {id, org}, true);
-    if (!events.result) LOG.error(`Error fetching events.`); 
+    const events = await apiman.rest(`${APP_CONSTANTS.API_PATH}/${API_GET_EVENTS}`, "GET", {id: id.toString(), 
+        org: org.toString()}, true);
+    if ((!events) || (!events.result)) LOG.error(`Error fetching events.`); 
 
-    const eventsArray = []; if (events.result) for (const event of Object.values(events)) eventsArray.push(event);
+    const eventsArray = []; if (events?.result) for (const event of Object.values(events.events)) eventsArray.push(event);
     
-    const renderedEvents = (await router.getMustache()).render(EVENTS_TEMPLATE, eventsArray); return renderedEvents;
+    const eventsTemplate = document.querySelector("#notificationstemplate"), eventsHTML = eventsTemplate.innerHTML;
+    const matches = /<!--([\s\S]+)-->/g.exec(eventsHTML); const template = matches[1]; 
+    const renderedEvents = (await router.getMustache()).render(template, {events:eventsArray.length?
+        eventsArray:undefined}); return renderedEvents;
 }
 
-const setEventsTemplate = template => EVENTS_TEMPLATE = template;
-
-export const main = {initView, getNotifications, setEventsTemplate};
+export const main = {initView, getNotifications};

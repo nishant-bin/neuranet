@@ -89,16 +89,20 @@ div#filecontainer {
 
 </div>
 
-<script>window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].searchmain.setEventsTemplate(
-    document.querySelector("template#notifications").innerHTML);</script>
-<template id="notifications">
-    <div id="notificationsmain">
-    {{#events}}
-    <div id="singlenotification">
-        <span id="path">{{path}}</span>
-        <span id="donenotifier">{{#done}}Done{{/done}}{{^done}}Processing{{/done}}</span>
-        <span id="progressimage"><img src="{{{VIEW_PATH}}}/img/spinner{{#done}}done{{/done}}{{^done}}progress{{/done}}.svg"></span>
-    </div>
-    {{/events}}
-    </div>
+<template id="notificationstemplate">
+<!-- {{=<% %>=}} 
+<style>
+    div#notificationsmain {padding: 1em; box-sizing: border-box; font-size: smaller;}
+</style>
+<div id="notificationsmain">
+{{#events}}
+<div id="singlenotification">
+    <span id="path">{{path}}</span>
+    <span id="donenotifier">{{#done}}Done{{/done}}{{^done}}Processing{{/done}}</span>
+    <span id="progressimage"><img src="{{{VIEW_PATH}}}/img/spinner{{#done}}done{{/done}}{{^done}}progress{{/done}}.svg"></span>
+</div>
+{{/events}}
+{{^events}}No events.{{/events}}
+</div>
+<%={{ }}=%> -->
 </template>
