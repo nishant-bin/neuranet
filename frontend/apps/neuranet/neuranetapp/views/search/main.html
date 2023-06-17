@@ -92,12 +92,17 @@ div#filecontainer {
 <template id="notificationstemplate">
 <!-- {{=<% %>=}} 
 <style>
-    div#notificationsmain {padding: 1em; box-sizing: border-box; font-size: smaller;}
+    div#notificationsmain {padding: 1em; box-sizing: border-box; font-size: small; cursor: default;}
+    div#singlenotification {display: flex; flex-flow: row; align-items: center; gap: 0.5em;}
+    span#path {width: 8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+    span#donenotifier {width: 5em;}
+    span#progressimage {width: 1.2em; height: 1.2em;}
+    span#progressimage > img {width: 100%; height: 100%;}
 </style>
 <div id="notificationsmain">
 {{#events}}
 <div id="singlenotification">
-    <span id="path">{{path}}</span>
+    <span id="path" title="{{path}}">{{path}}</span>
     <span id="donenotifier">{{#done}}Done{{/done}}{{^done}}Processing{{/done}}</span>
     <span id="progressimage"><img src="{{{VIEW_PATH}}}/img/spinner{{#done}}done{{/done}}{{^done}}progress{{/done}}.svg"></span>
 </div>

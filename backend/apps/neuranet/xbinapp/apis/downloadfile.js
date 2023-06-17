@@ -69,7 +69,7 @@ exports.readUTF8File = async function (headers, inpath) {
 	return dataRead;
 }
 
-exports.getReadStream = async function(fullpath, pathIsATemporarilyZippedFolderForDownloading) {
+exports.getReadStream = function(fullpath, pathIsATemporarilyZippedFolderForDownloading) {
 	const zippable = pathIsATemporarilyZippedFolderForDownloading?false:uploadfile.isZippable(fullpath);
 	let readStream = fs.createReadStream(fullpath, {highWaterMark: CONF.DOWNLOAD_READ_BUFFER_SIZE||DEFAULT_READ_BUFFER_SIZE, 
 		flags:"r", autoClose:true});

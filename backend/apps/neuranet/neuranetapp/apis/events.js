@@ -16,8 +16,8 @@ exports.init = _ => blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, messa
 
     const usermemory = _getUserMemory(message.id, message.org)
     usermemory[message.cmspath] = {...message, path: message.cmspath,   // overwrite full path as we don't want top send this out
-        done:  message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSEDVECTORDB_FILE_PROCESSED};
-    _setUserMemory.set(message.id, message.org, usermemory);
+        done:  message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED};
+    _setUserMemory(message.id, message.org, usermemory);
 });
 
 exports.doService = async jsonReq => {

@@ -27,16 +27,17 @@ REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limi
 
 exports.init = _ => blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message));
 
-async function _handleFileEvent(message, type, id, org) {
-    const awaitPromisePublishFileEvent = async (promise, path, return_vectors) => {
+async function _handleFileEvent(message) {
+    const awaitPromisePublishFileEvent = async (promise, path, return_vectors, type, id, org) => {
         // we have started processing a file
-        blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSING, 
-            path, result: result.result, vectors: return_vectors ? result.vectors : undefined, subtype: type, id, org});
+        blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, { type: NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSING, 
+            result: true, vectors: undefined, subtype: type, id, org, path,
+            cmspath: await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path) });
         const result = await promise;   // wait for it to complete
         // we have finished processing this file
         blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED, 
             path, result: result.result, vectors: return_vectors ? result.vectors : undefined, subtype: type, id, org,
-            cmspath: cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path)});
+            cmspath: await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path)});
     }
 
     if (message.type == XBIN_CONSTANTS.EVENTS.FILE_CREATED && (!message.isDirectory)) 
@@ -75,13 +76,15 @@ async function _ingestfile(pathIn, id, org, isxbin) {
         LOG.error(`Can't instantiate the vector DB ${vectorDB_ID} for ID ${id} and org ${org}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
-    const metadata = {cmspath: cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn), id, 
+    const metadata = {cmspath: await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn), id, 
         date_created: Date.now(), fullpath: pathIn};
 	let ingestedVectors; try {
         ingestedVectors = await vectordb.ingeststream(metadata, isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn), 
             aiModelObjectForEmbeddings.encoding, aiModelObjectForEmbeddings.chunk_size, aiModelObjectForEmbeddings.split_separators, 
             aiModelObjectForEmbeddings.overlap);
-    } catch (err) { LOG.error(`Vector ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); }
+    } catch (err) { 
+        LOG.error(`Vector ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
+    }
 
 	if (!ingestedVectors) {
 		LOG.error(`AI library error indexing document for path ${pathIn} and ID ${id} and org ${org} for vector DB ${vectordb}.`); 
