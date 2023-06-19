@@ -29,5 +29,9 @@ export const i18n = {
 
 "ErrorConvertingAIQuotaLimit": "Your 24 hour spend quota limit has been reached. Please retry tomorrow.",
 
-"NotImplemented": "Not implemented yet."
+"NotImplemented": "Not implemented yet.",
+
+"EnterpriseSearch_Done": "Done",
+"EnterpriseSearch_Processing": "Reading",
+"EnterpriseSearch_NoEvents": "No Events."
 }
