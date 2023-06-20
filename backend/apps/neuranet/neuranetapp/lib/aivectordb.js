@@ -393,7 +393,7 @@ function _worker_calculate_cosine_similarity(dbPath, startIndex, endIndex, vecto
 
 function _worker_setDatabase(dbsIn) {
     dbs_worker = dbsIn;
-    (global.LOG||console).info(`DB set called on vector DB worker.`);
+    (global.LOG||console).info(`DB set called on vector DB worker.`); return {result: true};
 }
 /*** End: worker module functions ***/
 
