@@ -172,9 +172,9 @@ exports.delete = async (vector, db_path) => {
     }
 
     try {
-        await fspromises.unlink(_get_db_index_text_file(vector, db_path));
         delete dbToUse.index[hash];
         dbToUse.dirty = true; if (dbToUse.multithreaded) await _update_db_for_worker_threads();
+        await fspromises.unlink(_get_db_index_text_file(vector, db_path));
         return true;
     } catch (err) {
         _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be deleted`, db_path, err);
