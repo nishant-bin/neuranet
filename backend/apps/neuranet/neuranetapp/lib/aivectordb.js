@@ -57,7 +57,7 @@ const dbs = {}, DB_INDEX_NAME = "dbindex.json", DB_INDEX_OBJECT_TEMPLATE = {inde
 
 let dbs_worker, workers_initialized = false;
 
-if (!worker_threads.isMainThread) worker_threads.parentPort.on("message", async message => {
+if (!worker_threads.isMainThread) worker_threads.parentPort.on("message", async message => {    // multi-threading support
     let result;
     if (message.function == "setDatabase") result = _worker_setDatabase(...message.arguments);
     if (message.function == "calculate_cosine_similarity") result = _worker_calculate_cosine_similarity(...message.arguments);
