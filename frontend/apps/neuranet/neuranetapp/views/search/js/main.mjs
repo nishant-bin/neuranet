@@ -27,8 +27,9 @@ async function getNotifications() {
     
     const eventsTemplate = document.querySelector("#notificationstemplate"), eventsHTML = eventsTemplate.innerHTML,
         matches = /<!--([\s\S]+)-->/g.exec(eventsHTML), template = matches[1]; 
-    const renderedEvents = (await router.getMustache()).render(template, {events:eventsArray.length?
-        eventsArray:undefined}); return renderedEvents;
+    const renderedEvents = (await router.getMustache()).render(template, await router.getPageData(undefined, 
+        {events:eventsArray.length?eventsArray:undefined})); 
+    return renderedEvents;
 }
 
 export const main = {initView, getNotifications};
