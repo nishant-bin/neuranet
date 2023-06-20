@@ -8,8 +8,7 @@
  * Uses cosine similarity for queries. Supports pluggable embedding generators
  * to support various AI models for generating embeddings.
  * 
- * Supports CRUD operations on the index, and query to return topK
- * matching vectors.
+ * Supports CRUD operations on the index, and query to return topK matching vectors.
  * 
  * Not ACID - serialization to the disk is "best effort, and when possible",
  * but automatic.
@@ -29,12 +28,13 @@
  * sufficient for a million typical documents - spread across how many ever indexes 
  * as needed.
  * 
- * Flat indexing takes about 200 ms on a 2 core, 6 GB RAM box with 5,000 documents to
+ * Flat indexing takes about 95 ms on a 2 core, 6 GB RAM box with 5,000 documents to
  * search. May be faster on modern processors or GPUs. 
  * 
  * Can be multithreaded, if selected during initialization. Will use worker threads 
  * for queries if multithreaded. Multithreading is on a per database level, however
- * will use (cores-1)*memory if enabled even for one sub-database.
+ * will use (cores-1)*memory (see memory calculations above) if enabled even for 
+ * one sub-database.
  * 
  * TODO: An upcoming new algorithm for fast, 100% accurate exhaustive search would be
  * added by Tekmonks once testing is completed. Making this the easiest, and a really 
