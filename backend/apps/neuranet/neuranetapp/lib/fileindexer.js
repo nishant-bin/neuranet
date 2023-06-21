@@ -2,7 +2,7 @@
  * Will index files including XBin documents in and out of 
  * the AI vector databases.
  * 
- * Bridge between drive doucments including XBin and Neuranet 
+ * Bridge between drive documents including XBin and Neuranet 
  * knowledgebases.
  * 
  * (C) 2023 Tekmonks Corp. All rights reserved.
@@ -50,7 +50,7 @@ async function _handleFileEvent(message) {
             message.id, message.org);
     else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_RENAMED && (!message.isDirectory)) 
         awaitPromisePublishFileEvent(_renamefile(path.resolve(message.from), path.resolve(message.to), message.id, 
-            message.org), message.from, message.return_vectors, 
+            message.org), message.to, message.return_vectors, 
             NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.RENAMED, message.id, message.org);
     else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_MODIFIED && (!message.isDirectory)) {
         await _uningestfile(path.resolve(message.path), message.id, message.org);

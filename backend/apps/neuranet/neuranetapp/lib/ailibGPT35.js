@@ -67,17 +67,18 @@ exports.process = async function(data, promptFile, apiKey, model) {
         utils.getObjProperty(response, modelObject.response_cost_of_query_path) : undefined};
 }
 
-exports.countTokens = async function(string, AImodel, uplift=DEFAULT_TOKEN_UPLIFT, tokenizer) {
+exports.countTokens = async function(string, AImodel, uplift=DEFAULT_TOKEN_UPLIFT, tokenizer=INTERNAL_TOKENIZER) {
     let count, encoderLib; try {
         if (tokenizer.toLowerCase() != INTERNAL_TOKENIZER) encoderLib = require(tokenizer||DEFAULT_GPT_TOKENIZER);
     } catch (err) {
-        LOG.warn(`GPT3 encoder library not available for estimation, using approximate estimation method instead. The error is ${err}.`);
+        LOG.warn(`GPT3 encoder library ${tokenizer||DEFAULT_GPT_TOKENIZER} not available for estimation, using approximate estimation method instead. The error is ${err}.`);
     }
     if ((AImodel.toLowerCase().includes("gpt-3") || AImodel.toLowerCase().includes("gpt-4")) && encoderLib) {
         const encoded = encoderLib.encode(string);
         count = encoded.length;
     } else {
         if (encoderLib) LOG.warn(`${AImodel} is not supported using encoder, using the approximate estimation method to calculate tokens.`);
+        if (!encoderLib) LOG.info(`Using the approximate estimation method to calculate tokens. The tokenizer specified is ${tokenizer}.`)
         count = (string.length/DEFAULT_GPT_CHARS_PER_TOKEN); 
     }
     const tokenCount = Math.ceil(count*uplift);
