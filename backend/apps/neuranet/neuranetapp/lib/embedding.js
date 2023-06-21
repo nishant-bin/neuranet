@@ -36,7 +36,7 @@ async function createEmbeddingVector(id, text, model) {
 		LOG.error(`AI library error processing request for embedding ${text}`); 
 		return {reason: REASONS.INTERNAL, error: "AI library error."};
 	} else {
-        dblayer.logUsage(id, response.metric_cost, aiModelToUse);
+        dblayer.logUsage(id, response.metric_cost||0, aiModelToUse);
 		return {reason: REASONS.OK, embedding: response.airesponse};
 	}
 }

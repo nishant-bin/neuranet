@@ -270,7 +270,8 @@ exports.ingeststream = async function(metadata, stream, encoding="utf8", chunk_s
             chunk_to_ingest += chunk.toString(encoding)
             if (chunk_to_ingest.length >= chunk_size) {
                 const ingestionResult = await exports.ingest(metadata, chunk_to_ingest, chunk_size, split_separators, overlap, embedding_generator, db_path, true);
-                if (!ingestionResult) {_deleteAllCreatedVectors(vectors_ingested); stream.destroy("VectorDB ingestion failed.");}
+                if ((!ingestionResult) || (!ingestionResult.vectors_ingested)) {
+                    _deleteAllCreatedVectors(vectors_ingested); stream.destroy("VectorDB ingestion failed."); return; }
                 chunk_to_ingest = ingestionResult.tail_chunk||""; // whatever was left - start there next time
                 vectors_ingested.push(...ingestionResult.vectors_ingested);
             }
