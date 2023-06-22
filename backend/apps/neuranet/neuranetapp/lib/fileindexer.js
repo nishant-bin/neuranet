@@ -119,7 +119,7 @@ async function _uningestfile(pathIn, id, org) {
 }
 
 async function _renamefile(from, to, id, org) {
-    let vectordb; try { vectordb = await exports.getVectorDBForIDAndOrg(id, org) } catch(err) { 
+    let vectordb; try { vectordb = await exports.getVectorDBForIDAndOrg(id, org); } catch(err) { 
         LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }

@@ -5,7 +5,7 @@
 {"role":"{{{role}}}", "content":"{{{content}}}"},
 {{/last}}
 {{#last}}
-{"role":"{{{role}}}", "content":"{{{content}}} Always append {\"user\": \"a very concise summary of the question\", \"ai\": \"a very concise summary of the response\"} after completing the entire response."}
+{"role":"{{{role}}}", "content":"{{{content}}}\nAlways append {\"user\": \"a very concise summary of the question\", \"ai\": \"a very concise summary of the response\"} after completing the entire response."}
 {{/last}}
 {{/session}}
 ]

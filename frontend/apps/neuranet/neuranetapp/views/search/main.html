@@ -79,8 +79,8 @@ div#filecontainer {
 <div id="maincontainer">
 
 <chat-box id="enterprisechat" chatapi="{{APP_CONSTANTS.BACKEND}}/apps/{{APP_CONSTANTS.APP_NAME}}/knowledgebasechat"
-    onresult="window.monkshu_env.apps.neuranetapp.search_main.processResponse(result, 'enterprisechat')"
-    onrequest="window.monkshu_env.apps.neuranetapp.search_main.getChatRequest(prompt, 'enterprisechat')"></chat-box>
+    onresult="window.monkshu_env.apps.neuranetapp.searchmain.processChatResponse(result, 'enterprisechat')"
+    onrequest="window.monkshu_env.apps.neuranetapp.searchmain.getChatRequest(prompt, 'enterprisechat')"></chat-box>
 
 <div id="filecontainer">
     <span id="filecontainerheader">{{i18n.EnterpriseSearch_KnowledgeBase}}</span>

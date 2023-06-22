@@ -11,10 +11,11 @@ let chatsessionID;
 const SESSION_OBJ_TEMPLATE = {"role": "user", "content": ""};
 
 function initView() {
-    window.monkshu_env.apps.neuranetapp.chat_main = main;
+    window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {
+        ...(window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME]||{}), chat_main: main}; 
 }
 
-async function processResponse(result, _chatboxid) {
+async function processChatResponse(result, _chatboxid) {
     if (!result) return {error: (await i18n.get("ChatAIError")), ok: false}
     chatsessionID = result.session_id;  // save session ID so that backend can maintain session
     if ((!result.result) && (result.reason == "limit")) return {error: (await i18n.get("ErrorConvertingAIQuotaLimit")), ok: false};
@@ -29,4 +30,4 @@ function getChatRequest(prompt, _chatboxid) {
         maintain_session: true, session_id: chatsessionID};
 }
 
-export const main = {initView, processResponse, getChatRequest};
+export const main = {initView, processChatResponse, getChatRequest};

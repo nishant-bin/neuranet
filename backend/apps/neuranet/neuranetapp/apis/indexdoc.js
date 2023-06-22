@@ -23,6 +23,7 @@ const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
+const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
 const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"};
@@ -39,7 +40,7 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
 
-	const id = cms.getID(headers), org = cms.getOrg(headers);
+	const id = login.getID(headers), org = login.getOrg(headers);
 	if (!(id && org)) {LOG.error(`Disallowing request, as ID and ORG could not be identified from the request.`); return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};}
 
 	const folderForDynamicDocuments = `${cms.getCMSRoot(headers)}/${DYNAMIC_FILES_FOLDER}`; 
@@ -67,4 +68,4 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 		...CONSTANTS.TRUE_RESULT};
 }
 
-const validateRequest = jsonReq => (jsonReq && jsonReq.document && jsonReq.metadata);
+const validateRequest = jsonReq => (jsonReq && jsonReq.document && jsonReq.metadata && jsonReq.id);

@@ -38,10 +38,10 @@ async function send(containedElement) {
     const result = await apiman.rest(`${API_CHAT}`, "POST", request, true);
     
     const onResult = host.getAttribute("onresult"), resultProcessor = util.createAsyncFunction(`return await ${onResult};`), 
-        checkResult = await resultProcessor({result});
-    _insertAIResponse(shadowRoot, userMessageArea, userPrompt, checkResult[checkResult.ok?"response":"error"], oldInsertion);
+        processedResult = await resultProcessor({result});
+    _insertAIResponse(shadowRoot, userMessageArea, userPrompt, processedResult[processedResult.ok?"response":"error"], oldInsertion);
 
-    if (!checkResult.ok) {  // sending more messages is now disabled as this chat is dead due to error
+    if (!processedResult.ok) {  // sending more messages is now disabled as this chat is dead due to error
         buttonSendImg.onclick = ''; buttonSendImg.src = `${COMPONENT_PATH}/img/senddisabled.svg`;
     } else { // enable sending more messages
         textareaEdit.classList.remove("readonly"); textareaEdit.removeAttribute("readonly"); buttonSendImg.src = `${COMPONENT_PATH}/img/send.svg`;

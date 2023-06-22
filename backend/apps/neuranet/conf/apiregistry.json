@@ -25,8 +25,8 @@
     "/apps/{{app}}/convertcode" : "/neuranetapp/apis/convertcode.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
     "/apps/{{app}}/convertcodechain" : "/neuranetapp/apis/convertcodechain.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
     "/apps/{{app}}/chat" : "/neuranetapp/apis/chat.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
-    "/apps/{{app}}/knowledgebasechat" : "/neuranetapp/apis/chat_knowledge_base.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389",
-    "/apps/{{app}}/indexdoc" : "/neuranetapp/apis/indexdoc.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389",
+    "/apps/{{app}}/knowledgebasechat" : "/neuranetapp/apis/chat_knowledge_base.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&checkClaims=id",
+    "/apps/{{app}}/indexdoc" : "/neuranetapp/apis/indexdoc.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&checkClaims=id",
     "/apps/{{app}}/events" : "/neuranetapp/apis/events.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id,org",
 
     "/apps/{{app}}/getfiles" : "/xbinapp/apis/getfiles.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=user,admin",

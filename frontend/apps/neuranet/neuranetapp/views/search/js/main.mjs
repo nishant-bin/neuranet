@@ -4,16 +4,21 @@
  * (C) 2023 Tekmonks Corp.
  */
 
+import {i18n} from "/framework/js/i18n.mjs";
 import {util} from "/framework/js/util.mjs";
 import {router} from "/framework/js/router.mjs";
 import {session} from "/framework/js/session.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
 const API_GET_EVENTS = "events", MODULE_PATH = util.getModulePath(import.meta),
-    VIEW_PATH = util.resolveURL(`${MODULE_PATH}/../`);
+    VIEW_PATH = util.resolveURL(`${MODULE_PATH}/../`), SESSION_OBJ_TEMPLATE = {"role": "user", "content": ""};
+
+let chatsessionID;
 
 function initView(data) {
-    window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {searchmain: main}; data.VIEW_PATH = VIEW_PATH;
+    window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {
+        ...(window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME]||{}), searchmain: main}; 
+    data.VIEW_PATH = VIEW_PATH;
     data.shownotifications = {action: "monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].searchmain.getNotifications()"};
 }
 
@@ -32,4 +37,16 @@ async function getNotifications() {
     return renderedEvents;
 }
 
-export const main = {initView, getNotifications};
+async function processChatResponse(result, _chatboxid) {
+    if (!result) return {error: (await i18n.get("ChatAIError")), ok: false}
+    chatsessionID = result.session_id;  // save session ID so that backend can maintain session
+    if ((!result.result) && (result.reason == "limit")) return {error: (await i18n.get("ErrorConvertingAIQuotaLimit")), ok: false};
+    if (!result.result) return {error: (await i18n.get("ChatAIError")), ok: false};
+    return {ok: true, response: result.response};
+}
+
+const getChatRequest = (question, _chatboxid) => {
+    return {id: session.get(APP_CONSTANTS.USERID), question, session_id: chatsessionID};
+}
+
+export const main = {initView, getNotifications, processChatResponse, getChatRequest};
