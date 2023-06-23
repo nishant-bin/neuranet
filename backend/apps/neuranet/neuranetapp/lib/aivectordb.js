@@ -339,10 +339,10 @@ const _cosine_similarity = (v1, v2, lengthV1, lengthV2) => {
 // End: Cosine similarity calculator
 
 function _search_singlethreaded(dbToUse, vectorToFindSimilarTo, metadata_filter_function) {
-    let similarities = []; const lengthOfVectorToFindSimilarTo = vectorToFindSimilarTo?
+    const similarities = [], lengthOfVectorToFindSimilarTo = vectorToFindSimilarTo?
         _getVectorLength(vectorToFindSimilarTo):undefined;
     for (const entryToCompareTo of Object.values(dbToUse.index)) 
-        if (metadata_filter_function && metadata_filter_function(entryToCompareTo.metadata)) similarities.push({   // calculate cosine similarities
+        if ((!metadata_filter_function) || metadata_filter_function(entryToCompareTo.metadata)) similarities.push({   // calculate cosine similarities
             vector: entryToCompareTo.vector, 
             similarity: vectorToFindSimilarTo ? _cosine_similarity(entryToCompareTo.vector, vectorToFindSimilarTo, 
                 entryToCompareTo.length, lengthOfVectorToFindSimilarTo) : undefined,
@@ -358,7 +358,7 @@ async function _search_multithreaded(dbPath, vectorToFindSimilarTo, metadata_fil
         "calculate_cosine_similarity", [dbPath, start, end, vectorToFindSimilarTo, lengthOfVectorToFindSimilarTo, metadata_filter_function]);
     const _getSimilarityPushPromise = async (similarities, worker, start, end) => 
         similarities.push(...(await _getSimilaritiesFromWorker(worker, start, end)));
-    let similarities = []; const searchPromises = []; 
+    const similarities = [], searchPromises = []; 
     for (let split_num = 0;  split_num < maxthreads_for_search; split_num++) {
         const start = split_num*splitLength, end = ((split_num*splitLength)+splitLength > entries.length) ||
             (split_num ==  maxthreads_for_search - 1) ? entries.length : (split_num*splitLength)+splitLength;
@@ -384,7 +384,7 @@ async function _callWorker(worker, functionToCall, argumentsToSend) {
 function _worker_calculate_cosine_similarity(dbPath, startIndex, endIndex, vectorToFindSimilarTo, lengthOfVectorToFindSimilarTo, metadata_filter_function) {
     const db = dbs_worker[_get_db_index(dbPath)], arrayToCompareTo = Object.values(db.index).slice(startIndex, endIndex);
     const similarities = []; for (const entryToCompareTo of arrayToCompareTo) 
-        if (metadata_filter_function && metadata_filter_function(entryToCompareTo.metadata)) similarities.push({   // calculate cosine similarities
+        if ((!metadata_filter_function) || metadata_filter_function(entryToCompareTo.metadata)) similarities.push({   // calculate cosine similarities
             vector: entryToCompareTo.vector, 
             similarity: vectorToFindSimilarTo ? _cosine_similarity(entryToCompareTo.vector, vectorToFindSimilarTo, 
                 entryToCompareTo.length, lengthOfVectorToFindSimilarTo) : undefined,

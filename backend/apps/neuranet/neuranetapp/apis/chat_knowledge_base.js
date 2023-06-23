@@ -25,7 +25,7 @@ const chatAPI = require(`${NEURANET_CONSTANTS.APIDIR}/chat.js`);
 const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
-const fileindexer = require(`${NEURANET_CONSTANTS.APIDIR}/fileindexer.js`);
+const fileindexer = require(`${NEURANET_CONSTANTS.LIBDIR}/fileindexer.js`);
 
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
 		LIMIT: "limit", NOKNOWLEDGE: "noknowledge"}, CHAT_MODEL_DEFAULT = "chat-knowledgebase-gpt35-turbo", 
