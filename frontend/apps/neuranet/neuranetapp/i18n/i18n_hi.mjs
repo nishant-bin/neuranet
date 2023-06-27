@@ -34,5 +34,6 @@ export const i18n = {
 "EnterpriseSearch_Done": "Done",
 "EnterpriseSearch_Processing": "Reading",
 "EnterpriseSearch_NoEvents": "No Events.",
-"EnterpriseSearch_KnowledgeBase": "AI Training"
+"EnterpriseSearch_KnowledgeBase": "AI Training",
+"EnterpriseSearch_ErrorNoKnowledge": "Sorry I have no knowledge of this topic."
 }

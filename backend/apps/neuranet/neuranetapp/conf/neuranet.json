@@ -87,8 +87,10 @@
                 "model": "gpt-3.5-turbo", "temperature": 0.7, "stream": false, "max_tokens": 4096, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
             },
-            "topK": "3",
-            "min_distance": 0.5,
+            "topK_vectors": "3",
+            "min_distance_vectors": 0.50,
+            "topK_docs": "3",
+            "min_score_docs": 0.8,
             "embeddings_model": "embedding-openai-ada002",
             "request_contentpath": "messages",
             "response_contentpath": "data.choices[0].message.content",

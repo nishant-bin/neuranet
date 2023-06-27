@@ -39,9 +39,14 @@ async function getNotifications() {
 
 async function processChatResponse(result, _chatboxid) {
     if (!result) return {error: (await i18n.get("ChatAIError")), ok: false}
-    chatsessionID = result.session_id;  // save session ID so that backend can maintain session
-    if ((!result.result) && (result.reason == "limit")) return {error: (await i18n.get("ErrorConvertingAIQuotaLimit")), ok: false};
-    if (!result.result) return {error: (await i18n.get("ChatAIError")), ok: false};
+    if (result.session_id) chatsessionID = result.session_id;  // save session ID so that backend can maintain session
+    if ((!result.result) && (result.reason == "limit")) return {error: await i18n.get("ErrorConvertingAIQuotaLimit"), ok: false};
+
+    // in case of no knowledge, allow the chat to continue still, with the message that we have no knowledge to answer this particular prompt
+    if ((!result.result) && (result.reason == "noknowledge")) return {ok: true, response: await i18n.get("EnterpriseSearch_ErrorNoKnowledge")};
+
+    if (!result.result) return {error: await i18n.get("ChatAIError"), ok: false};
+
     return {ok: true, response: result.response};
 }
 

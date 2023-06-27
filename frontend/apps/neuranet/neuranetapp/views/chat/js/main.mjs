@@ -17,7 +17,7 @@ function initView() {
 
 async function processChatResponse(result, _chatboxid) {
     if (!result) return {error: (await i18n.get("ChatAIError")), ok: false}
-    chatsessionID = result.session_id;  // save session ID so that backend can maintain session
+    if (result.session_id) chatsessionID = result.session_id;  // save session ID so that backend can maintain session
     if ((!result.result) && (result.reason == "limit")) return {error: (await i18n.get("ErrorConvertingAIQuotaLimit")), ok: false};
     if (!result.result) return {error: (await i18n.get("ChatAIError")), ok: false};
     return {ok: true, response: result.response};

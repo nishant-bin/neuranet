@@ -1,6 +1,13 @@
 /**
  * Will index files including XBin documents in and out of 
- * the AI vector databases.
+ * the AI databases. Currently uses two of them TF.IDF which  
+ * iis useful for finding complete documents matching a query 
+ * and the vector DB which is useful for finding semantic portions
+ * of the matching documents useful for answering the query.
+ * 
+ * Together these two AI DBs comprise the Neuranet knowledgebase
+ * which is then used for in-context training when the user is 
+ * chatting with the AI. 
  * 
  * Bridge between drive documents including XBin and Neuranet 
  * knowledgebases.
@@ -19,6 +26,7 @@ const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
+const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
 const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
 const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
 
@@ -73,16 +81,24 @@ async function _ingestfile(pathIn, id, org, isxbin) {
 			else return response.embedding;
 		}
     let vectordb; try { vectordb = await exports.getVectorDBForIDAndOrg(id, org, embeddingsGenerator) } catch(err) { 
-        LOG.error(`Can't instantiate the vector DB ${vectorDB_ID} for ID ${id} and org ${org}. Unable to continue.`); 
+        LOG.error(`Can't instantiate the vector DB ${vectorDB_ID} for ID ${id} and org ${org}. Unable to continue.`);
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
+
     const metadata = {cmspath: await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn), id, 
         date_created: Date.now(), fullpath: pathIn};
+
+    // ingest into the TF.IDF DB
+    const tfidfDB = getTFIDFDBForIDAndOrg(id, org); tfidfDB.create((await _readFullFile( // ingest into tf.idf
+        isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn)).toString("utf8")), metadata);
+
+    // ingest into the vector DB
 	let ingestedVectors; try {
         ingestedVectors = await vectordb.ingeststream(metadata, isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn), 
             aiModelObjectForEmbeddings.encoding, aiModelObjectForEmbeddings.chunk_size, aiModelObjectForEmbeddings.split_separators, 
             aiModelObjectForEmbeddings.overlap);
     } catch (err) { 
+        tfidfDB.delete(metadata);   // delete the file from tf.idf DB too to keep them in sync
         LOG.error(`Vector ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
     }
 
@@ -101,6 +117,15 @@ async function _uningestfile(pathIn, id, org) {
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
+    // delete from the TF.IDF DB
+    const tfidfDB = getTFIDFDBForIDAndOrg(id, org); const docsFound = tfidfDB.query(null, null, 
+        metadata => metadata.fullpath == pathIn), metadata = docsFound.length > 0 ? docsFound[0].metadata : null;
+    if (!metadata) {
+        LOG.error(`Document to uningest at path ${path} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
+        return;
+    } else tfidfDB.delete(metadata);
+    
+    // delete from the Vector DB
     const queryResults = await vectordb.query(undefined, -1, undefined, metadata => metadata.fullpath == pathIn, true);
     const vectorsDropped = []; if (queryResults) for (const result of queryResults) {
         try {await vectordb.delete(result.vector);} catch (err) {
@@ -119,15 +144,26 @@ async function _uningestfile(pathIn, id, org) {
 }
 
 async function _renamefile(from, to, id, org) {
+    // update TF.IDF DB 
+    const tfidfDB = getTFIDFDBForIDAndOrg(id, org); const docsFound = tfidfDB.query(null, null, 
+        metadata => metadata.fullpath == pathIn), metadata = docsFound.length > 0 ? docsFound[0].metadata : null;
+    if (!metadata) {
+        LOG.error(`Document to rename at path ${path} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
+        return;
+    } else tfidfDB.update(metadata, {...metadata, 
+        cmspath: cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path), fullpath: to});
+
+    // update vector DB
     let vectordb; try { vectordb = await exports.getVectorDBForIDAndOrg(id, org); } catch(err) { 
         LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
     const queryResults = await vectordb.query(undefined, -1, undefined, metadata => metadata.fullpath == from, true);
-    const vectorsRenamed = [], cmsRoot = await cms.getCMSRoot({xbin_id: id, xbin_org: org}); 
+    const vectorsRenamed = []; 
     if (queryResults) for (const result of queryResults) {
-        const metadata = result.metadata; metadata.cmspath = path.relative(cmsRoot, to); metadata.fullpath = to;
+        const metadata = result.metadata; metadata.cmspath = cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path); 
+            metadata.fullpath = to;
         if (!vectordb.update(result.vector, metadata)) {
             LOG.error(`Renaming the vector file paths failed from path ${from} to path ${to} for ID ${id} and org ${org}.`);
             return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
@@ -142,7 +178,22 @@ async function _renamefile(from, to, id, org) {
 }
 
 exports.getVectorDBForIDAndOrg = async function(id, org, embeddingsGenerator) {
-    const vectorDB_ID = `vectordb_index_${id}_${org}`, 
-        vectordb = await aivectordb.get_vectordb(`${NEURANET_CONSTANTS.VECTORDBPATH}/${vectorDB_ID}`, embeddingsGenerator);
+    const vectorDB_ID = `${id}_${org}`, 
+        vectordb = await aivectordb.get_vectordb(`${NEURANET_CONSTANTS.AIDBPATH}/vectordb/${vectorDB_ID}`, embeddingsGenerator);
     return vectordb;
+}
+
+exports.getTFIDFDBForIDAndOrg = async function(id, org, lang="en") {
+    const tfidfDB_ID = `${id}_${org}`, 
+        tfidfdb = await aitfidfdb.get_tfidf_db(`${NEURANET_CONSTANTS.AIDBPATH}/tfidfdb/${tfidfDB_ID}`, lang);
+    return tfidfdb;
+}
+
+function _readFullFile(stream) {
+    return new Promise((resolve, reject) => {
+        const contents = [];
+        stream.on("data", chunk => contents.push(chunk));
+        stream.on("close", _ => resolve(Buffer.concat(contents)));
+        stream.on("error", err => reject(err));
+    });
 }

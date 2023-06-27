@@ -41,12 +41,20 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 		LOG.error(`Disallowing the API call, as the user ${id} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
-	
-	const aiModelToUseForChat = jsonReq.model||CHAT_MODEL_DEFAULT, aiModelObjectForChat = await aiutils.getAIModel(aiModelToUseForChat);
+
 	const chatsession = chatAPI.getUsersChatSession(id, jsonReq.session_id).chatsession;
 	const allPreviousUserPrompts = []; for (const sessionObject of chatsession) 
 		if (sessionObject.role == aiModelObjectForChat.user_role) allPreviousUserPrompts.push(sessionObject.content);
 	const userPromptsConcatenated = [...allPreviousUserPrompts, jsonReq.question].join("\n\n");
+
+	// strategy is to first find matching documents using TF.IDF and then use their vectors for a sematic 
+	// search to build the in-context prompt training documents
+	const tfidfDB = await fileindexer.getTFIDFDBForIDAndOrg(id, org, jsonReq.lang);
+	const tfidfScoredDocuments = tfidfDB.query(userPromptsConcatenated, aiModelObjectForChat.topK_docs, 
+		aiModelObjectForChat.min_score_docs);	// search using TF.IDF for matching documents first - only will use semantic search on vectors from these documents later
+	const documentsToUseCMSPaths = []; for (const tfidfScoredDoc of tfidfScoredDocuments) 
+		documentsToUseCMSPaths.push(tfidfScoredDoc.metadata.cmspath);
+	
 	const aiModelToUseForEmbeddings = aiModelObjectForChat.embeddings_model, 
 		embeddingsGenerator = async text => {
 			const response = await embedding.createEmbeddingVector(id, text, aiModelToUseForEmbeddings); 
@@ -63,7 +71,8 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 		LOG.error(`Can't instantiate the vector DB for ID ${id}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
 	}
-	const similarityResultsForPrompt = await vectordb.query(vectorForUserPrompts, aiModelObjectForChat.topK, aiModelObjectForChat.min_distance);
+	const similarityResultsForPrompt = await vectordb.query(vectorForUserPrompts, aiModelObjectForChat.topK_vectors, 
+		aiModelObjectForChat.min_distance_vectors, metadata => documentsToUseCMSPaths.includes(metadata.cmspath));
 	if ((!similarityResultsForPrompt) || (!similarityResultsForPrompt.length)) return {reason: REASONS.NOKNOWLEDGE, ...CONSTANTS.FALSE_RESULT};
 	const documents = [], metadatasForResponse = []; for (const [i,similarityResult] of similarityResultsForPrompt.entries()) {
 		documents.push({content: similarityResult.text, document_index: i+1}); metadatasForResponse.push(similarityResult.metadata) };
@@ -71,6 +80,7 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 	const knowledgebasePromptTemplate = await aiutils.getPrompt(`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${PROMPT_FILE_KNOWLEDGEBASE}`);
 	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, {documents, question: jsonReq.question});
 
+	const aiModelToUseForChat = jsonReq.model||CHAT_MODEL_DEFAULT, aiModelObjectForChat = await aiutils.getAIModel(aiModelToUseForChat);
 	const jsonReqChat = { id, maintain_session: true, session_id: jsonReq.session_id,
 		session: [{"role": aiModelObjectForChat.user_role, "content": knowledegebaseWithQuestion}], model: aiModelToUseForChat };
 	const response = await chatAPI.doService(jsonReqChat);
