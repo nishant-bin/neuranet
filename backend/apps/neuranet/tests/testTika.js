@@ -16,6 +16,7 @@ exports.runTestsAsync = async function(argv) {
     if (!argv[1]) {LOG.console("Missing test file path.\n"); return;} 
     const pathToFile = path.resolve(argv[1]);
 
+    await tika.initAsync(); // init first
     const result = await tika.getContent(pathToFile);  // test text extraction using the Tika plugin
     if (!result) return false;
 
