@@ -1,0 +1,4 @@
+{
+    "classpath": ["{{{__dirname}}}/tika-app-2.8.0.jar"],
+    "max_content_length": 1262485504
+}

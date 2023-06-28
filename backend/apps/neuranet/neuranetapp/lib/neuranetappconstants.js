@@ -15,6 +15,7 @@ exports.TRAININGPROMPTSDIR = path.resolve(`${APPROOT}/training_prompts`);
 exports.RESPONSESDIR = path.resolve(`${APPROOT}/sample_responses`);
 exports.TEMPDIR = path.resolve(`${APPROOT}/temp`);
 exports.THIRDPARTYDIR = path.resolve(`${APPROOT}/3p`);
+exports.PLUGINSDIR = path.resolve(`${APPROOT}/plugins`);
 exports.DBDIR = path.resolve(LOGINAPP_CONSTANTS.DB_DIR);
 exports.AIDBPATH = path.resolve(`${LOGINAPP_CONSTANTS.APP_ROOT}/db/ai_db`);
 
