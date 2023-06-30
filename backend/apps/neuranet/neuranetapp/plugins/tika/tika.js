@@ -75,6 +75,7 @@ exports.getContentStream = async function (inputstream, filepath) {
 exports.getContent = async function(filepath) {
     const readstreamTExtractedText = await exports.getContentStream(fs.createReadStream(filepath), filepath);
     return new Promise((resolve, reject) => {
+        if (!readstreamTExtractedText) reject("Failed on Tika stream creation.");
         const contents = [];
         readstreamTExtractedText.on("data", chunk => contents.push(chunk));
         readstreamTExtractedText.on("close", _ => resolve(Buffer.concat(contents)));
