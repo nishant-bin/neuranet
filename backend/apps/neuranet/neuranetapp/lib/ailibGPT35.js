@@ -24,7 +24,8 @@ exports.process = async function(data, promptFile, apiKey, model) {
         LOG.error(`Request too large for the model's context length - the token count is ${tokencount_request}, the model's max context length is ${modelObject.request.model}.`); 
         LOG.error(`The request prompt was ${JSON.stringify(prompt)}`);
         return null; 
-    } else modelObject.request.max_tokens = modelObject.request.max_tokens - tokencount_request;
+    } 
+    if (modelObject.request.max_tokens) delete modelObject.request.max_tokens;  // retaining this causes many errors in OpenAI as the tokencount is always approximate, while this value - if provided - must be absolutely accurate
 
     let promptObject;
     if (!modelObject.request_contentpath)

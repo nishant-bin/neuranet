@@ -1,2 +1,4 @@
-Convert this code from Cobol to {{{langto}}} and ignore incomplete functions. Convert all variable declarations seen. Do not add comments.
+Convert this code from Cobol to {{{langto}}} and ignore incomplete functions. Convert all variable declarations seen. Do not add comments.  Use plaintext.
 {{{request}}}
+
+{{{langto}}}

@@ -88,15 +88,19 @@ async function _ingestfile(pathIn, id, org, isxbin) {
     const metadata = {cmspath: await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn), id, 
         date_created: Date.now(), fullpath: pathIn};
 
+    const _getExtractedTextStream = _ => _extractTextViaPluginsUsingStreams(
+        isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn), aiModelObjectForEmbeddings, pathIn);
+
     // ingest into the TF.IDF DB
-    const tfidfDB = getTFIDFDBForIDAndOrg(id, org); tfidfDB.create((await _readFullFile( // ingest into tf.idf
-        isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn)).toString("utf8")), metadata);
+    const tfidfDB = getTFIDFDBForIDAndOrg(id, org); 
+    try {tfidfDB.create(await _readFullFile(await _getExtractedTextStream()).toString("utf8"), metadata);}
+    catch (err) {LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); }
 
     // ingest into the vector DB
-	let ingestedVectors; try {
-        ingestedVectors = await vectordb.ingeststream(metadata, isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn), 
-            aiModelObjectForEmbeddings.encoding, aiModelObjectForEmbeddings.chunk_size, aiModelObjectForEmbeddings.split_separators, 
-            aiModelObjectForEmbeddings.overlap);
+	let ingestedVectors; try { 
+        ingestedVectors = await vectordb.ingeststream(metadata, await _getExtractedTextStream(), 
+            aiModelObjectForEmbeddings.encoding, aiModelObjectForEmbeddings.chunk_size, 
+            aiModelObjectForEmbeddings.split_separators, aiModelObjectForEmbeddings.overlap);
     } catch (err) { 
         tfidfDB.delete(metadata);   // delete the file from tf.idf DB too to keep them in sync
         LOG.error(`Vector ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
@@ -187,6 +191,15 @@ exports.getTFIDFDBForIDAndOrg = async function(id, org, lang="en") {
     const tfidfDB_ID = `${id}_${org}`, 
         tfidfdb = await aitfidfdb.get_tfidf_db(`${NEURANET_CONSTANTS.AIDBPATH}/tfidfdb/${tfidfDB_ID}`, lang);
     return tfidfdb;
+}
+
+async function _extractTextViaPluginsUsingStreams(inputstream, aiModelObject, filepath) {
+    for (const textExtractor of aiModelObject.text_extraction_plugins) {
+        const extractedTextStream = await textExtractor.getContentStream(inputstream, filepath);
+        if (extractedTextStream) return extractedTextStream;
+    } 
+
+    throw new Error(`Unable to process the given file to extract the text.`);
 }
 
 function _readFullFile(stream) {

@@ -14,7 +14,11 @@ async function runTestsAsync(argv) {
 			fileEntry.toLowerCase().endsWith(".js")  && (fileEntry != path.basename(__filename))) {
 
 		const testModule = require(`${__dirname}/${fileEntry}`);
-		await testModule.runTestsAsync(argv);
+		if (testModule.runTestsAsync) await testModule.runTestsAsync(argv);
+		else {
+			const errorMsg = `Skipping ${fileEntry} as it is not a proper test case module.`;
+			LOG.warn(errorMsg); LOG.console(errorMsg);
+		}
 	}
 }
 

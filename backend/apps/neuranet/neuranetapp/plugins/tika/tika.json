@@ -1,4 +1,12 @@
 {
     "classpath": ["{{{__dirname}}}/tika-app-2.8.0.jar"],
-    "max_content_length": 1262485504
+    "max_content_length": 1262485504,
+    "supported_types": [".apxl", ".asp", ".aspx", ".c", ".cc", ".cpp", ".cxx", ".doc", ".docm", ".docx", ".dotm", ".dotx", 
+        ".dwfx", ".epub", ".fb2", ".fbz", ".groovy", ".htm", ".html", ".ibook", ".java", ".key", ".mbox", ".mdb", 
+        ".mpp", ".msg", ".ncx", ".numbers", ".odc", ".odf", ".odft", ".odg", ".odi", ".odm", ".odp", ".ods", ".odt", 
+        ".ole", ".opf", ".otc", ".otg", ".oth", ".oti", ".otp", ".ots", ".ott", ".p7c", ".p7m", ".p7s", ".pages", 
+        ".pdf", ".pot", ".potm", ".potx", ".ppa", ".ppam", ".pps", ".ppsm", ".ppsx", ".ppt", ".pptm", ".pptx", 
+        ".pst", ".pub", ".rfc822", ".rtf", ".sldasm", ".slddrw", ".sldm", ".sldprt", ".sxw", ".tnef", ".tsd", 
+        ".txt", ".text", ".vsd", ".vsdm", ".vsdx", ".vssm", ".vssx", ".vstm", ".vstx", ".wp6", ".wps", ".xht", ".xhtml", 
+        ".xla", ".xlam", ".xlr", ".xls", ".xlsb", ".xlsm", ".xlsx", ".xlt", ".xltm", ".xltx", ".xlw", ".xml", ".xps"]
 }
