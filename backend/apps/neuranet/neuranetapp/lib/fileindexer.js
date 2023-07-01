@@ -92,7 +92,7 @@ async function _ingestfile(pathIn, id, org, isxbin) {
         isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn), aiModelObjectForEmbeddings, pathIn);
 
     // ingest into the TF.IDF DB
-    const tfidfDB = getTFIDFDBForIDAndOrg(id, org); 
+    const tfidfDB = exports.getTFIDFDBForIDAndOrg(id, org); 
     try {tfidfDB.create(await _readFullFile(await _getExtractedTextStream()).toString("utf8"), metadata);}
     catch (err) {LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); }
 
@@ -122,7 +122,7 @@ async function _uningestfile(pathIn, id, org) {
     }
 
     // delete from the TF.IDF DB
-    const tfidfDB = getTFIDFDBForIDAndOrg(id, org); const docsFound = tfidfDB.query(null, null, 
+    const tfidfDB = exports.getTFIDFDBForIDAndOrg(id, org), docsFound = tfidfDB.query(null, null, 
         metadata => metadata.fullpath == pathIn), metadata = docsFound.length > 0 ? docsFound[0].metadata : null;
     if (!metadata) {
         LOG.error(`Document to uningest at path ${path} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
@@ -149,7 +149,7 @@ async function _uningestfile(pathIn, id, org) {
 
 async function _renamefile(from, to, id, org) {
     // update TF.IDF DB 
-    const tfidfDB = getTFIDFDBForIDAndOrg(id, org); const docsFound = tfidfDB.query(null, null, 
+    const tfidfDB = exports.getTFIDFDBForIDAndOrg(id, org), docsFound = tfidfDB.query(null, null, 
         metadata => metadata.fullpath == pathIn), metadata = docsFound.length > 0 ? docsFound[0].metadata : null;
     if (!metadata) {
         LOG.error(`Document to rename at path ${path} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
