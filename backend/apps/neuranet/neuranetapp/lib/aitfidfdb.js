@@ -72,14 +72,14 @@ exports.loadData = async function(pathIn) {
         LOG.error(`TF.IDF search can't find or load ${INDEX_FILE} from path ${pathIn}. Using an empty DB.`); return _deepclone(EMPTY_DB);
     };
     let vocabulary; try {vocabulary = JSON.parse(await fspromises.readFile(vocabularyFile, "utf8"));} catch (err) {
-        LOG.error(`TF.IDF search can't find or load ${WORDCOUNTS_FILE} from path ${pathIn}. Using an empty DB.`); return _deepclone(EMPTY_DB);
+        LOG.error(`TF.IDF search can't find or load ${VOCABULARY_FILE} from path ${pathIn}. Using an empty DB.`); return _deepclone(EMPTY_DB);
     };
 
     return {tfidfDocStore: index.tfidfDocStore, wordDocCounts: index.wordDocCounts, vocabulary};
 }
 
-exports.writeData = async (path, db) => {
-    const indexFile = `${path}/${INDEX_FILE}`, vocabulary = `${path}/${WORDCOUNTS_FILE}`;
+exports.writeData = async (pathIn, db) => {
+    const indexFile = `${pathIn}/${INDEX_FILE}`, vocabulary = `${pathIn}/${VOCABULARY_FILE}`;
 
     await fspromises.writeFile(indexFile, JSON.stringify({tfidfDocStore: db.tfidfDocStore, wordDocCounts: db.wordDocCounts}));
     await fspromises.writeFile(vocabulary, JSON.stringify(db.vocabulary));

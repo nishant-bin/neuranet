@@ -48,14 +48,17 @@ async function _testIngestion(pathIn) {
     const tfidfDB = await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG, "en");  
     const metadata = {id: TEST_ID, org: TEST_ORG, fullpath: pathIn};  
     try {await tfidfDB.create(await fspromises.readFile(pathIn, "utf8"), metadata); return true;}
-    catch (err) {LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${TEST_ID} and org ${TEST_ORG} with error ${err}.`); }
+    catch (err) {
+        LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${TEST_ID} and org ${TEST_ORG} with error ${err}.`); 
+        return false;
+    }
 }
 
 async function _testQuery(query) {
     const tfidfDB = await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG, "en");  
     const queryResult = tfidfDB.query(query, 3, null, 0.5);
     if (!queryResult) return null;
-    const logMsg = `Query result is ${JSON.stringify(queryResult, null, 2)}.`; LOG.info(logMsg); LOG.console(logMsg);
+    const logMsg = `Query result is ${JSON.stringify(queryResult, null, 2)}.\n`; LOG.info(logMsg); LOG.console(logMsg);
     return queryResult;
 }
 

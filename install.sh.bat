@@ -4,3 +4,5 @@ npm install mustache
 npm install bcryptjs
 npm install sqlite3
 npm install @dqbd/tiktoken
+npm install natural
+npm install java
