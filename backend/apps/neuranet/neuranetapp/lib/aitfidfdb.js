@@ -51,6 +51,7 @@ exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_
             override_lang||lang, db); _autosaveIfSelected();},
         query: (query, topK, filter_function, cutoff_score, ignoreCoord=false, override_lang) => exports.query(query, topK, filter_function, lang||override_lang, cutoff_score, ignoreCoord, db),
         delete: (metadata, override_lang) => {exports.delete(metadata, override_lang||lang, db); _autosaveIfSelected();},
+        defragment: db => {exports.defragment(db); _autosaveIfSelected();},
         flush: _ => exports.writeData(dbPath, db)   // writeData is async so the caller can await for the flush to complete
     }
 }
@@ -76,10 +77,10 @@ exports.writeData = async (path, db) => {
 }
 
 exports.ingest = exports.create = function(document, metadata, lang="en", db=EMPTY_DB) {
-    const docIndex = _getDocumentHashIndex(metadata, lang, db), docWords = _getLangNormalizedWords(document, lang),
+    const docHash = _getDocumentHashIndex(metadata, lang, db), docWords = _getLangNormalizedWords(document, lang),
         datenow = Date.now();
     exports.delete(metadata, lang, db);   // if adding same document, delete the old one first.
-    db.tfidfDocStore[docIndex] = {metadata: {...metadata}, scores: {}, length: docWords.length, 
+    db.tfidfDocStore[docHash] = {metadata: {...metadata}, scores: {}, length: docWords.length, 
         date_created: datenow, date_modified: datenow};
     const wordsCounted = {}; for (const word of docWords) {
         const wordIndex = _getWordIndex(word, db, true); 
@@ -87,10 +88,10 @@ exports.ingest = exports.create = function(document, metadata, lang="en", db=EMP
             db.wordDocCounts[wordIndex] = db.wordDocCounts[wordIndex]?db.wordDocCounts[wordIndex]+1:1; 
             wordsCounted[wordIndex] = true; 
         }
-        db.tfidfDocStore[docIndex].scores[wordIndex] = {
+        db.tfidfDocStore[docHash].scores[wordIndex] = {
             tfidf: 0, // dummy as we will rebuild the entire index in the next step, as IDF will change with every new doc as the word counts per doc changed (the denominator for IDF)
-            wordcount: db.tfidfDocStore[docIndex].scores[wordIndex]?
-                db.tfidfDocStore[docIndex].scores[wordIndex].wordcount+1:1 };   
+            wordcount: db.tfidfDocStore[docHash].scores[wordIndex]?
+                db.tfidfDocStore[docHash].scores[wordIndex].wordcount+1:1 };   
     }
 
     _recalculateTFIDF(db);    // rebuild the entire TF.IDF score index
@@ -145,6 +146,29 @@ exports.query = (query, topK, filter_function, lang="en", cutoff_score, ignoreCo
     } else cutoffDocs = scoredDocs;
     const topKScoredDocs = topK ? cutoffDocs.slice(0, (topK < cutoffDocs.length ? topK : cutoffDocs.length)) : cutoffDocs;
     return topKScoredDocs;
+}
+
+exports.defragment = function(db) {
+    const newVocabulary = []; for (const [wordIndex,word] of db.vocabulary.entries())
+        if (db.wordDocCounts[wordIndex]) newVocabulary.push(word);
+    if (newVocabulary.length == db.vocabulary.length) return;   //nothing to do
+
+    const newTFIDFDocStore = {}; for (const [documentHash, document] of Object.entries(db.tfidfDocStore)) {
+        const newDocument = _deepclone(document); newDocument.scores = {};
+        for (const wordIndex of Object.keys(document.scores)) {
+            const word = _getDocWordFromIndex(wordIndex, db);
+            const newWordIndex = _getWordIndex(word, {...db, vocabulary: newVocabulary});
+            newDocument.scores[newWordIndex] = document.scores[wordIndex];
+        }
+        newTFIDFDocStore[documentHash] = newDocument;
+    }
+
+    const newWordDocCounts = {}; for (const [wordIndex, word] of newVocabulary.entries())
+        newWordDocCounts[wordIndex] = db.wordDocCounts[_getWordIndex(word, db)];
+    
+    db.tfidfDocStore = newTFIDFDocStore;
+    db.wordDocCounts = newWordDocCounts;
+    db.vocabulary = newVocabulary;
 }
 
 function _recalculateTFIDF(db) {  // rebuilds the entire TF.IDF index for all documents, necessary as IDF changes with every new doc ingested
