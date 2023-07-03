@@ -149,11 +149,11 @@ exports.query = (query, topK, filter_function, lang="en", cutoff_score, ignoreCo
     }
     if (!query) return scoredDocs;  // can't do cutoff, topK etc if no query was given
     
-    scoredDocs.sort((doc1, doc2) => doc1.score < doc2.score ? -1 : doc1.score > doc2.score ? 1 : 0);
+    scoredDocs.sort((doc1, doc2) => doc1.score < doc2.score ? 1 : doc1.score > doc2.score ? -1 : 0);
     // if cutoff_score is provided, then use it. Use highest score to balance the documents found for the cutoff
     const cutoffDocs = []; if (cutoff_score) for (const scoredDocument of scoredDocs) {  
         scoredDocument.cutoff_scaled_score = scoredDocument.score/highestScore; scoredDocument.highest_query_score = highestScore;
-        if (scoredDocument.cutoff_scaled_score >= cutoffDocs) cutoffDocs.push(scoredDocument);
+        if (scoredDocument.cutoff_scaled_score >= cutoff_score) cutoffDocs.push(scoredDocument);
     } else cutoffDocs = scoredDocs;
     const topKScoredDocs = topK ? cutoffDocs.slice(0, (topK < cutoffDocs.length ? topK : cutoffDocs.length)) : cutoffDocs;
     return topKScoredDocs;

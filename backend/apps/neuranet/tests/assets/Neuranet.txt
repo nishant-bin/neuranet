@@ -1,0 +1,222 @@
+Neuranet � AI Powered Enterprise Engine
+
+Tekmonks
+
+
+
+
+
+AI Powered Database, and Code Migration
+�#�
+Neuranet Powered by Tekmonks AI Expertise.
+
+Neuranet AI Engine is built and optimized to support multiple pluggable AI backends  Bloom AI (Tekmonks hosted), BERT Based (Tekmonks hosted), GPT-2 Based (Tekmonks hosted), OpenAI, Azure AI Services and Google AI.
+
+Tekmonks trained models, added long chains, to further enhance the power of AI and Machine Learning for various Enterprise use 
+cases.
+
+Leverages Tekmonks Enterprise development experience to improve models and Success rates.
+
+Compliant with all Enterprise confidentiality and security policies. Private hosted AI engine also a possibility.
+
+Neuranet
+
+
+
+�#�
+
+Tekmonks AI is Enterprise Ready
+Enterprise Ready, Legally Compliant
+
+Your data is not shared externally.
+
+Logic is not used to train AI or embed inside AI.
+
+Controlled by Tekmonks security controls.
+
+Inhouse non-cloud AI engines are available as an option.
+
+Can be retrained into a confidential, Enterprise specific AI brain.
+
+
+
+
+
+
+
+�#�
+
+Neuranet: Tekmonks AI Engine
+
+AI Powered:
+Enterprise ready
+Ability to query private data to train AI in-context.
+Deep Learning Capabilities
+Multiple AI Engine Support
+Supports Search, Code Generation, and Q&A agents.
+
+Tekmonks Ingenuity:
+Training including negative trainings.
+Long inference chains.
+Validation, filtering.
+Scenario based Training Data.
+Open API Access.
+Accessible via Web.
+
+
+
+
+Demo
+
+
+
+
+
+Neuranet � Compared to ChatGPT, Code and DB Migrators
+Neuranet Supports and is being trained for
+
+Private AI engine, customized to your business.
+Can connect to internal knowledge bases, databases and systems .
+Ability to �train a brain� which is specialized to your business data, and processes.
+AI can be retrained quickly to meet any emerging challenges.
+
+
+TekMonks Experience Improves Neuranet AI Enterprise Models and Training Data
+
+
+
+
+
+Neuranet: Also helps with Enterprise Coding
+�#�
+Automated AI based migration
+Tekmonks has trained AI models to migrate Program Code, Database stored procedures and SQLs automatically. For example, from MS SQL to SingleStore.
+
+Minimize Application Changes Post Migration.
+Optional Neuranet Database Virtualization
+Allows applications to �think� they are talking to Oracle, while the virtualization engine runs the queries on another database eg MariaDB.
+
+
+
+
+�#�
+
+ROADMAP to Migration Success
+
+DB Magic Validation
+Phase
+1
+
+Contract Negotiation
+Phase
+2
+
+Pilot Customers
+Phase
+3
+
+Ongoing Support
+Phase
+4
+
+
+
+
+
+Thank
+You!
+
+
+
+
+
+Appendix - B
+Pricing
+
+
+
+
+Pricing
+Option 1 - Pay as you go
+
+Zero upfront price.
+
+50 cents per agent query.
+
+Only bug support is included, any other support is priced as an additional services cost.
+
+But harder to price for the white labeling scenario.
+
+
+
+
+
+Manual costs for Enterprise productivity are $35 to $50 per complicated query.
+
+
+
+
+�#�
+
+Pricing
+Option 2 - Express Site license
+
+$50,000 a year site wide license.
+
+30 cents per agent query.
+
+8x5 enhanced support is included at no additional cost. Support includes bug support and customizations.
+
+
+
+
+
+
+
+
+�#�
+
+Pricing
+Pricing Option 3 - Full Site license
+
+$100,000 a year unlimited site wide license.
+
+24x7 enhanced support from Tekmonks is included at no additional charge.
+
+10 cents per agent query.
+
+
+
+
+�#�
+
+image12.png
+
+image3.png
+
+image7.png
+
+image5.png
+
+image19.png
+
+image10.png
+
+image9.png
+
+image4.png
+
+image8.png
+
+image6.png
+
+image15.png
+
+image17.png
+
+image18.png
+
+image11.png
+
+image16.png
+

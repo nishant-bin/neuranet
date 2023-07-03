@@ -17,12 +17,14 @@ exports.runTestsAsync = async function(argv) {
         return;
     }
     if (!argv[1]) {LOG.console("Missing test file path.\n"); return;} 
-    const pathToFile = path.resolve(argv[1]);
+    const filesToIngest = argv[1].split(",");
 
     const _testFailed = err => {const error=`Error TF.IDF testing failed.${err?" Error was "+err:""}\n`; LOG.error(error); LOG.console(error);}
     try{
-        const createdMetadata = await _testIngestion(pathToFile);  // test ingestion
-        if (!createdMetadata) {_testFailed("Ingestion failed."); return false;}
+        let createdMetadata; for (const [i,fileToIngest] of filesToIngest.entries()) {
+            createdMetadata = await _testIngestion(path.resolve(fileToIngest), i+1);  // test ingestion
+            if (!createdMetadata) {_testFailed("Ingestion failed for file "+fileToIngest); return false;}
+        }
     
         const queryResult = await _testQuery(argv[2]);  // test query
         if (!queryResult) {_testFailed("Query failed."); return false;}
@@ -35,11 +37,11 @@ exports.runTestsAsync = async function(argv) {
     await (await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG, "en")).flush();
 }
 
-async function _testIngestion(pathIn) {
+async function _testIngestion(pathIn, docindex) {
     LOG.console(`Test case for TF.IDF ingestion called to ingest file ${pathIn}.\n`);
 
     const tfidfDB = await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG, "en");  
-    const metadata = {id: TEST_ID, org: TEST_ORG, fullpath: pathIn, neuranet_docid: "testdoc1"};  
+    const metadata = {id: TEST_ID, org: TEST_ORG, fullpath: pathIn, neuranet_docid: "testdoc"+docindex};  
     try {await tfidfDB.create(await fspromises.readFile(pathIn, "utf8"), metadata); return metadata;}
     catch (err) {
         LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${TEST_ID} and org ${TEST_ORG} with error ${err}.`); 
