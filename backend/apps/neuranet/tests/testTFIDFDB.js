@@ -30,6 +30,8 @@ exports.runTestsAsync = async function(argv) {
         if (!result) {_testFailed(); return false;}
     } catch (err) {_testFailed(err); return false;}
 
+    await (await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG, "en")).flush();
+
     /*const tempRename = pathToFile+".rename_test.txt";
     await fspromises.rename(pathToFile, tempRename);
     result = await _testRename(pathToFile, tempRename);
@@ -44,7 +46,7 @@ async function _testIngestion(pathIn) {
     LOG.console(`Test case for TF.IDF ingestion called to ingest file ${pathIn}.\n`);
 
     const tfidfDB = await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG, "en");  
-    const metadata = {id: TEST_ID, org: TEST_ORG, date_created: Date.now(), fullpath: pathIn};  
+    const metadata = {id: TEST_ID, org: TEST_ORG, fullpath: pathIn};  
     try {await tfidfDB.create(await fspromises.readFile(pathIn, "utf8"), metadata); return true;}
     catch (err) {LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${TEST_ID} and org ${TEST_ORG} with error ${err}.`); }
 }

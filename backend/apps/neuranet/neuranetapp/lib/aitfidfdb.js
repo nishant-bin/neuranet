@@ -26,10 +26,11 @@ const crypto = require("crypto");
 const fspromises = require("fs").promises;
 const LOG = global.LOG || console;  // allow independent operation
 
-const EMPTY_DB = {tfidfDocStore: {}, wordDocCounts: {}}, TFIDF_FILE = "documents.json", WORDCOUNTS_FILE = "vocabulary.json";
+const EMPTY_DB = {tfidfDocStore: {}, wordDocCounts: {}, vocabulary: []}, INDEX_FILE = "index.json", 
+    VOCABULARY_FILE = "vocabulary.json", METADATA_DOCID_KEY="aidb_docid";
 const IN_MEM_DBS = {};
 
-exports.get_tfidf_db = async function(dbPath, lang="en", autosave=true, autosave_frequency=500) {
+exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_KEY, lang="en", autosave=true, autosave_frequency=500) {
     const normPath = path.resolve(dbPath); if (!IN_MEM_DBS[normPath]) {    // load the DB from the disk only if needed
         try { await fspromises.access(dbPath); } catch (err) {    // check the DB path exists or create it etc.
             if (err.code == "ENOENT") { 
@@ -39,7 +40,7 @@ exports.get_tfidf_db = async function(dbPath, lang="en", autosave=true, autosave
         }
         IN_MEM_DBS[normPath] = await exports.loadData(normPath);
     }
-    const db = IN_MEM_DBS[normPath];
+    const db = IN_MEM_DBS[normPath]; db.METADATA_DOCID_KEY = metadata_docid_key;
 
     const _autosaveIfSelected = _ => {if (autosave) setTimeout(_=>exports.writeData(dbPath, db), autosave_frequency);}
 
@@ -55,34 +56,38 @@ exports.get_tfidf_db = async function(dbPath, lang="en", autosave=true, autosave
 }
 
 exports.loadData = async function(pathIn) {
-    const tfidfDocStorePath = `${pathIn}/${TFIDF_FILE}`, wordDocCountsPath = `${pathIn}/${WORDCOUNTS_FILE}`;
+    const indexFile = `${pathIn}/${INDEX_FILE}`, vocabularyFile = `${pathIn}/${VOCABULARY_FILE}`;
 
-    let tfidfDocStore = {}; try {tfidfDocStore = await fspromises.readFile(tfidfDocStorePath)} catch (err) {
-        LOG.error(`TF.IDF search can't find or load ${TFIDF_FILE} from path ${pathIn}. Using an empty document store.`);
+    let index; try {index = JSON.parse(await fspromises.readFile(indexFile, "utf8"))} catch (err) {
+        LOG.error(`TF.IDF search can't find or load ${INDEX_FILE} from path ${pathIn}. Using an empty DB.`); return _deepclone(EMPTY_DB);
     };
-    let wordDocCounts = {}; try {await fspromises.readFile(wordDocCountsPath);} catch (err) {
-        LOG.error(`TF.IDF search can't find or load ${WORDCOUNTS_FILE} from path ${pathIn}. Using an empty vocabulary store.`);
+    let vocabulary; try {vocabulary = JSON.parse(await fspromises.readFile(vocabularyFile, "utf8"));} catch (err) {
+        LOG.error(`TF.IDF search can't find or load ${WORDCOUNTS_FILE} from path ${pathIn}. Using an empty DB.`); return _deepclone(EMPTY_DB);
     };
 
-    return {tfidfDocStore, wordDocCounts};
+    return {tfidfDocStore: index.tfidfDocStore, wordDocCounts: index.wordDocCounts, vocabulary};
 }
 
 exports.writeData = async (path, db) => {
-    const tfidfDocStorePath = `${path}/${TFIDF_FILE}`, wordDocCountsPath = `${path}/${WORDCOUNTS_FILE}`;
+    const indexFile = `${path}/${INDEX_FILE}`, vocabulary = `${path}/${WORDCOUNTS_FILE}`;
 
-    await fspromises.writeFile(tfidfDocStorePath, db.tfidfDocStore);
-    await fspromises.writeFile(wordDocCountsPath, db.wordDocCounts);
+    await fspromises.writeFile(indexFile, JSON.stringify({tfidfDocStore: db.tfidfDocStore, wordDocCounts: db.wordDocCounts}));
+    await fspromises.writeFile(vocabulary, JSON.stringify(db.vocabulary));
 }
 
 exports.ingest = exports.create = function(document, metadata, lang="en", db=EMPTY_DB) {
-    const docIndex = _getDocumentHashIndex(metadata, lang), docWords = _getLangNormalizedWords(document, lang);
-    db.tfidfDocStore[docIndex] = {metadata, scores: {}, length: docWords.length};
+    const docIndex = _getDocumentHashIndex(metadata, lang, db), docWords = _getLangNormalizedWords(document, lang),
+        datenow = Date.now();
+    exports.delete(metadata, lang, db);   // if adding same document, delete the old one first.
+    db.tfidfDocStore[docIndex] = {metadata: {...metadata}, scores: {}, length: docWords.length, 
+        date_created: datenow, date_modified: datenow};
     const wordsCounted = {}; for (const word of docWords) {
-        if (!wordsCounted[word]) {
-            db.wordDocCounts[word] = db.wordDocCounts[word]?db.wordDocCounts[word]+1:1; 
-            wordsCounted[word] = true
+        const wordIndex = _getWordIndex(word, db, true); 
+        if (!wordsCounted[wordIndex]) {
+            db.wordDocCounts[wordIndex] = db.wordDocCounts[wordIndex]?db.wordDocCounts[wordIndex]+1:1; 
+            wordsCounted[wordIndex] = true; 
         }
-        const wordIndex = _getWordIndex(word, db); db.tfidfDocStore[docIndex].scores[wordIndex] = {
+        db.tfidfDocStore[docIndex].scores[wordIndex] = {
             tfidf: 0, // dummy as we will rebuild the entire index in the next step, as IDF will change with every new doc as the word counts per doc changed (the denominator for IDF)
             wordcount: db.tfidfDocStore[docIndex].scores[wordIndex]?
                 db.tfidfDocStore[docIndex].scores[wordIndex].wordcount+1:1 };   
@@ -92,13 +97,23 @@ exports.ingest = exports.create = function(document, metadata, lang="en", db=EMP
 }
 
 exports.delete = function(metadata, lang="en", db=EMPTY_DB) {
-    delete db.tfidfDocStore[_getDocumentHashIndex(metadata, lang)];
+    const document = db.tfidfDocStore[_getDocumentHashIndex(metadata, lang, db)], wordCounts = _deepclone(db.wordDocCounts);
+    if (document) {
+        const allDocumentWordIndexes = Object.keys(document.scores);
+        for (const wordIndex of allDocumentWordIndexes) {
+            wordCounts[wordIndex] = wordCounts[wordIndex]-1;
+            if (wordCounts[wordIndex] == 0) delete wordCounts[wordIndex];   // this makes the vocabulary a sparse index potentially but is needed otherwise word-index mapping will change breaking the entire DB
+        }
+        delete db.tfidfDocStore[_getDocumentHashIndex(metadata, lang, db)];
+        db.wordDocCounts = wordCounts;
+    }
 }
 
 exports.update = (oldmetadata, newmetadata, lang="en", db=EMPTY_DB) => {
-    const oldhash = _getDocumentHashIndex(oldmetadata, lang);
-    db. tfidfDocStore[_getDocumentHashIndex(newmetadata)] = db.tfidfDocStore[oldhash];
-    exports.delete(oldmetadata, lang, db);
+    const oldhash = _getDocumentHashIndex(oldmetadata, lang, db), newhash = _getDocumentHashIndex(newmetadata, lang, db),
+        document = db.tfidfDocStore[oldhash];
+    document.metadata = {...newmetadata}; document.date_modified = Date.now();
+    db. tfidfDocStore[newhash] = document; delete db. tfidfDocStore[oldhash];
 }
 
 /**
@@ -133,10 +148,10 @@ exports.query = (query, topK, filter_function, lang="en", cutoff_score, ignoreCo
 }
 
 function _recalculateTFIDF(db) {  // rebuilds the entire TF.IDF index for all documents, necessary as IDF changes with every new doc ingested
-    for (const document of Object.values(db.tfidfDocStore)) for (const docWordIndex of Object.keys(document.scores)) {
-        const docWord = _getDocWordFromIndex(docWordIndex, db), tf = document.scores[docWordIndex].wordcount/document.length, 
-            idf = 1+Math.log10(Object.keys(db.tfidfDocStore).length/(db.wordDocCounts[docWord]+1));
-        document.scores[docWordIndex].tfidf = tf*idf;
+    for (const document of Object.values(db.tfidfDocStore)) for (const wordIndex of Object.keys(document.scores)) {
+        const tf = document.scores[wordIndex].wordcount/document.length, 
+            idf = 1+Math.log10(Object.keys(db.tfidfDocStore).length/(db.wordDocCounts[wordIndex]+1));
+        document.scores[wordIndex].tfidf = tf*idf;
     }
 }
 
@@ -149,15 +164,18 @@ function _getLangNormalizedWords(document, lang) {     // TODO: Add word stemmin
     return words;
 }
 
-const _getDocumentHashIndex = (metadata, lang="en") => {
+const _getDocumentHashIndex = (metadata, lang="en", db) => {
+    if (metadata[db.METADATA_DOCID_KEY||METADATA_DOCID_KEY]) return metadata[db.METADATA_DOCID_KEY||METADATA_DOCID_KEY];
     const lowerCaseObject = {}; for (const [key, keysValue] of Object.entries(metadata))
         lowerCaseObject[key.toLocaleLowerCase?key.toLocaleLowerCase(lang):key] = 
             keysValue.toLocaleLowerCase?keysValue.toLocaleLowerCase(lang):keysValue;
     return crypto.createHash("md5").update(JSON.stringify(lowerCaseObject)).digest("hex");
 }
 
-const _getWordIndex = (word, db) => {
-    const index = Object.keys(db.wordDocCounts).indexOf(word);
-    if (index == -1) return null; else return index;
+const _getWordIndex = (word, db, create) => {
+    const index = db.vocabulary.indexOf(word); if (index != -1) return index;
+    if (create) {db.vocabulary.push(word); return db.vocabulary.indexOf(word);}
+    else return null;
 }
-const _getDocWordFromIndex = (index, db) => Object.keys(db.wordDocCounts)[index];
+const _getDocWordFromIndex = (index, db) => db.vocabulary[index];
+const _deepclone = object => JSON.parse(JSON.stringify(object));
