@@ -51,7 +51,7 @@ async function _testIngestion(pathIn, docindex) {
 
 async function _testQuery(query) {
     const tfidfDB = await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG, "en");  
-    const queryResult = tfidfDB.query(query, 3, null, 0.5);
+    const queryResult = tfidfDB.query(query, 3, null, 0.6);
     if (!queryResult) return null;
     const logMsg = `Query result is ${JSON.stringify(queryResult, null, 2)}.\n`; LOG.info(logMsg); LOG.console(logMsg);
     return queryResult;
