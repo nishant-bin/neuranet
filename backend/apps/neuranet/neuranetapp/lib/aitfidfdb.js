@@ -27,7 +27,8 @@ const fspromises = require("fs").promises;
 const LOG = global.LOG || console;  // allow independent operation
 
 const EMPTY_DB = {tfidfDocStore: {}, wordDocCounts: {}, vocabulary: []}, INDEX_FILE = "index.json", 
-    VOCABULARY_FILE = "vocabulary.json", METADATA_DOCID_KEY="aidb_docid";
+    VOCABULARY_FILE = "vocabulary.json", METADATA_DOCID_KEY="aidb_docid", MIN_STOP_WORD_IDENTIFICATION_LENGTH = 5,
+    MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95;
 const IN_MEM_DBS = {};
 
 /**
@@ -54,13 +55,14 @@ exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_
     const _autosaveIfSelected = _ => {if (autosave) setTimeout(_=>exports.writeData(dbPath, db), autosave_frequency);}
 
     return {    // TODO: add stream ingestion
-        create: (document, metadata, override_lang) => {exports.create(document, metadata, override_lang||lang, db); 
-            _autosaveIfSelected();},
-        update: (oldmetadata, newmetadata, override_lang) => {exports.update(oldmetadata, newmetadata, 
-            override_lang||lang, db); _autosaveIfSelected();},
+        create: (document, metadata, override_lang) => {const result = exports.create(document, metadata, override_lang||lang, db); 
+            _autosaveIfSelected(); return result;},
+        update: (oldmetadata, newmetadata, override_lang) => {const result = exports.update(oldmetadata, newmetadata, 
+            override_lang||lang, db); _autosaveIfSelected(); return result;},
         query: (query, topK, filter_function, cutoff_score, ignoreCoord=false, override_lang) => exports.query(query, topK, filter_function, lang||override_lang, cutoff_score, ignoreCoord, db),
-        delete: (metadata, override_lang) => {exports.delete(metadata, override_lang||lang, db); _autosaveIfSelected();},
-        defragment: db => {exports.defragment(db); _autosaveIfSelected();},
+        delete: (metadata, override_lang) => {const result = exports.delete(metadata, override_lang||lang, db); 
+            _autosaveIfSelected(); return result;},
+        defragment: db => {const result = exports.defragment(db); _autosaveIfSelected(); return result;},
         flush: _ => exports.writeData(dbPath, db)   // writeData is async so the caller can await for the flush to complete
     }
 }
@@ -91,10 +93,10 @@ exports.ingest = exports.create = function(document, metadata, lang="en", db=EMP
     exports.delete(metadata, lang, db);   // if adding the same document, delete the old one first.
     const newDocument = {metadata: _deepclone(metadata), scores: {}, length: docWords.length, 
         date_created: datenow, date_modified: datenow}; db.tfidfDocStore[docHash] = newDocument;
-    const wordsCounted = {}; for (const word of docWords) {
+    const docsInDB = Object.keys(db.tfidfDocStore).length, wordsCounted = {}; for (const word of docWords) {
         const wordIndex = _getWordIndex(word, db, true); 
         if (!wordsCounted[wordIndex]) {
-            db.wordDocCounts[wordIndex] = db.wordDocCounts[wordIndex]?db.wordDocCounts[wordIndex]+1:1; 
+            db.wordDocCounts[wordIndex] = Math.min(db.wordDocCounts[wordIndex]?db.wordDocCounts[wordIndex]+1:1, docsInDB);  // db.wordDocCounts can't eevr be more than number of docs in the DB
             wordsCounted[wordIndex] = true; 
         }
         if (!newDocument.scores[wordIndex]) newDocument.scores[wordIndex] = {tfidf: 0, wordcount: 1};   // see _recalculateTFIDF below
@@ -120,8 +122,10 @@ exports.delete = function(metadata, lang="en", db=EMPTY_DB) {
 exports.update = (oldmetadata, newmetadata, lang="en", db=EMPTY_DB) => {
     const oldhash = _getDocumentHashIndex(oldmetadata, lang, db), newhash = _getDocumentHashIndex(newmetadata, lang, db),
         document = db.tfidfDocStore[oldhash];
+    if (!document) return false;    // not found
     document.metadata = _deepclone(newmetadata); document.date_modified = Date.now();
-    db.tfidfDocStore[newhash] = document; delete db.tfidfDocStore[oldhash];
+    delete db.tfidfDocStore[oldhash]; db.tfidfDocStore[newhash] = document; 
+    return newmetadata;
 }
 
 /**
@@ -205,10 +209,19 @@ function _getLangNormalizedWords(document, lang, db) {
             default: return DEFAULT_STEMMER;    
         }
     }
+    const _isStopWord = word => {   // can auto learn stop words if needed, language agnostic
+        const dbDocCount = Object.keys(db.tfidfDocStore).length;
+        if ((!db._stopwords) && (dbDocCount > MIN_STOP_WORD_IDENTIFICATION_LENGTH)) {
+            db._stopwords = []; for (const [wordIndex, docCount] of Object.entries(db.wordDocCounts)) 
+                if ((docCount/dbDocCount) > MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS) db._stopwords.push(_getDocWordFromIndex(wordIndex, db));
+        }
+
+        if (db._stopwords && db._stopwords.includes(word)) return true; else return false; 
+    }
     for (const segmentThis of Array.from(segmenter.segment(document))) if (segmentThis.isWordLike) {
         const depuntuatedLowerLangWord = segmentThis.segment.replace(punctuation, "").trim().toLocaleLowerCase(lang);
         const stemmedWord = _getStemmer(lang).stem(depuntuatedLowerLangWord);
-        words.push(stemmedWord);
+        if (!_isStopWord(stemmedWord)) words.push(stemmedWord);
     }
     return words;
 }
