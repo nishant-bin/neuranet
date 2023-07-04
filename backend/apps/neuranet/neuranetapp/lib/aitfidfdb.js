@@ -59,7 +59,8 @@ exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_
             _autosaveIfSelected(); return result;},
         update: (oldmetadata, newmetadata, override_lang) => {const result = exports.update(oldmetadata, newmetadata, 
             override_lang||lang, db); _autosaveIfSelected(); return result;},
-        query: (query, topK, filter_function, cutoff_score, ignoreCoord=false, override_lang) => exports.query(query, topK, filter_function, lang||override_lang, cutoff_score, ignoreCoord, db),
+        query: (query, topK, filter_function, cutoff_score, ignoreCoord=false, filter_metadata_last=false, override_lang) => 
+            exports.query(query, topK, filter_function, override_lang||lang, cutoff_score, ignoreCoord, filter_metadata_last, db),
         delete: (metadata, override_lang) => {const result = exports.delete(metadata, override_lang||lang, db); 
             _autosaveIfSelected(); return result;},
         defragment: db => {const result = exports.defragment(db); _autosaveIfSelected(); return result;},
@@ -131,12 +132,21 @@ exports.update = (oldmetadata, newmetadata, lang="en", db=EMPTY_DB) => {
 /**
  * TF.IDF search. Formula is document_score = coord(q/Q)*sum(tfidf(q,d)) - where q is the
  * set of query words found in the document and Q is the superset of all query words. And
- * d is the document.
+ * d is the document from the set D of all documents in the given database.
+ * @param {string} query The query
+ * @param {number} topK TopK where K is the max top documents to return. 
+ * @param {function} filter_function Filter function to filter the documents, runs pre-query
+ * @param {string} lang The language, defaults to "en" or English. Use ISO language codes.
+ * @param {number} cutoff_score The cutoff score relative to the top document. From 0 to 1.
+ * @param {boolean} ignoreCoord Do not use coord scores 
+ * @param {boolean} filter_metadata_last If set to true, then TD.IDF search is performed first, then metadata filtering. Default is false.
+ * @param {object} db The database to use
+ * @returns {Array} The resulting documents as an array of {metadata, plus other stats} objects.
  */
-exports.query = (query, topK, filter_function, lang="en", cutoff_score, ignoreCoord=false, db=EMPTY_DB) => {
+exports.query = (query, topK, filter_function, lang="en", cutoff_score, ignoreCoord=false, filter_metadata_last=false, db=EMPTY_DB) => {
     const queryWords = _getLangNormalizedWords(query, lang, db), scoredDocs = []; let highestScore = 0; 
     for (const document of Object.values(db.tfidfDocStore)) {
-        if (filter_function && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
+        if (filter_function && (!filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
         let scoreThisDoc = 0, queryWordsFoundInThisDoc = 0; if (query) for (const queryWord of queryWords) {
             const wordIndex = _getWordIndex(queryWord, db); if (!wordIndex) continue;  // query word not found in the vocabulary
             if (document.scores[wordIndex]) {scoreThisDoc += document.scores[wordIndex].tfidf; queryWordsFoundInThisDoc++;}
@@ -147,11 +157,14 @@ exports.query = (query, topK, filter_function, lang="en", cutoff_score, ignoreCo
             tfidf_score: scoreThisDoc/coordScore, query_tokens_found: queryWordsFoundInThisDoc, total_query_tokens: queryWords.length}); 
         if (scoreThisDoc > highestScore) highestScore = scoreThisDoc;
     }
-    if (!query) return scoredDocs;  // can't do cutoff, topK etc if no query was given
+    let filteredScoredDocs = []; if (filter_function && filter_metadata_last) { for (const scoredDoc of scoredDocs)   // post-filter here if indicated
+        if (filter_function(scoredDoc.metadata)) filteredScoredDocs.push(scoredDoc); } else filteredScoredDocs = scoredDocs;
+
+    if (!query) return filteredScoredDocs;  // can't do cutoff, topK etc if no query was given
     
-    scoredDocs.sort((doc1, doc2) => doc1.score < doc2.score ? 1 : doc1.score > doc2.score ? -1 : 0);
+    filteredScoredDocs.sort((doc1, doc2) => doc1.score < doc2.score ? 1 : doc1.score > doc2.score ? -1 : 0);
     // if cutoff_score is provided, then use it. Use highest score to balance the documents found for the cutoff
-    const cutoffDocs = []; if (cutoff_score) for (const scoredDocument of scoredDocs) {  
+    const cutoffDocs = []; if (cutoff_score) for (const scoredDocument of filteredScoredDocs) {  
         scoredDocument.cutoff_scaled_score = scoredDocument.score/highestScore; scoredDocument.highest_query_score = highestScore;
         if (scoredDocument.cutoff_scaled_score >= cutoff_score) cutoffDocs.push(scoredDocument);
     } else cutoffDocs = scoredDocs;
