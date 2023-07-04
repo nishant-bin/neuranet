@@ -29,7 +29,7 @@ exports.runTestsAsync = async function(argv) {
         const queryResult = await _testQuery(argv[2]);  // test query
         if (!queryResult) {_testFailed("Query failed."); return false;}
 
-        const newMetadata = {...createdMetadata, update_test: true};
+        const newMetadata = {...createdMetadata, update_test: true, neuranet_docid: "testdoc3"};
         const updatedMetadata = await _testUpdate(createdMetadata, newMetadata);  // test query
         if ((!updatedMetadata) || (!updatedMetadata.update_test)) {_testFailed("Update failed."); return false;}
     } catch (err) {_testFailed(err); return false;}

@@ -36,7 +36,7 @@ REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limi
 exports.init = _ => blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message));
 
 async function _handleFileEvent(message) {
-    const awaitPromisePublishFileEvent = async (promise, path, return_vectors, type, id, org) => {
+    const awaitPromisePublishFileEvent = async (promise, path, return_vectors, type, id, org) => {  // this is mostly to inform listeners about file being processed events
         // we have started processing a file
         blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, { type: NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSING, 
             result: true, vectors: undefined, subtype: type, id, org, path,
@@ -49,26 +49,26 @@ async function _handleFileEvent(message) {
     }
 
     if (message.type == XBIN_CONSTANTS.EVENTS.FILE_CREATED && (!message.isDirectory)) 
-        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.isxbin), 
+        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.isxbin, message.lang), 
             message.path, message.return_vectors, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.INGESTED, 
             message.id, message.org);
     else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_DELETED && (!message.isDirectory)) 
-        awaitPromisePublishFileEvent(_uningestfile(path.resolve(message.path), message.id, message.org), 
+        awaitPromisePublishFileEvent(_uningestfile(path.resolve(message.path), message.id, message.org, message.lang), 
             message.path, message.return_vectors, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.UNINGESTED,
             message.id, message.org);
     else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_RENAMED && (!message.isDirectory)) 
         awaitPromisePublishFileEvent(_renamefile(path.resolve(message.from), path.resolve(message.to), message.id, 
-            message.org), message.to, message.return_vectors, 
+            message.org, message.lang), message.to, message.return_vectors, 
             NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.RENAMED, message.id, message.org);
     else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_MODIFIED && (!message.isDirectory)) {
-        await _uningestfile(path.resolve(message.path), message.id, message.org);
-        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.isxbin), 
+        await _uningestfile(path.resolve(message.path), message.id, message.org, message.lang);
+        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.isxbin, message.lang), 
             message.path, message.return_vectors, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.MODIFIED,
             message.id, message.org);
     }
 }
 
-async function _ingestfile(pathIn, id, org, isxbin) {
+async function _ingestfile(pathIn, id, org, isxbin, lang) {
     if (!(await quota.checkQuota(id))) {
 		LOG.error(`Disallowing the ingest call for the path ${pathIn}, as the user ${id} of org ${org} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
@@ -86,13 +86,13 @@ async function _ingestfile(pathIn, id, org, isxbin) {
     }
 
     const metadata = {cmspath: await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn), id, 
-        date_created: Date.now(), fullpath: pathIn};
+        date_created: Date.now(), fullpath: pathIn}; metadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(pathIn);
 
     const _getExtractedTextStream = _ => _extractTextViaPluginsUsingStreams(
         isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn), aiModelObjectForEmbeddings, pathIn);
 
     // ingest into the TF.IDF DB
-    const tfidfDB = exports.getTFIDFDBForIDAndOrg(id, org); 
+    const tfidfDB = await exports.getTFIDFDBForIDAndOrg(id, org, lang); 
     try {tfidfDB.create(await _readFullFile(await _getExtractedTextStream()).toString("utf8"), metadata);}
     catch (err) {LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); }
 
@@ -115,23 +115,25 @@ async function _ingestfile(pathIn, id, org, isxbin) {
     }
 }
 
-async function _uningestfile(pathIn, id, org) {
+async function _uningestfile(pathIn, id, org, lang) {
     let vectordb; try { vectordb = await exports.getVectorDBForIDAndOrg(id, org) } catch(err) { 
         LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
     // delete from the TF.IDF DB
-    const tfidfDB = exports.getTFIDFDBForIDAndOrg(id, org), docsFound = tfidfDB.query(null, null, 
-        metadata => metadata.fullpath == pathIn), metadata = docsFound.length > 0 ? docsFound[0].metadata : null;
+    const docID = _getDocID(pathIn), tfidfDB = await exports.getTFIDFDBForIDAndOrg(id, org, lang), 
+        docsFound = tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
+        metadata = docsFound.length > 0 ? docsFound[0].metadata : null;
     if (!metadata) {
         LOG.error(`Document to uningest at path ${path} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
         return;
     } else tfidfDB.delete(metadata);
     
     // delete from the Vector DB
-    const queryResults = await vectordb.query(undefined, -1, undefined, metadata => metadata.fullpath == pathIn, true);
-    const vectorsDropped = []; if (queryResults) for (const result of queryResults) {
+    const queryResults = await vectordb.query(undefined, -1, undefined, 
+        metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID, true), vectorsDropped = []; 
+    if (queryResults) for (const result of queryResults) {
         try {await vectordb.delete(result.vector);} catch (err) {
             LOG.error(`Error dropping vector for file ${pathIn} for ID ${id} and org ${org} failed. Some vectors were dropped. Database needs recovery for this file.`);
             LOG.debug(`The vector which failed was ${result.vector}.`);
@@ -147,15 +149,17 @@ async function _uningestfile(pathIn, id, org) {
     return {vectors: vectorsDropped, reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
 }
 
-async function _renamefile(from, to, id, org) {
+async function _renamefile(from, to, id, org, lang) {
     // update TF.IDF DB 
-    const tfidfDB = exports.getTFIDFDBForIDAndOrg(id, org), docsFound = tfidfDB.query(null, null, 
-        metadata => metadata.fullpath == pathIn), metadata = docsFound.length > 0 ? docsFound[0].metadata : null;
+    const docID = _getDocID(pathIn), tfidfDB = await exports.getTFIDFDBForIDAndOrg(id, org, lang), 
+        docsFound = tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
+        metadata = docsFound.length > 0 ? docsFound[0].metadata : null, 
+        newmetadata = {...metadata, cmspath: cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path), fullpath: to}; 
+    newmetadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(to);
     if (!metadata) {
         LOG.error(`Document to rename at path ${path} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
         return;
-    } else tfidfDB.update(metadata, {...metadata, 
-        cmspath: cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path), fullpath: to});
+    } else tfidfDB.update(metadata, newmetadata);
 
     // update vector DB
     let vectordb; try { vectordb = await exports.getVectorDBForIDAndOrg(id, org); } catch(err) { 
@@ -163,12 +167,10 @@ async function _renamefile(from, to, id, org) {
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
-    const queryResults = await vectordb.query(undefined, -1, undefined, metadata => metadata.fullpath == from, true);
-    const vectorsRenamed = []; 
+    const queryResults = await vectordb.query(undefined, -1, undefined, 
+        metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID, true), vectorsRenamed = []; 
     if (queryResults) for (const result of queryResults) {
-        const metadata = result.metadata; metadata.cmspath = cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path); 
-            metadata.fullpath = to;
-        if (!vectordb.update(result.vector, metadata)) {
+        if (!vectordb.update(result.vector, newmetadata)) {
             LOG.error(`Renaming the vector file paths failed from path ${from} to path ${to} for ID ${id} and org ${org}.`);
             return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
         } else vectorsRenamed.push(result.vector); 
@@ -188,8 +190,8 @@ exports.getVectorDBForIDAndOrg = async function(id, org, embeddingsGenerator) {
 }
 
 exports.getTFIDFDBForIDAndOrg = async function(id, org, lang="en") {
-    const tfidfDB_ID = `${id}_${org}`, 
-        tfidfdb = await aitfidfdb.get_tfidf_db(`${NEURANET_CONSTANTS.AIDBPATH}/tfidfdb/${tfidfDB_ID}`, lang);
+    const tfidfDB_ID = `${id}_${org}`, tfidfdb = await aitfidfdb.get_tfidf_db(
+        `${NEURANET_CONSTANTS.AIDBPATH}/tfidfdb/${tfidfDB_ID}`, NEURANET_CONSTANTS.NEURANET_DOCID, lang);
     return tfidfdb;
 }
 
@@ -210,3 +212,5 @@ function _readFullFile(stream) {
         stream.on("error", err => reject(err));
     });
 }
+
+const _getDocID = pathIn => crypto.createHash("md5").update(path.resolve(pathIn)).digest("hex");
