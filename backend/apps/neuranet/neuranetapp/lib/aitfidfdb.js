@@ -88,6 +88,14 @@ exports.writeData = async (pathIn, db) => {
     await fspromises.writeFile(vocabulary, JSON.stringify(db.vocabulary));
 }
 
+/**
+ * Ingests a new document into the give database.
+ * @param {object} document The document to ingest. Must be a text string.
+ * @param {object} metadata The document's metadata. Must have document ID inside as a field - typically aidb_docid
+ * @param {string} lang The language for the database, defaults to English "en". Use ISO 2 character codes.
+ * @param {object} db The database to use
+ * @return {object} metadata The document's metadata.
+ */
 exports.ingest = exports.create = function(document, metadata, lang="en", db=EMPTY_DB) {
     const docHash = _getDocumentHashIndex(metadata, lang, db), docWords = _getLangNormalizedWords(document, lang, db),
         datenow = Date.now();
@@ -105,6 +113,7 @@ exports.ingest = exports.create = function(document, metadata, lang="en", db=EMP
     }
 
     _recalculateTFIDF(db);    // rebuild the entire TF.IDF score index for all documents, will fix the 0 scores for this document above too
+    return metadata;
 }
 
 exports.delete = function(metadata, lang="en", db=EMPTY_DB) {
