@@ -94,8 +94,10 @@ async function _ingestfile(pathIn, id, org, isxbin, lang) {
 
     // ingest into the TF.IDF DB
     const tfidfDB = await exports.getTFIDFDBForIDAndOrg(id, org, lang); 
-    try {tfidfDB.create(await _readFullFile(await _getExtractedTextStream()).toString("utf8"), metadata);}
-    catch (err) {LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); }
+    try {
+        const fileContents = (await _readFullFile(await _getExtractedTextStream())).toString("utf8");
+        tfidfDB.create(fileContents, metadata);
+    } catch (err) {LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); }
 
     // ingest into the vector DB
 	let ingestedVectors; try { 
