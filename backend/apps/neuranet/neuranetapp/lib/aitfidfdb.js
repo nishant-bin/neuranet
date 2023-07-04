@@ -9,7 +9,8 @@
  * then 4GB of RAM will be used etc. Eventually this should be sharded, eg if the data
  * is per user then each user's memory and DB should be sharded, as they are independent.
  * 
- * Should support all international languages. 
+ * Should support all international languages. Can autolearn stop words. Can autostem for 
+ * multiple languages.
  * 
  * Use only get_tfidf_db factory method to init and use an instance of this module to
  * ensure proper initialization, serialization etc. Other methods are exported to allow
@@ -39,6 +40,7 @@ const IN_MEM_DBS = {};
  * @param {boolean} no_stemming Whether or not to stem the words. Default is to stem. If true stemming won't be used.
  * @param {boolean} autosave Autosave the DB or not. Default is true.
  * @param {number} autosave_frequency The autosave frequency. Default is 500 ms. 
+ * @return {object} The database object.
  */
 exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_KEY, lang="en", no_stemming=false, autosave=true, autosave_frequency=500) {
     const normPath = path.resolve(dbPath); if (!IN_MEM_DBS[normPath]) {    // load the DB from the disk only if needed
