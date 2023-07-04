@@ -21,6 +21,7 @@ const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
@@ -31,7 +32,7 @@ const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
 const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
 
 REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
-	MODEL_DEFAULT = "embedding-openai-ada002";
+	MODEL_DEFAULT = "embedding-openai-ada002", DEFAULT_ID = "unknownid", DEFAULT_ORG = "unknownorg";
 
 exports.init = _ => blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message));
 
@@ -44,7 +45,7 @@ async function _handleFileEvent(message) {
         const result = await promise;   // wait for it to complete
         // we have finished processing this file
         blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED, 
-            path, result: result.result, vectors: return_vectors ? result.vectors : undefined, subtype: type, id, org,
+            path, result: result?result.result:false, vectors: return_vectors ? result.vectors : undefined, subtype: type, id, org,
             cmspath: await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path)});
     }
 
@@ -127,7 +128,7 @@ async function _uningestfile(pathIn, id, org, lang) {
         metadata = docsFound.length > 0 ? docsFound[0].metadata : null;
     if (!metadata) {
         LOG.error(`Document to uningest at path ${path} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
-        return;
+        return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
     } else tfidfDB.delete(metadata);
     
     // delete from the Vector DB
@@ -158,7 +159,7 @@ async function _renamefile(from, to, id, org, lang) {
     newmetadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(to);
     if (!metadata) {
         LOG.error(`Document to rename at path ${path} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
-        return;
+        return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     } else tfidfDB.update(metadata, newmetadata);
 
     // update vector DB
@@ -184,20 +185,22 @@ async function _renamefile(from, to, id, org, lang) {
 }
 
 exports.getVectorDBForIDAndOrg = async function(id, org, embeddingsGenerator) {
-    const vectorDB_ID = `${id}_${org}`, 
-        vectordb = await aivectordb.get_vectordb(`${NEURANET_CONSTANTS.AIDBPATH}/vectordb/${vectorDB_ID}`, embeddingsGenerator);
+    const vectordb = await aivectordb.get_vectordb(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org)}/vectordb`, 
+        embeddingsGenerator);
     return vectordb;
 }
 
 exports.getTFIDFDBForIDAndOrg = async function(id, org, lang="en") {
-    const tfidfDB_ID = `${id}_${org}`, tfidfdb = await aitfidfdb.get_tfidf_db(
-        `${NEURANET_CONSTANTS.AIDBPATH}/tfidfdb/${tfidfDB_ID}`, NEURANET_CONSTANTS.NEURANET_DOCID, lang);
+    const tfidfdb = await aitfidfdb.get_tfidf_db(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org)}/tfidfdb`, 
+        NEURANET_CONSTANTS.NEURANET_DOCID, lang);
     return tfidfdb;
 }
 
+const _getDBID = (id, org) => `${(id||DEFAULT_ID).toLowerCase()}_${(org||DEFAULT_ORG).toLowerCase()}`;
+
 async function _extractTextViaPluginsUsingStreams(inputstream, aiModelObject, filepath) {
     for (const textExtractor of aiModelObject.text_extraction_plugins) {
-        const extractedTextStream = await textExtractor.getContentStream(inputstream, filepath);
+        const extractedTextStream = await (NEURANET_CONSTANTS.getPlugin(textExtractor)).getContentStream(inputstream, filepath);
         if (extractedTextStream) return extractedTextStream;
     } 
 

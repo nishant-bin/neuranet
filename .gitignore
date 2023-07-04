@@ -6,7 +6,7 @@ backend/apps/*/db/*.db*
 backend/**/conf/hostname.json
 backend/apps/neuranet/tests/vector_db/**/*
 backend/apps/neuranet/tests/tfidf_db/**/*
-backend/apps/neuranet/db/vectordb/**/*
+backend/apps/neuranet/db/ai_db/**/*
 backend/apps/neuranet/xbinapp/drive/**/*
 backend/apps/neuranet/neuranetapp/temp/**/*
 !backend/apps/neuranet/neuranetapp/temp/_do_not_delete_

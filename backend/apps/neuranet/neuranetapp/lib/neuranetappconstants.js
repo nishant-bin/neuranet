@@ -17,9 +17,11 @@ exports.TEMPDIR = path.resolve(`${APPROOT}/temp`);
 exports.THIRDPARTYDIR = path.resolve(`${APPROOT}/3p`);
 exports.PLUGINSDIR = path.resolve(`${APPROOT}/plugins`);
 exports.DBDIR = path.resolve(LOGINAPP_CONSTANTS.DB_DIR);
-exports.AIDBPATH = path.resolve(`${LOGINAPP_CONSTANTS.APP_ROOT}/db/ai_db`);
+exports.AIDBPATH = path.resolve(`${LOGINAPP_CONSTANTS.DB_DIR}/ai_db`);
 
 exports.NEURANET_DOCID = "aidb_docid";
+
+exports.getPlugin = name => require(`${APPROOT}/plugins/${name}/${name}.js`);
 
 exports.NEURANETEVENT = "__org_monkshu_neuranet_event";
 exports.EVENTS = Object.freeze({VECTORDB_FILE_PROCESSING: "vectordb_file_processing", 
