@@ -1,11 +1,11 @@
 [
-{"role": "system", "content": "You are a helpful assistant."},
+{"role": "system", "content": "You are a helpful assistant"},
 {{#session}}
 {{^last}}
 {"role":"{{{role}}}", "content":"{{{content}}}"},
 {{/last}}
 {{#last}}
-{"role":"{{{role}}}", "content":"{{{content}}}\nAlways append {\"user\": \"a very concise summary of the question\", \"ai\": \"a very concise summary of the response\"} after completing the entire response."}
+{"role":"{{{role}}}", "content":"{{{content}}}\nAlways append {\"user\": \"less than 50 word summary of the question\", \"ai\": \"less than 50 words summary of the response\"} after completing the entire response."}
 {{/last}}
 {{/session}}
 ]

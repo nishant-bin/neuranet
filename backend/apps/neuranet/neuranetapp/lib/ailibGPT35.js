@@ -13,15 +13,15 @@ const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}", SAMPLE_MODULE_PREFIX = "module(", DEFAULT_GPT_CHARS_PER_TOKEN = 4,
     INTERNAL_TOKENIZER = "internal", DEFAULT_GPT_TOKENIZER = "gpt-tokenizer", DEFAULT_TOKEN_UPLIFT = 1.05;
 
-exports.process = async function(data, promptFile, apiKey, model) {
-    const prompt = mustache.render(await aiutils.getPrompt(promptFile), data).replace(/\r\n/gm,"\n");   // create the prompt
+exports.process = async function(data, promptOrPromptFile, apiKey, model, dontInflatePrompt) {
+    const prompt = dontInflatePrompt ? promptOrPromptFile : mustache.render(await aiutils.getPrompt(promptOrPromptFile), data).replace(/\r\n/gm,"\n");   // create the prompt
     const modelObject = await aiutils.getAIModel(model); 
     if (!modelObject) { LOG.error(`Bad model object - ${modelObject}.`); return null; }
 
     const tokencount_request = await exports.countTokens(prompt, modelObject.request.model, 
         modelObject.token_approximation_uplift, modelObject.tokenizer);
     if (tokencount_request > modelObject.request.max_tokens - 1) {
-        LOG.error(`Request too large for the model's context length - the token count is ${tokencount_request}, the model's max context length is ${modelObject.request.model}.`); 
+        LOG.error(`Request too large for the model's context length - the token count is ${tokencount_request}, the model's max context length is ${modelObject.request.max_tokens}.`); 
         LOG.error(`The request prompt was ${JSON.stringify(prompt)}`);
         return null; 
     } 

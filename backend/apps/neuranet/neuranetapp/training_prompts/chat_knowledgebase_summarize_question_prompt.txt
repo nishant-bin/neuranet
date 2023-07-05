@@ -1,0 +1,9 @@
+Given the following conversation and a question, rephrase the question to be a standalone question.
+Chat History:
+{{#session}}
+{{{role}}}: {{{content}}}
+{{/session}}
+
+Question: {{{question}}}
+
+Standalone question:
