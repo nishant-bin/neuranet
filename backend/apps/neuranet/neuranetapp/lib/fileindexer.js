@@ -194,7 +194,7 @@ exports.getVectorDBForIDAndOrg = async function(id, org, embeddingsGenerator) {
 
 exports.getTFIDFDBForIDAndOrg = async function(id, org, lang="en") {
     const tfidfdb = await aitfidfdb.get_tfidf_db(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org)}/tfidfdb`, 
-        NEURANET_CONSTANTS.NEURANET_DOCID, lang);
+        NEURANET_CONSTANTS.NEURANET_DOCID, lang, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`);
     return tfidfdb;
 }
 

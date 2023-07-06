@@ -1,0 +1,207 @@
+NJ “Social distancing meets
+NG digital proximity to ensure
+ur continued productivity
+
+WHO ARE WE?
+
+Teleworkr
+
+About Us
+
+TekMonks is disrupting the IT industry by offering cutting edge solutions in everything
+from true Al Cybersecurity to custom built software for our clients. We are consistently
+
+bringing our clients innovative software solutions today that is the technology foundation
+of the future.
+
+Teleworkr
+
+— Quick and easy software to allow access to
+company computers and applications
+
+— no hackers taking advantage of remote access,
+Multi-factor authentication
+
+— Can see coworkers working, managers can
+see their team working. So the productivity of the company doesn't
+get impacted.
+
+— Quick one day to setup
+
+— Virtual badge in, badge out, proof of work done — for compliance
+and administration purposes.
+
+Teleworkr
+
+______ My Status
+
+» Working
+
+» Coffee Break
+
+» Sick but Working
+» Not Working
+
+Sam Mac Ram Xiu®
+Online since BAM Online since 8:45AM Online since 9AM Online since 10AM
+Status: Working Status: Coffee Break Status: Working Status: Offline
+
+My Deskto
+OSTEO P O 3 3
+OOOO
+
+Teleworkr
+
+Company Firewall
+No need to open
+any ports
+
+Teleworkr
+Agent
+
+User Reflection
+to talk
+
+Company
+Desktop
+
+Teleworkr
+
+Just install the Teleworkr Agent on the user's
+desktops via a central push or the user's can
+self install.
+
+No need to modify the corporate network.
+
+Teleworkr
+
+No ports opened in the corporate firewall, no risk. As no one can
+access the desktops. This is the advantage of using reflection.
+
+Teleworkr supports Multi-factor for logins. So people logging in
+from home are strongly authenticated.
+
+No need to make any changes to the corporate network,
+just install Teleworkr agent on in-house desktops or servers.
+
+Teleworkr's admin console allows the company to centrally
+manage which users have access and who does not.
+
+100% compatible with Windows OS. Not some proprietary protocol.
+RDP is sent over fully encrypted tunnel using reflection. So again
+
+doesn't allow anyone on the internet to access anything other than
+authorized users.
+
+No need for additional licensing as each Windows license includes
+2 RDP licenses for free.
+VPN Citrix
+
+Teleworkr
+
+a Secures against remote data transfer and files X XX
+
+Protects company against exposure to potential malware
+on personal devices
+
+Protects company against exposure to other vulnerable
+devices on the same Network at Home
+
+Protects against insecure Home Wi-Fi network
+
+Connection via 0 open ports
+
+X X X X
+X X X X
+
+Supports Multi-factor Authentication
+
+Complete Virtual Office (recording login / logoff times,
+taking screenshots) XX XX
+
+Simple Installation XX XX
+
+AnyDesk
+
+Teleworkr
+
+ AnyDeskc VS Teloworke Mobile to PC Remote Control
+
+Transmission of Audio and Video
+
+Complete Virtual Office
+(times audit, taking screenshots)
+
+Centralized Management - Admin control
+
+Prevents fluctuation in remote desktop’s resolution.
+
+Employee Location Tracking using IP
+
+Microsoft's Remote Desktop Protocol for utmost Secu-
+rity & Performance
+
+X X X X X
+
+AnyDesk
+
+Teleworkr
+
+Connection via 0 open ports - No exposure to the Internet X
+
+Protects company against exposure to potential malware
+on personal devices
+
+Protects against insecure Wi-Fi network
+
+Supports Multi-factor Authentication
+(including Biometric Login)
+
+Secures against remote data transfer and files
+
+Secure file transfer and tracking
+
+X X X X X
+
+Teleworkr
+
+Access company's desktop securely
+
+Multi Factor Authentication
+
+Centralized Management
+
+Time Audit
+
+Screenshots as proof of work
+
+Employee Location Tracking
+
+Ability to define office hours and rules
+
+Secure file transfer and tracking
+
+Basic
+
+X X X X X
+
+Pro
+
+X X X
+Teleworkr BUY ALL THESE OR BUY THIS INSTEAD
+
+@
+J
+
+ZOOM CITRIX
+
+Spyware MFA
+for tacking F Portal @® VPN
+
+1-year project to
+integrate them all
+
+22 Dropbox
+
+A
+

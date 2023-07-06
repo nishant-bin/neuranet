@@ -36,6 +36,10 @@
  * will use (cores-1)*memory (see memory calculations above) if enabled even for 
  * one sub-database.
  * 
+ * The module supports multiple databases, a strategy to shard would be to break logical
+ * documents types into independent databases, shard them over multiple machines. This 
+ * would significantly reduce per machine memory needed, and significantly boost performance.
+ * 
  * TODO: An upcoming new algorithm for fast, 100% accurate exhaustive search would be
  * added by Tekmonks once testing is completed. Making this the easiest, and a really 
  * fast vector database for all types of production loads and AI applications.

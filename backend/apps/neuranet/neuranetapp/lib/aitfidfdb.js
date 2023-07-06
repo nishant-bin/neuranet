@@ -9,6 +9,10 @@
  * then 4GB of RAM will be used etc. Eventually this should be sharded, eg if the data
  * is per user then each user's memory and DB should be sharded, as they are independent.
  * 
+ * The module supports multiple databases, a strategy to shard would be to break logical
+ * documents types into independent databases, shard them over multiple machines. This 
+ * would significantly reduce per machine memory needed, and significantly boost performance.
+ * 
  * Should support all international languages. Can autolearn stop words. Can autostem for 
  * multiple languages.
  * 
@@ -29,7 +33,7 @@ const LOG = global.LOG || console;  // allow independent operation
 
 const EMPTY_DB = {tfidfDocStore: {}, wordDocCounts: {}, vocabulary: []}, INDEX_FILE = "index.json", 
     VOCABULARY_FILE = "vocabulary.json", METADATA_DOCID_KEY="aidb_docid", MIN_STOP_WORD_IDENTIFICATION_LENGTH = 5,
-    MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95;
+    MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95, DEFAULT_MAX_COORD_BOOST = 0.10;
 const IN_MEM_DBS = {};
 
 /**
@@ -37,12 +41,15 @@ const IN_MEM_DBS = {};
  * @param {string} dbPath The save path for the database
  * @param {string} metadata_docid_key The document ID key inside document metadata. Default is "aidb_docid"
  * @param {string} lang The language for the DB. Default is English.
+ * @param {string} stopwords_path The path to the ISO stopwords file, if available. Format is {"iso_language_code":[array of stop words],...}
+ *                                If set to null (not provided) then the DB will try to auto learn stop words.
  * @param {boolean} no_stemming Whether or not to stem the words. Default is to stem. If true stemming won't be used.
  * @param {boolean} autosave Autosave the DB or not. Default is true.
  * @param {number} autosave_frequency The autosave frequency. Default is 500 ms. 
  * @return {object} The database object.
  */
-exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_KEY, lang="en", no_stemming=false, autosave=true, autosave_frequency=500) {
+exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_KEY, lang="en", 
+        stopwords_path, no_stemming=false, autosave=true, autosave_frequency=500) {
     const normPath = path.resolve(dbPath); if (!IN_MEM_DBS[normPath]) {    // load the DB from the disk only if needed
         try { await fspromises.access(dbPath); } catch (err) {    // check the DB path exists or create it etc.
             if (err.code == "ENOENT") { 
@@ -53,6 +60,7 @@ exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_
         IN_MEM_DBS[normPath] = await exports.loadData(normPath);
     }
     const db = IN_MEM_DBS[normPath]; db.METADATA_DOCID_KEY = metadata_docid_key; db.no_stemming = no_stemming;
+    if (stopwords_path) db._stopwords = require(stopwords_path)[lang];
 
     const _autosaveIfSelected = _ => {if (autosave) setTimeout(_=>exports.writeData(dbPath, db), autosave_frequency);}
 
@@ -61,8 +69,8 @@ exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_
             _autosaveIfSelected(); return result;},
         update: (oldmetadata, newmetadata, override_lang) => {const result = exports.update(oldmetadata, newmetadata, 
             override_lang||lang, db); _autosaveIfSelected(); return result;},
-        query: (query, topK, filter_function, cutoff_score, ignoreCoord=false, filter_metadata_last=false, override_lang) => 
-            exports.query(query, topK, filter_function, override_lang||lang, cutoff_score, ignoreCoord, filter_metadata_last, db),
+        query: (query, topK, filter_function, cutoff_score, options, override_lang) => 
+            exports.query(query, topK, filter_function, override_lang||lang, cutoff_score, options, db),
         delete: (metadata, override_lang) => {const result = exports.delete(metadata, override_lang||lang, db); 
             _autosaveIfSelected(); return result;},
         defragment: db => {const result = exports.defragment(db); _autosaveIfSelected(); return result;},
@@ -149,33 +157,39 @@ exports.update = (oldmetadata, newmetadata, lang="en", db=EMPTY_DB) => {
  * @param {function} filter_function Filter function to filter the documents, runs pre-query
  * @param {string} lang The language, defaults to "en" or English. Use ISO language codes.
  * @param {number} cutoff_score The cutoff score relative to the top document. From 0 to 1.
- * @param {boolean} ignoreCoord Do not use coord scores 
- * @param {boolean} filter_metadata_last If set to true, then TD.IDF search is performed first, then metadata filtering. Default is false.
+ * @param {object} options An object with values below
+ *                  {
+ *                      ignoreCoord: Do not use coord scores, 
+ *                      filter_metadata_last: If set to true, then TD.IDF search is performed first, 
+ *                                            then metadata filtering. Default is false,
+ *                      max_coord_boost: Maximum boost from coord scores. Default is 10%.
+ *                  }
  * @param {object} db The database to use
  * @returns {Array} The resulting documents as an array of {metadata, plus other stats} objects.
  */
-exports.query = (query, topK, filter_function, lang="en", cutoff_score, ignoreCoord=false, filter_metadata_last=false, db=EMPTY_DB) => {
+exports.query = (query, topK, filter_function, lang="en", cutoff_score, options={}, db=EMPTY_DB) => {
     const queryWords = _getLangNormalizedWords(query, lang, db), scoredDocs = []; let highestScore = 0; 
     for (const document of Object.values(db.tfidfDocStore)) {
-        if (filter_function && (!filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
+        if (filter_function && (!options.filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
         let scoreThisDoc = 0, queryWordsFoundInThisDoc = 0; if (query) for (const queryWord of queryWords) {
             const wordIndex = _getWordIndex(queryWord, db); if (!wordIndex) continue;  // query word not found in the vocabulary
             if (document.scores[wordIndex]) {scoreThisDoc += document.scores[wordIndex].tfidf; queryWordsFoundInThisDoc++;}
         }
-        const coordScore = (query && (!ignoreCoord)) ? queryWordsFoundInThisDoc/queryWords.length : 1;
+        const max_coord_boost = options.max_coord_boost||DEFAULT_MAX_COORD_BOOST, 
+            coordScore = (query && (!options.ignoreCoord)) ? 1+(max_coord_boost*queryWordsFoundInThisDoc/queryWords.length) : 1;
         scoreThisDoc = scoreThisDoc*coordScore; // add in coord scoring
         scoredDocs.push({metadata: document.metadata, score: scoreThisDoc, coord_score: coordScore, 
             tfidf_score: scoreThisDoc/coordScore, query_tokens_found: queryWordsFoundInThisDoc, total_query_tokens: queryWords.length}); 
         if (scoreThisDoc > highestScore) highestScore = scoreThisDoc;
     }
-    let filteredScoredDocs = []; if (filter_function && filter_metadata_last) { for (const scoredDoc of scoredDocs)   // post-filter here if indicated
+    let filteredScoredDocs = []; if (filter_function && options.filter_metadata_last) { for (const scoredDoc of scoredDocs)   // post-filter here if indicated
         if (filter_function(scoredDoc.metadata)) filteredScoredDocs.push(scoredDoc); } else filteredScoredDocs = scoredDocs;
 
     if (!query) return filteredScoredDocs;  // can't do cutoff, topK etc if no query was given
     
     filteredScoredDocs.sort((doc1, doc2) => doc1.score < doc2.score ? 1 : doc1.score > doc2.score ? -1 : 0);
     // if cutoff_score is provided, then use it. Use highest score to balance the documents found for the cutoff
-    const cutoffDocs = []; if (cutoff_score) for (const scoredDocument of filteredScoredDocs) {  
+    let cutoffDocs = []; if (cutoff_score) for (const scoredDocument of filteredScoredDocs) {  
         scoredDocument.cutoff_scaled_score = scoredDocument.score/highestScore; scoredDocument.highest_query_score = highestScore;
         if (scoredDocument.cutoff_scaled_score >= cutoff_score) cutoffDocs.push(scoredDocument);
     } else cutoffDocs = scoredDocs;
@@ -235,17 +249,21 @@ function _getLangNormalizedWords(document, lang, db) {
     }
     const _isStopWord = word => {   // can auto learn stop words if needed, language agnostic
         const dbDocCount = Object.keys(db.tfidfDocStore).length;
-        if ((!db._stopwords) && (dbDocCount > MIN_STOP_WORD_IDENTIFICATION_LENGTH)) {
-            db._stopwords = []; for (const [wordIndex, docCount] of Object.entries(db.wordDocCounts)) 
-                if ((docCount/dbDocCount) > MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS) db._stopwords.push(_getDocWordFromIndex(wordIndex, db));
+        if ((!db._stopwords) && (dbDocCount > MIN_STOP_WORD_IDENTIFICATION_LENGTH)) {   // auto learn stop words if possible
+            db._stopwords = []; for (const [thisWordIndex, thisWordDocCount] of Object.entries(db.wordDocCounts)) 
+                if ((thisWordDocCount/dbDocCount) > MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS) 
+                    db._stopwords.push(_getDocWordFromIndex(thisWordIndex, db));
         }
-
-        if (db._stopwords && db._stopwords.includes(word)) return true; else return false; 
+        
+        if (!db._stopwords) return false;   // nothing to do
+        const isStopWord = db._stopwords.includes(word); 
+        return isStopWord;
     }
     for (const segmentThis of Array.from(segmenter.segment(document))) if (segmentThis.isWordLike) {
         const depuntuatedLowerLangWord = segmentThis.segment.replace(punctuation, "").trim().toLocaleLowerCase(lang);
+        if (_isStopWord(depuntuatedLowerLangWord)) continue;    // drop stop words
         const stemmedWord = _getStemmer(lang).stem(depuntuatedLowerLangWord);
-        if (!_isStopWord(stemmedWord)) words.push(stemmedWord);
+        words.push(stemmedWord);
     }
     return words;
 }

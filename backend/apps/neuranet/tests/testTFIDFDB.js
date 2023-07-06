@@ -51,7 +51,7 @@ async function _testIngestion(pathIn, docindex) {
 
 async function _testQuery(query) {
     const tfidfDB = await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG, "en");  
-    const queryResult = tfidfDB.query(query, 3, null, 0.6);
+    const queryResult = tfidfDB.query(query, 3, null, 0);
     if (!queryResult) return null;
     const logMsg = `Query result is ${JSON.stringify(queryResult, null, 2)}.\n`; LOG.info(logMsg); LOG.console(logMsg);
     return queryResult;
@@ -64,6 +64,7 @@ async function _testUpdate(metadataOld, metadataNew) {
 
 async function _getTFIDFDBForIDAndOrg(id, org, lang="en") {
     const tfidfDB_ID = `${id}_${org}`, 
-        tfidfdb = await aitfidfdb.get_tfidf_db(`${__dirname}/tfidf_db/${tfidfDB_ID}`, "neuranet_docid", lang);
+        tfidfdb = await aitfidfdb.get_tfidf_db(`${__dirname}/tfidf_db/${tfidfDB_ID}`, 
+            NEURANET_CONSTANTS.NEURANET_DOCID, lang, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`);
     return tfidfdb;
 }
