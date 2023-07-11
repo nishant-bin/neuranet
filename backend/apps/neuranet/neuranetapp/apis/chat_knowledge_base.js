@@ -23,10 +23,10 @@ const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const chatAPI = require(`${NEURANET_CONSTANTS.APIDIR}/chat.js`);
 const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
+const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const simplellm = require(`${NEURANET_CONSTANTS.LIBDIR}/simplellm.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
-const fileindexer = require(`${NEURANET_CONSTANTS.LIBDIR}/fileindexer.js`);
 
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
 		LIMIT: "limit", NOKNOWLEDGE: "noknowledge"}, CHAT_MODEL_DEFAULT = "chat-knowledgebase-gpt35-turbo", 
@@ -59,7 +59,7 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 	
 	// strategy is to first find matching documents using TF.IDF and then use their vectors for a sematic 
 	// search to build the in-context prompt training documents
-	const tfidfDB = await fileindexer.getTFIDFDBForIDAndOrg(id, org, jsonReq.lang);
+	const tfidfDB = await aidbfs.getTFIDFDBForIDAndOrg(id, org, jsonReq.lang);
 	const tfidfScoredDocuments = tfidfDB.query(questionToSearchAndAsk, aiModelObjectForChat.topK_tfidf, null, 
 		aiModelObjectForChat.cutoff_score_tfidf);	// search using TF.IDF for matching documents first - only will use semantic search on vectors from these documents later
 	if (tfidfScoredDocuments.length == 0) return {reason: REASONS.NOKNOWLEDGE, ...CONSTANTS.FALSE_RESULT};	// no knowledge
@@ -78,7 +78,7 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 	}
 
-	let vectordb; try { vectordb = await fileindexer.getVectorDBForIDAndOrg(id, org, embeddingsGenerator) } catch(err) { 
+	let vectordb; try { vectordb = await aidbfs.getVectorDBForIDAndOrg(id, org, embeddingsGenerator) } catch(err) { 
 		LOG.error(`Can't instantiate the vector DB for ID ${id}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
 	}

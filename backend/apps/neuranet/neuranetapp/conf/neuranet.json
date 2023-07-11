@@ -135,6 +135,7 @@
                 "model": "text-embedding-ada-002", 
                 "input":"${__ORG_NEURANET_PROMPT__}"
             },
+            "file_handling_plugins": ["webspider"],
             "text_extraction_plugins": ["tika"],
             "split_separators": ["\n\n","\n"," "],
             "overlap": 0,

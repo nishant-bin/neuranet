@@ -172,7 +172,7 @@ exports.query = (query, topK, filter_function, lang="en", cutoff_score, options=
     for (const document of Object.values(db.tfidfDocStore)) {
         if (filter_function && (!options.filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
         let scoreThisDoc = 0, queryWordsFoundInThisDoc = 0; if (query) for (const queryWord of queryWords) {
-            const wordIndex = _getWordIndex(queryWord, db); if (!wordIndex) continue;  // query word not found in the vocabulary
+            const wordIndex = _getWordIndex(queryWord, db); if (wordIndex == null) continue;  // query word not found in the vocabulary
             if (document.scores[wordIndex]) {scoreThisDoc += document.scores[wordIndex].tfidf; queryWordsFoundInThisDoc++;}
         }
         const max_coord_boost = options.max_coord_boost||DEFAULT_MAX_COORD_BOOST, 
