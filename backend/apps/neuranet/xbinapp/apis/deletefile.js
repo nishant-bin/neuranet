@@ -26,6 +26,13 @@ exports.doService = async (jsonReq, _, headers) => {
 	} catch (err) {LOG.error(`Error deleting  path: ${fullpath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}
 }
 
+exports.deleteFile = async (headersOrIDAndOrg, path) => {
+	const ip = utils.getLocalIPs()[0], id = headersOrIDAndOrg.xbin_id||cms.getID(headers), 
+		org = headersOrIDAndOrg.xbin_org||cms.getOrg(headers);
+	await rmrf(path, id, org, ip);
+	return true;
+}
+
 async function rmrf(path, id, org, ip) {
 	const _deleteFile = async path => {
 		await unlinkFileAndRemoveFromDB(path); 

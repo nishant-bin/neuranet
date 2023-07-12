@@ -32,6 +32,10 @@ exports.init = _ => {
 	});
 }
 
+/**
+ * @param {object} headersOrLoginIDAndOrg HTTP request headers or {xbin_id, xbin_org} object
+ * @returns The CMS root for this user.
+ */
 exports.getCMSRoot = async function(headersOrLoginIDAndOrg) {
 	const headersOrLoginIDAndOrgIsHeaders = !(headersOrLoginIDAndOrg.xbin_org &&  headersOrLoginIDAndOrg.xbin_id);
 	const loginID = headersOrLoginIDAndOrgIsHeaders ? login.getID(headersOrLoginIDAndOrg) : headersOrLoginIDAndOrg.xbin_id; 

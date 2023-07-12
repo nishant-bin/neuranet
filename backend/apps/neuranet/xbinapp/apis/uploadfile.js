@@ -23,9 +23,7 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 	
 	LOG.debug("Got uploadfile request for path: " + jsonReq.path);
 
-	const transferID = jsonReq.transfer_id || Date.now(), 
-		fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${jsonReq.path}`), 
-		temppath = path.resolve(`${fullpath}${transferID}${XBIN_CONSTANTS.XBIN_TEMP_FILE_SUFFIX}`);
+	const transferID = jsonReq.transfer_id || Date.now(), fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${jsonReq.path}`);
 	if (!await cms.isSecure(headers, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 
 	try {
@@ -34,28 +32,37 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 		const bufferToWrite = Buffer.from(matches[1], "base64");
 		if (!(await quotas.checkQuota(headers, bufferToWrite.length)).result) throw (`Quota is full write failed for path ${fullpath}.`);
         
-		if (jsonReq.startOfFile) {	// delete the old files if they exist
-			try {await fspromises.access(fullpath); await fspromises.unlink(fullpath);} catch (err) {};
-			try {deleteDiskFileMetadata(fullpath);} catch (err) {};
-		} 
-	
-		await _appendOrWrite(temppath, bufferToWrite, jsonReq.startOfFile, jsonReq.endOfFile, exports.isZippable(fullpath));
-		if (jsonReq.endOfFile) {
-			await fspromises.rename(temppath, fullpath);
-			blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: fullpath, 
-				ip: utils.getLocalIPs()[0], id: cms.getID(headers), org: cms.getOrg(headers), isxbin: true});
-		}
+		await exports.writeChunk(headers, transferID, fullpath, bufferToWrite, jsonReq.startOfFile, jsonReq.endOfFile);
 
-		await exports.updateFileStats(fullpath, jsonReq.path, bufferToWrite.length, jsonReq.endOfFile, XBIN_CONSTANTS.XBIN_FILE);
-
-		LOG.debug(`Added new ${bufferToWrite.length} bytes to the file at eventual path ${fullpath} using temp path ${temppath}.`);
-        
 		return {result: true, transfer_id: transferID};
 	} catch (err) {
 		LOG.error(`Error writing to path: ${fullpath}, error is: ${err}`); 
 		try {await fspromises.unlink(fullpath); await exports.deleteDiskFileMetadata(fullpath)} catch(err) {};
 		return CONSTANTS.FALSE_RESULT;
 	}
+}
+
+exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath, chunk, startOfFile, endOfFile) {
+	const temppath = path.resolve(`${fullpath}${transferid}${XBIN_CONSTANTS.XBIN_TEMP_FILE_SUFFIX}`)
+
+	if (startOfFile) {	// delete the old files if they exist
+		try {await fspromises.access(fullpath); await fspromises.unlink(fullpath);} catch (err) {};
+		try {deleteDiskFileMetadata(fullpath);} catch (err) {};
+	} 
+
+	await _appendOrWrite(temppath, chunk, startOfFile, endOfFile, exports.isZippable(fullpath));
+	LOG.debug(`Added new ${chunk.length} bytes to the file at eventual path ${fullpath} using temp path ${temppath}.`);
+	if (endOfFile) {
+		await fspromises.rename(temppath, fullpath);
+		LOG.info(`Finished uploading file ${fullpath} successfully. Total file size is ${(await exports.getFileStats(fullpath)).size} bytes.`);
+		blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: fullpath, 
+			ip: utils.getLocalIPs()[0], id: cms.getID(headers), org: cms.getOrg(headers), isxbin: true});
+	}
+
+	const cmspath = cms.getCMSRootRelativePath(headersOrLoginIDAndOrg, fullpath)
+	await exports.updateFileStats(fullpath, cmspath, chunk.length, endOfFile, XBIN_CONSTANTS.XBIN_FILE);
+
+	return true;
 }
 
 exports.writeUTF8File = async function (headers, inpath, data) {
