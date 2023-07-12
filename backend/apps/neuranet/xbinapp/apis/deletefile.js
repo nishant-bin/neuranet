@@ -18,6 +18,13 @@ exports.doService = async (jsonReq, _, headers) => {
 	const fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${jsonReq.path}`);
 	if (!await cms.isSecure(headers, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 
+	try {await fspromises.access(fullpath)} catch (err) { 
+		if (err.code == "ENOENT") {
+			LOG.warn(`Told to delete file ${fullpath}, which doesn't exist. Ignoring.`);
+			return CONSTANTS.TRUE_RESULT;
+		}
+	}
+
 	const ip = utils.getLocalIPs()[0], id = cms.getID(headers), org = cms.getOrg(headers);
 
 	try {
@@ -26,10 +33,10 @@ exports.doService = async (jsonReq, _, headers) => {
 	} catch (err) {LOG.error(`Error deleting  path: ${fullpath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}
 }
 
-exports.deleteFile = async (headersOrIDAndOrg, path) => {
+exports.deleteFile = async (headersOrIDAndOrg, fullpath) => {
 	const ip = utils.getLocalIPs()[0], id = headersOrIDAndOrg.xbin_id||cms.getID(headers), 
 		org = headersOrIDAndOrg.xbin_org||cms.getOrg(headers);
-	await rmrf(path, id, org, ip);
+	await rmrf(fullpath, id, org, ip);
 	return true;
 }
 

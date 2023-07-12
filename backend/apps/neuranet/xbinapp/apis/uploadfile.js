@@ -36,7 +36,7 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 
 		return {result: true, transfer_id: transferID};
 	} catch (err) {
-		LOG.error(`Error writing to path: ${fullpath}, error is: ${err}`); 
+		LOG.error(`Error writing to path: ${fullpath}, error is: ${err}, stack is ${err.stack}`); 
 		try {await fspromises.unlink(fullpath); await exports.deleteDiskFileMetadata(fullpath)} catch(err) {};
 		return CONSTANTS.FALSE_RESULT;
 	}
@@ -54,12 +54,12 @@ exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath
 	LOG.debug(`Added new ${chunk.length} bytes to the file at eventual path ${fullpath} using temp path ${temppath}.`);
 	if (endOfFile) {
 		await fspromises.rename(temppath, fullpath);
-		LOG.info(`Finished uploading file ${fullpath} successfully. Total file size is ${(await exports.getFileStats(fullpath)).size} bytes.`);
+		LOG.info(`Finished uploading file ${fullpath} successfully.`);
 		blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: fullpath, 
-			ip: utils.getLocalIPs()[0], id: cms.getID(headers), org: cms.getOrg(headers), isxbin: true});
+			ip: utils.getLocalIPs()[0], id: cms.getID(headersOrLoginIDAndOrg), org: cms.getOrg(headersOrLoginIDAndOrg), isxbin: true});
 	}
 
-	const cmspath = cms.getCMSRootRelativePath(headersOrLoginIDAndOrg, fullpath)
+	const cmspath = await cms.getCMSRootRelativePath(headersOrLoginIDAndOrg, fullpath)
 	await exports.updateFileStats(fullpath, cmspath, chunk.length, endOfFile, XBIN_CONSTANTS.XBIN_FILE);
 
 	return true;
@@ -205,7 +205,7 @@ exports.isFileConsistentOnDisk = async fullpath => {
 	} catch (err) {return false;}
 }
 
-exports.normalizeRemotePath = path => path.replace(/\\+/g, "/").replace(/\/+/g, "/");
+exports.normalizeRemotePath = pathIn => pathIn.replace(/\\+/g, "/").replace(/\/+/g, "/");
 
 async function _getSecureFullPath(headers, inpath) {
 	const fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${inpath}`);

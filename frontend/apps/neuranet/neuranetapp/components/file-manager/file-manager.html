@@ -88,6 +88,8 @@ div#filelistingscontainer {
     align-content: flex-start;
     flex: 1;
     width: 100%;
+    overflow: scroll;
+    padding-bottom: 1em;
 }
 
 div#filelistingscontainer div#operations {
@@ -126,6 +128,7 @@ div#filelistingscontainer div.filemanagerentries > span {
     text-overflow: ellipsis;
     overflow: hidden;
     width: 100%;
+    white-space: nowrap;
 }
 
 div#informationbox {
@@ -259,6 +262,7 @@ div#progress > span#name {
     overflow: hidden;
     text-overflow: ellipsis;
     display: inline-block;
+    white-space: nowrap;
 }
 div#progress > span#bar, div#progress > span#bar > span#percent {
     width: 55%;
