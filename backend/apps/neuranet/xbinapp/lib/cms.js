@@ -59,7 +59,7 @@ exports.getID = headers => login.getID(headers);
 
 exports.getOrg = headers => login.getOrg(headers);
 
-exports.isSecure = async (headers, path) => XBIN_CONSTANTS.isSubdirectory(path, await this.getCMSRoot(headers));
+exports.isSecure = async (headersOrLoginIDAndOrg, path) => XBIN_CONSTANTS.isSubdirectory(path, await this.getCMSRoot(headersOrLoginIDAndOrg));
 
 const _getPathForIDAndOrg = (id, org) => `${XBIN_CONSTANTS.CONF.CMS_ROOT}/${_convertToPathFriendlyString(org.toLowerCase())}/${_convertToPathFriendlyString(id.toLowerCase())}`;
 

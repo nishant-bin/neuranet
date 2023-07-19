@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const zlib = require("zlib");
 const fspromises = fs.promises;
+const stream = require("stream");
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
@@ -34,11 +35,30 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
         
 		await exports.writeChunk(headers, transferID, fullpath, bufferToWrite, jsonReq.startOfFile, jsonReq.endOfFile);
 
-		return {result: true, transfer_id: transferID};
+		return {...CONSTANTS.TRUE_RESULT, transfer_id: transferID};
 	} catch (err) {
 		LOG.error(`Error writing to path: ${fullpath}, error is: ${err}, stack is ${err.stack}`); 
 		try {await fspromises.unlink(fullpath); await exports.deleteDiskFileMetadata(fullpath)} catch(err) {};
-		return CONSTANTS.FALSE_RESULT;
+		return {...CONSTANTS.FALSE_RESULT, transfer_id: transferID};
+	}
+}
+
+exports.uploadFile = async function(xbin_id, xbin_org, transfer_id, readstreamOrContents, relativePath) {
+	LOG.debug("Got uploadfile request for path: " + relativePath);
+
+	const transferID = transfer_id || Date.now(), fullpath = path.resolve(`${await cms.getCMSRoot({xbin_id, xbin_org})}/${relativePath}`);
+	if (!await cms.isSecure({xbin_id, xbin_org}, fullpath)) {LOG.error(`Path security validation failure: ${relativePath}`); return CONSTANTS.FALSE_RESULT;}
+
+	if (Buffer.isBuffer(readstreamOrContents) && await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, 
+		readstreamOrContents, true, true)) return {...CONSTANTS.TRUE_RESULT, transfer_id: transferID};
+	else if (readstreamOrContents instanceof stream.Readable) {
+		let startOfFile = true;
+		readstreamOrContents.on("data", chunk => {
+			exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, chunk, startOfFile, false);
+			startOfFile = false;
+		});
+		readstreamOrContents.on("end", _ => exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, 
+			Buffer.from([]), false, true));
 	}
 }
 
@@ -50,7 +70,7 @@ exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath
 		try {deleteDiskFileMetadata(fullpath);} catch (err) {};
 	} 
 
-	await _appendOrWrite(temppath, chunk, startOfFile, endOfFile, exports.isZippable(fullpath));
+	if (chunk.length > 0) await _appendOrWrite(temppath, chunk, startOfFile, endOfFile, exports.isZippable(fullpath));
 	LOG.debug(`Added new ${chunk.length} bytes to the file at eventual path ${fullpath} using temp path ${temppath}.`);
 	if (endOfFile) {
 		await fspromises.rename(temppath, fullpath);
