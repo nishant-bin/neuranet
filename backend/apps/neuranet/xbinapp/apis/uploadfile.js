@@ -51,15 +51,20 @@ exports.uploadFile = async function(xbin_id, xbin_org, transfer_id, readstreamOr
 
 	if (Buffer.isBuffer(readstreamOrContents) && await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, 
 		readstreamOrContents, true, true)) return {...CONSTANTS.TRUE_RESULT, transfer_id: transferID};
-	else if (readstreamOrContents instanceof stream.Readable) {
-		let startOfFile = true;
-		readstreamOrContents.on("data", chunk => {
-			exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, chunk, startOfFile, false);
+	else if (readstreamOrContents instanceof stream.Readable) return new Promise((resolve, reject) => {
+		let startOfFile = true, ignoreEvents = false;
+		readstreamOrContents.on("data", async chunk => {
+			if (ignoreEvents) return;	// failed already
+			if (!await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, chunk, startOfFile, false)) {
+				reject({...CONSTANTS.FALSE_RESULT, transfer_id: transferID}); ignoreEvents = true };
 			startOfFile = false;
 		});
-		readstreamOrContents.on("end", _ => exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, 
-			Buffer.from([]), false, true));
-	}
+		readstreamOrContents.on("end", async _ => {
+			if (ignoreEvents) return;	// failed already
+			if (!await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, Buffer.from([]), false, true)) reject({...CONSTANTS.FALSE_RESULT, transfer_id: transferID});
+			else resolve({...CONSTANTS.TRUE_RESULT, transfer_id: transferID});
+		});
+	});
 }
 
 exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath, chunk, startOfFile, endOfFile) {
