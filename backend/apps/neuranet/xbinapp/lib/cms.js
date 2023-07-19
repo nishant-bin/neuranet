@@ -23,13 +23,7 @@ exports.init = _ => {
 		}
 	})
 
-	register.addNewUserListener(async (id, org) => {	// ID registration listener
-		const home = _getPathForIDAndOrg(id, org);
-		try {await utils.rmrf(home); return true;} catch(err) {
-			LOG.error(`Can't init the home folder for id ${id} for org ${org} as can't access or delete path ${home}. The error is ${err}.`); 
-			return false;
-		}
-	});
+	register.addNewUserListener(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`, "initXbinPath");// ID registration listener
 }
 
 /**
@@ -51,6 +45,14 @@ exports.getCMSRootRelativePath = async function(headersOrLoginIDAndOrg, fullpath
 	const cmsroot = await exports.getCMSRoot(headersOrLoginIDAndOrg);
 	const relativePath = encodeURI(path.relative(cmsroot, fullpath).replaceAll("\\", "/"));
 	return relativePath;
+}
+
+exports.initXbinPath = async (result) => {
+	const home = _getPathForIDAndOrg(result.id, result.org);
+	try {await utils.rmrf(home); return true;} catch(err) {
+			LOG.error(`Can't init the home folder for id ${result.id} for org ${result.org} as can't access or delete path ${home}. The error is ${err}.`);
+			return false;
+	}
 }
 
 exports.getID = headers => login.getID(headers);
