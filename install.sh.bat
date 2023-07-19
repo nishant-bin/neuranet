@@ -6,3 +6,5 @@ npm install sqlite3
 npm install @dqbd/tiktoken
 npm install natural
 npm install java
+npm install undici
+npm install htmlparser2

@@ -5,4 +5,13 @@
  * License: See the enclosed LICENSE file.
  */
 
-exports.canHandle = function(_path) {return false;}
+exports.canHandle = async function(fileindexer) {
+    if (fileindexer.getFilePath().toLowerCase().endsWith(S_PLUGIN_EXTENSION)) {
+        const fileContents = await fileindexer.getContents(filepath, additionalHandlingInformation);
+        if (JSON.parse(fileContents).url) return true;  // minimally we should have URL we need to crawl
+    } else return false;
+}
+
+exports.ingest = async function(fileindexer) {
+    
+}

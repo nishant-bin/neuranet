@@ -12,10 +12,12 @@
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 
+const fs = require("fs");
 const path = require("path");
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
+const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/utils.js`);
 const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
 
 exports.init = _ => blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message));
@@ -54,30 +56,38 @@ async function _handleFileEvent(message) {
 }
 
 async function _ingestfile(pathIn, id, org, isxbin, lang) {
-    const filePlugin = await _searchForFilePlugin(pathIn);
-    if (filePlugin) return filePlugin.ingest(pathIn, filePlugin.plugin);
+    const indexer = _getFileIndexer(pathIn, isxbin), filePlugin = await _searchForFilePlugin(indexer);
+    if (filePlugin) return filePlugin.ingest(indexer);
     else return aidbfs.ingestfile(pathIn, id, org, lang, isxbin?_=>downloadfile.getReadStream(pathIn):undefined);
 }
 
 async function _uningestfile(pathIn, id, org, lang) {
-    const filePlugin = await _searchForFilePlugin(pathIn);
-    if (filePlugin) return filePlugin.uningest(pathIn, directIngestionPlugin.plugin);
+    const indexer = _getFileIndexer(pathIn, isxbin), filePlugin = await _searchForFilePlugin(indexer);
+    if (filePlugin) return filePlugin.uningest(indexer);
     else return aidbfs.uningestfile(pathIn, id, org, lang);
 }
 
 async function _renamefile(from, to, id, org, lang) {
-    const filePlugin = await _searchForFilePlugin(pathIn);
-    if (filePlugin) return filePlugin.renamefile(pathIn, directIngestionPlugin.plugin);
+    const indexer = _getFileIndexer(pathIn, isxbin), filePlugin = await _searchForFilePlugin(indexer);
+    if (filePlugin) return filePlugin.renamefile(indexer);
     else return aidbfs.renamefile(from, to, id, org, lang);
 }
 
-async function _searchForFilePlugin(pathIn) {
+async function _searchForFilePlugin(fileindexerForFile) {
     const aiModelObject = await aidbfs.getAIModelForFiles();
 
     for (const file_plugin of aiModelObject.file_handling_plugins) {
         const pluginThis = NEURANET_CONSTANTS.getPlugin(file_plugin);
-        if (await pluginThis.canHandle(pathIn)) return pluginThis;
+        if (await pluginThis.canHandle(fileindexerForFile)) return pluginThis;
     }
 
     return false;
+}
+
+function _getFileIndexer(pathIn, isxbin) {
+    return {
+        getContents: _ => neuranetutils.readFullFile(isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn)),
+        getReadstream: _ => isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn),
+        getFilePath: _ => pathIn
+    }
 }

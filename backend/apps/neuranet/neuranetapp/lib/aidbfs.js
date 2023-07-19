@@ -19,6 +19,7 @@ const crypto = require("crypto");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
+const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/utils.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
 const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
@@ -61,7 +62,7 @@ async function ingestfile(pathIn, id, org, lang, streamGenerator) {
     // ingest into the TF.IDF DB
     const tfidfDB = await getTFIDFDBForIDAndOrg(id, org, lang); 
     try {
-        const fileContents = (await _readFullFile(await _getExtractedTextStream())).toString("utf8");
+        const fileContents = await neuranetutils.readFullFile(await _getExtractedTextStream(), "utf8");
         tfidfDB.create(fileContents, metadata);
     } catch (err) {
         LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
@@ -212,15 +213,6 @@ async function _extractTextViaPluginsUsingStreams(inputstream, aiModelObject, fi
     } 
 
     throw new Error(`Unable to process the given file to extract the text.`);
-}
-
-function _readFullFile(stream) {
-    return new Promise((resolve, reject) => {
-        const contents = [];
-        stream.on("data", chunk => contents.push(chunk));
-        stream.on("close", _ => resolve(Buffer.concat(contents)));
-        stream.on("error", err => reject(err));
-    });
 }
 
 const _getDocID = pathIn => crypto.createHash("md5").update(path.resolve(pathIn)).digest("hex");
