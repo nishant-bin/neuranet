@@ -19,6 +19,7 @@ const htmlparser2 = require("htmlparser2");
 const httpClient = require(`${CONSTANTS.LIBDIR}/httpClient.js`);
 const queueExecutor = require(`${CONSTANTS.LIBDIR}/queueExecutor.js`);
 
+const DEFAULT_MIMES = {"text/html":{ending:".html"}, "application/pdf":{ending:".pdf"}};
 const foldersCreated = [];
 
 // TLD download URL is curl https://github.com/publicsuffix/list/blob/master/public_suffix_list.dat > public_suffix_list.github.json
@@ -54,7 +55,22 @@ const _createFolderIfNeeded = async folder => {
     }
 }
 
-const _convertURLToFSSafePath = url => crypto.createHash("md5").update(url).digest("hex");
+const _convertURLToFSSafePath = (url, mime, mimes, maxPathLength) => {      
+    const urlParsed = new URL(url), hostAndPath = urlParsed.hostname + urlParsed.pathname,
+        tentativeFilepath = encodeURIComponent(hostAndPath), mimeNormalized = mime.split(",")[0].split(";")[0],
+        expectedEnding = mimes[mimeNormalized].ending;
+    if (!expectedEnding) return crypto.createHash("md5").update(url).digest("hex"); // unknown mime - we can't do much
+    let finalPath = tentativeFilepath; 
+    if (finalPath.endsWith(".")) finalPath = finalPath.substring(0,finalPath.length-1)+"%2E";
+    if (!finalPath.toLowerCase().endsWith(expectedEnding)) finalPath = finalPath+"%2Findex"+expectedEnding;
+    
+    if (finalPath.length > maxPathLength) {
+        finalPath = finalPath + "."+ Date.now() + expectedEnding;
+        finalPath = finalPath.substring(finalPath.length-maxPathLength);
+    }
+    
+    return finalPath;
+}
 
 const _isTextMime = headers => headers["content-type"] ? 
     headers["content-type"].trim().split("/")[0].toLowerCase() == "text" : false;
@@ -64,9 +80,10 @@ function init() {
     initialized = true;
 }
 
-async function crawl(url, output_folder_streamer_function, accepted_mime="text/html", 
-        timegap=0, max_dispersal_depth=0, memory={urls: {}, initial_url: url, crawls_waiting: 1, 
-            promiseToResolve: _getPromiseToResolve()}, current_dispersal_depth=0) {
+async function crawl(url, output_folder_streamer_function, accepted_mimes=DEFAULT_MIMES, 
+        timegap=0, max_dispersal_depth=0, max_path_for_files=150, 
+        memory={urls: {}, initial_url: url, crawls_waiting: 1, promiseToResolve: _getPromiseToResolve()}, 
+        current_dispersal_depth=0) {
 
     try {
         if (!initialized) init(); 
@@ -76,7 +93,7 @@ async function crawl(url, output_folder_streamer_function, accepted_mime="text/h
             return false; 
         } else LOG.info(`Requested crawl URL ${url} dispersal depth is ${requestedDispersalDepth}, maximum is ${max_dispersal_depth}. Crawling.`)
 
-        const response = await httpClient.fetch(url, {undici: false, headers: {accept: accepted_mime}, 
+        const response = await httpClient.fetch(url, {undici: false, headers: {accept: Object.keys(accepted_mimes).join(",")}, 
             enforce_mime: true, ssl_options:{_org_monkshu_httpclient_forceHTTP1: true}}); 
         if (!response.ok) { 
             LOG.error(`Crawler error URL: ${url}. Error is fetch error. Response code is: ${response.status}.`); 
@@ -84,11 +101,12 @@ async function crawl(url, output_folder_streamer_function, accepted_mime="text/h
         }
         const outputText = _isTextMime(response.headers) ? await response.text() : (await response.buffer()).toString("base64"), 
             dom = _isTextMime(response.headers)?htmlparser2.parseDocument(outputText):"", 
-            aElements = htmlparser2.DomUtils.getElementsByTagName("a", dom), outputObject = {
-                url, mime: response.headers["content-type"], is_binary: !_isTextMime(response.headers)}
+            mime = response.headers["content-type"], aElements = 
+            htmlparser2.DomUtils.getElementsByTagName("a", dom), outputObject = {url, mime, is_binary: !_isTextMime(response.headers)};
 
         if (output_folder_streamer_function && typeof output_folder_streamer_function == "string") (async _ => {
-            const outfolder = path.resolve(`${output_folder_streamer_function}/${_coreDomain(url)}`), outpath = path.resolve(`${outfolder}/${_convertURLToFSSafePath(url)}`);
+            const outfolder = path.resolve(`${output_folder_streamer_function}/${_coreDomain(url)}`), 
+                outpath = path.resolve(`${outfolder}/${_convertURLToFSSafePath(url, mime, accepted_mimes, max_path_for_files)}`);
             LOG.debug(`Serializing the URL ${url} to a file at path ${outpath}.`);
             try{ 
                 await _createFolderIfNeeded(outfolder, {recursive: true}); 
@@ -112,26 +130,27 @@ async function crawl(url, output_folder_streamer_function, accepted_mime="text/h
         
         // Now crawl each link recursively and clear function stack to preserve memory (setImmediate does that)
         for (const link of links) {
-            memory.crawls_waiting++; queueExecutor.add(_=>crawl(link, output_folder_streamer_function, 
-                accepted_mime, timegap, max_dispersal_depth, memory, requestedDispersalDepth), [], false, timegap);
+            memory.crawls_waiting++; 
+            queueExecutor.add(_=>crawl(link, output_folder_streamer_function, accepted_mimes, timegap, 
+                max_dispersal_depth, max_path_for_files, memory, requestedDispersalDepth), [], false, timegap);
         }
         return memory.promiseToResolve;
     } catch (error) { LOG.error(`Crawler error URL: ${url}. Error is: ${error.message||error}. Cause is ${error.cause||"unknown"}. Stack is ${error.stack}.`); return false; }
     finally {memory.crawls_waiting--; if (memory.crawls_waiting == 0) memory.promiseToResolve.__resolveFunction(true);}
 }
 
-module.exports = {crawl, init};
+module.exports = {crawl, init, coredomain: _coreDomain};
 
 if (require.main === module) {
     const args = process.argv.slice(2);
 
     if (args.length < 1) {
-        console.log("Usage: crawl.js <website> [time gap between requests in milliseconds - default is 0 which will result in bans usually] [acceptable mime, default is text/html] [maximum depth - default is 0] [output folder - default is skip saving]");
+        console.log("Usage: crawl.js <website> [time gap between requests in milliseconds - default is 0 which will result in bans usually] [acceptable mimes, default is text/html] [maximum depth - default is 0] [output folder - default is skip saving]");
         process.exit(1);
     } else {
         let done = false;
         (async _=>{
-            const result = await crawl(args[0], args[4], args[2],
+            const result = await crawl(args[0], args[4], args[2]?JSON.parse(args[2]):DEFAULT_MIMES,
                 args[1] ? parseInt(args[1]) != NaN ? parseInt(args[1]) : undefined : undefined, 
                 args[3] ? parseInt(args[3]) != NaN ? parseInt(args[3]) : undefined : undefined);
             if (result) console.log(`Crawl ended.`); else console.error(`Crawl ended with errors.`);

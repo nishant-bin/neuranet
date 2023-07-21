@@ -1,4 +1,5 @@
-/* 
+/**
+ * Deletes the given file. 
  * (C) 2020 TekMonks. All rights reserved.
  */
 const path = require("path");
@@ -33,11 +34,17 @@ exports.doService = async (jsonReq, _, headers) => {
 	} catch (err) {LOG.error(`Error deleting  path: ${fullpath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}
 }
 
-exports.deleteFile = async (headersOrIDAndOrg, fullpath) => {
-	const ip = utils.getLocalIPs()[0], id = headersOrIDAndOrg.xbin_id||cms.getID(headers), 
-		org = headersOrIDAndOrg.xbin_org||cms.getOrg(headers);
+exports.deleteFile = async (headersOrIDAndOrg, cmsPath) => {
+	const ip = utils.getLocalIPs()[0], id = headersOrIDAndOrg.xbin_id||cms.getID(headersOrIDAndOrg), 
+		org = headersOrIDAndOrg.xbin_org||cms.getOrg(headersOrIDAndOrg);
+
+	LOG.debug("Got delete file request for cms path: " + cmsPath + " for ID: " + id + " and org: " + org);
+
+	const fullpath = path.resolve(`${await cms.getCMSRoot(headersOrIDAndOrg)}/${cmsPath}`);
+	if (!await cms.isSecure(headersOrIDAndOrg, fullpath)) {LOG.error(`Path security validation failure: ${fullpath}`); return CONSTANTS.FALSE_RESULT;}
+
 	await rmrf(fullpath, id, org, ip);
-	return true;
+	return CONSTANTS.TRUE_RESULT;
 }
 
 async function rmrf(path, id, org, ip) {

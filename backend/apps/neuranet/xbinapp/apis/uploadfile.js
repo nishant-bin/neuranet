@@ -26,6 +26,8 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 
 	const transferID = jsonReq.transfer_id || Date.now(), fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${jsonReq.path}`);
 	if (!await cms.isSecure(headers, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
+	
+	LOG.debug("Resolved full path for upload file: " + fullpath);
 
 	try {
         const matches = jsonReq.data.match(/^data:.*;base64,(.*)$/); 
@@ -43,31 +45,33 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 	}
 }
 
-exports.uploadFile = async function(xbin_id, xbin_org, transfer_id, readstreamOrContents, relativePath) {
-	LOG.debug("Got uploadfile request for path: " + relativePath);
+exports.uploadFile = async function(xbin_id, xbin_org, readstreamOrContents, cmsPath, comment) {
+	LOG.debug("Got uploadfile request for cms path: " + cmsPath + " for ID: " + xbin_id + " and org: " + xbin_org);
 
-	const transferID = transfer_id || Date.now(), fullpath = path.resolve(`${await cms.getCMSRoot({xbin_id, xbin_org})}/${relativePath}`);
-	if (!await cms.isSecure({xbin_id, xbin_org}, fullpath)) {LOG.error(`Path security validation failure: ${relativePath}`); return CONSTANTS.FALSE_RESULT;}
+	const transferID = Date.now(), fullpath = path.resolve(`${await cms.getCMSRoot({xbin_id, xbin_org})}/${cmsPath}`);
+	if (!await cms.isSecure({xbin_id, xbin_org}, fullpath)) {LOG.error(`Path security validation failure: ${fullpath}`); return CONSTANTS.FALSE_RESULT;}
 
-	if (Buffer.isBuffer(readstreamOrContents) && await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, 
-		readstreamOrContents, true, true)) return {...CONSTANTS.TRUE_RESULT, transfer_id: transferID};
-	else if (readstreamOrContents instanceof stream.Readable) return new Promise((resolve, reject) => {
+	if (Buffer.isBuffer(readstreamOrContents)) {
+		if (await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, readstreamOrContents, true, 
+			true, comment)) return CONSTANTS.TRUE_RESULT; else return CONSTANTS.FALSE_RESULT;
+	} else if (readstreamOrContents instanceof stream.Readable) return new Promise(resolve => {
 		let startOfFile = true, ignoreEvents = false;
 		readstreamOrContents.on("data", async chunk => {
 			if (ignoreEvents) return;	// failed already
-			if (!await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, chunk, startOfFile, false)) {
-				reject({...CONSTANTS.FALSE_RESULT, transfer_id: transferID}); ignoreEvents = true };
-			startOfFile = false;
+			if (!await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, chunk, startOfFile, 
+				false, comment)) { resolve(CONSTANTS.FALSE_RESULT); ignoreEvents = true }; 
+			startOfFile = false; 
 		});
 		readstreamOrContents.on("end", async _ => {
 			if (ignoreEvents) return;	// failed already
-			if (!await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, Buffer.from([]), false, true)) reject({...CONSTANTS.FALSE_RESULT, transfer_id: transferID});
-			else resolve({...CONSTANTS.TRUE_RESULT, transfer_id: transferID});
+			if (await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, Buffer.from([]), false, 
+				true, comment)) resolve(CONSTANTS.TRUE_RESULT); else resolve(CONSTANTS.FALSE_RESULT);
 		});
-	});
+	}); else return CONSTANTS.FALSE_RESULT;	// neither a buffer, nor a stream - we can't deal with it
 }
 
-exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath, chunk, startOfFile, endOfFile) {
+exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath, chunk, startOfFile, 
+		endOfFile, comment) {
 	const temppath = path.resolve(`${fullpath}${transferid}${XBIN_CONSTANTS.XBIN_TEMP_FILE_SUFFIX}`)
 
 	if (startOfFile) {	// delete the old files if they exist
@@ -85,7 +89,7 @@ exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath
 	}
 
 	const cmspath = await cms.getCMSRootRelativePath(headersOrLoginIDAndOrg, fullpath)
-	await exports.updateFileStats(fullpath, cmspath, chunk.length, endOfFile, XBIN_CONSTANTS.XBIN_FILE);
+	await exports.updateFileStats(fullpath, cmspath, chunk.length, endOfFile, XBIN_CONSTANTS.XBIN_FILE, comment);
 
 	return true;
 }

@@ -17,6 +17,7 @@ const path = require("path");
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
+const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
 const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/utils.js`);
 const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
 
@@ -56,20 +57,20 @@ async function _handleFileEvent(message) {
 }
 
 async function _ingestfile(pathIn, id, org, isxbin, lang) {
-    const indexer = _getFileIndexer(pathIn, isxbin), filePlugin = await _searchForFilePlugin(indexer);
-    if (filePlugin) return filePlugin.ingest(indexer);
+    const indexer = _getFileIndexer(pathIn, isxbin, id, org), filePlugin = await _searchForFilePlugin(indexer);
+    if (filePlugin) return {result: filePlugin.ingest(indexer)};
     else return aidbfs.ingestfile(pathIn, id, org, lang, isxbin?_=>downloadfile.getReadStream(pathIn):undefined);
 }
 
 async function _uningestfile(pathIn, id, org, lang) {
-    const indexer = _getFileIndexer(pathIn, isxbin), filePlugin = await _searchForFilePlugin(indexer);
-    if (filePlugin) return filePlugin.uningest(indexer);
+    const indexer = _getFileIndexer(pathIn, isxbin, id, org), filePlugin = await _searchForFilePlugin(indexer);
+    if (filePlugin) return {result: filePlugin.uningest(indexer)};
     else return aidbfs.uningestfile(pathIn, id, org, lang);
 }
 
 async function _renamefile(from, to, id, org, lang) {
-    const indexer = _getFileIndexer(pathIn, isxbin), filePlugin = await _searchForFilePlugin(indexer);
-    if (filePlugin) return filePlugin.renamefile(indexer);
+    const indexer = _getFileIndexer(pathIn, isxbin, id, org), filePlugin = await _searchForFilePlugin(indexer);
+    if (filePlugin) return {result: filePlugin.renamefile(indexer)};
     else return aidbfs.renamefile(from, to, id, org, lang);
 }
 
@@ -84,10 +85,22 @@ async function _searchForFilePlugin(fileindexerForFile) {
     return false;
 }
 
-function _getFileIndexer(pathIn, isxbin) {
+function _getFileIndexer(pathIn, isxbin, id, org) {
     return {
+        filepath: pathIn, id: id, org: org,
         getContents: _ => neuranetutils.readFullFile(isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn)),
         getReadstream: _ => isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn),
-        getFilePath: _ => pathIn
+        addFile: (bufferOrStream, cmsPath, comment) => isxbin ? 
+            uploadfile.uploadFile(id, org, bufferOrStream, cmsPath, comment) : 
+            (async _=>{
+                try {
+                    await fs.promises.writeFile(cmsPath, Buffer.isBuffer(bufferOrStream) ? bufferOrStream : 
+                        neuranetutils.readFullFile(bufferOrStream)); 
+                    return CONSTANTS.TRUE_RESULT;
+                } catch (err) {
+                    LOG.error(`Error writing file ${cmsPath} for ID ${id} and org ${org} due to ${err}.`);
+                    return CONSTANTS.FALSE_RESULT;
+                }
+            })()
     }
 }

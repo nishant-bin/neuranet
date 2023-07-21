@@ -1,0 +1,12 @@
+{
+    "max_dispersal": 0,
+    "accepted_mimes": {
+        "text/html": {"ending": ".html"}, 
+        "application/pdf": {"ending": ".pdf"}, 
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation": {"ending": ".pptx"}, 
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {"ending": ".docx"}
+    },
+    "timegap": 50,
+    "crawl_output_root": "temp_crawls",
+    "max_path": 150
+}
