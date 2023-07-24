@@ -14,14 +14,25 @@ const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 
 const fs = require("fs");
 const path = require("path");
+const mustache = require("mustache");
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
+const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`)
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
 const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
-const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/utils.js`);
 const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
+const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
 
-exports.init = _ => blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message));
+let conf;
+
+exports.initSync = _ => {
+    blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message));
+    blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, message => _handleFileEvent(message));
+    conf = require(`${NEURANET_CONSTANTS.CONFDIR}/fileindexer.json`); 
+    confRendered = mustache.render(JSON.stringify(conf), {APPROOT: NEURANET_CONSTANTS.APPROOT.split(path.sep).join(path.posix.sep)}); 
+    conf = JSON.parse(confRendered);
+    _initPluginsSync(); 
+}
 
 async function _handleFileEvent(message) {
     const awaitPromisePublishFileEvent = async (promise, path, type, id, org) => {  // this is mostly to inform listeners about file being processed events
@@ -36,19 +47,28 @@ async function _handleFileEvent(message) {
             cmspath: await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path)});
     }
 
-    if (message.type == XBIN_CONSTANTS.EVENTS.FILE_CREATED && (!message.isDirectory)) 
+    const _isNeuranetFileCreatedEvent = message => message.type == XBIN_CONSTANTS.EVENTS.FILE_CREATED ||
+        message.type == NEURANET_CONSTANTS.EVENTS.FILE_CREATED,
+        _isNeuranetFileDeletedEvent = message => message.type == XBIN_CONSTANTS.EVENTS.FILE_DELETED ||
+            message.type == NEURANET_CONSTANTS.EVENTS.FILE_DELETED,
+        _isNeuranetFileRenamedEvent = message => message.type == XBIN_CONSTANTS.EVENTS.FILE_RENAMED ||
+            message.type == NEURANET_CONSTANTS.EVENTS.FILE_RENAMED,
+        _isNeuranetFileModifiedEvent = message => message.type == XBIN_CONSTANTS.EVENTS.FILE_MODIFIED ||
+            message.type == NEURANET_CONSTANTS.EVENTS.FILE_MODIFIED;
+
+    if (_isNeuranetFileCreatedEvent(message) && (!message.isDirectory)) 
         awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.isxbin, message.lang), 
             message.path, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.INGESTED, 
             message.id, message.org);
-    else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_DELETED && (!message.isDirectory)) 
+    else if (_isNeuranetFileDeletedEvent(message) && (!message.isDirectory)) 
         awaitPromisePublishFileEvent(_uningestfile(path.resolve(message.path), message.id, message.org, message.lang), 
             message.path, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.UNINGESTED,
             message.id, message.org);
-    else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_RENAMED && (!message.isDirectory)) 
+    else if (_isNeuranetFileRenamedEvent(message) && (!message.isDirectory)) 
         awaitPromisePublishFileEvent(_renamefile(path.resolve(message.from), path.resolve(message.to), message.id, 
             message.org, message.lang), message.to, 
             NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.RENAMED, message.id, message.org);
-    else if (message.type == XBIN_CONSTANTS.EVENTS.FILE_MODIFIED && (!message.isDirectory)) {
+    else if (_isNeuranetFileModifiedEvent(message) && (!message.isDirectory)) {
         await _uningestfile(path.resolve(message.path), message.id, message.org, message.lang);
         awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.isxbin, message.lang), 
             message.path, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.MODIFIED,
@@ -58,20 +78,29 @@ async function _handleFileEvent(message) {
 
 async function _ingestfile(pathIn, id, org, isxbin, lang) {
     const indexer = _getFileIndexer(pathIn, isxbin, id, org), filePlugin = await _searchForFilePlugin(indexer);
-    if (filePlugin) return {result: filePlugin.ingest(indexer)};
+    if (filePlugin) return {result: await filePlugin.ingest(indexer)};
     else return aidbfs.ingestfile(pathIn, id, org, lang, isxbin?_=>downloadfile.getReadStream(pathIn):undefined);
 }
 
 async function _uningestfile(pathIn, id, org, lang) {
-    const indexer = _getFileIndexer(pathIn, isxbin, id, org), filePlugin = await _searchForFilePlugin(indexer);
-    if (filePlugin) return {result: filePlugin.uningest(indexer)};
+    const indexer = _getFileIndexer(pathIn, undefined, id, org), filePlugin = await _searchForFilePlugin(indexer);
+    if (filePlugin) return {result: await filePlugin.uningest(indexer)};
     else return aidbfs.uningestfile(pathIn, id, org, lang);
 }
 
 async function _renamefile(from, to, id, org, lang) {
     const indexer = _getFileIndexer(pathIn, isxbin, id, org), filePlugin = await _searchForFilePlugin(indexer);
-    if (filePlugin) return {result: filePlugin.renamefile(indexer)};
+    if (filePlugin) return {result: await filePlugin.renamefile(indexer)};
     else return aidbfs.renamefile(from, to, id, org, lang);
+}
+
+async function _initPluginsSync() {
+    const aiModelObject = await aidbfs.getAIModelForFiles();
+
+    for (const file_plugin of aiModelObject.file_handling_plugins) {
+        const pluginThis = NEURANET_CONSTANTS.getPlugin(file_plugin);
+        if (pluginThis.initAsync) await pluginThis.initSync();
+    }
 }
 
 async function _searchForFilePlugin(fileindexerForFile) {
@@ -94,13 +123,25 @@ function _getFileIndexer(pathIn, isxbin, id, org) {
             uploadfile.uploadFile(id, org, bufferOrStream, cmsPath, comment) : 
             (async _=>{
                 try {
-                    await fs.promises.writeFile(cmsPath, Buffer.isBuffer(bufferOrStream) ? bufferOrStream : 
-                        neuranetutils.readFullFile(bufferOrStream)); 
+                    const pathToWriteTo = await _getNonCMSDrivePath(cmsPath, id, org);
+                    await fs.promises.writeFile(pathToWriteTo, Buffer.isBuffer(bufferOrStream) ? 
+                        bufferOrStream : neuranetutils.readFullFile(bufferOrStream));    // write to the disk
+                    blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, // ingest it into Neuranet
+                        {type: NEURANET_CONSTANTS.EVENTS.FILE_CREATED, path: pathToWriteTo, id, org, ip: serverutils.getLocalIPs()[0]});
                     return CONSTANTS.TRUE_RESULT;
                 } catch (err) {
                     LOG.error(`Error writing file ${cmsPath} for ID ${id} and org ${org} due to ${err}.`);
                     return CONSTANTS.FALSE_RESULT;
                 }
             })()
+    }
+}
+
+async function _getNonCMSDrivePath(cmsPath, id, org) {
+    const userRoot = path.resolve(`${conf.noncms_drive}/${org}/${id}`);
+    const fullPath = path.resolve(userRoot+"/"+cmsPath), folderFullPath = path.dirname(fullPath);
+    try {await fs.promises.stat(folderFullPath); return fullPath;} catch (err) {
+        if (err.code == "ENOENT") {try {await fs.promises.mkdir(folderFullPath, {recursive: true}); return fullPath;} 
+            catch (err) {throw err}} else throw err;
     }
 }

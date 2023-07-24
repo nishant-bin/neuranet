@@ -25,7 +25,8 @@ exports.getPlugin = name => require(`${APPROOT}/plugins/${name}/${name}.js`);
 
 exports.NEURANETEVENT = "__org_monkshu_neuranet_event";
 exports.EVENTS = Object.freeze({VECTORDB_FILE_PROCESSING: "vectordb_file_processing", 
-    VECTORDB_FILE_PROCESSED: "vectordb_file_processed"});
+    VECTORDB_FILE_PROCESSED: "vectordb_file_processed", FILE_CREATED: "filecreated",
+    FILE_DELETED: "filedeleted", FILE_RENAMED: "filerenamed", FILE_MODIFIED: "filemodified"});
 exports.VECTORDB_FILE_PROCESSED_EVENT_TYPES = Object.freeze({
     INGESTED: "vectordb_file_processed_ingested",
     UNINGESTED: "vectordb_file_processed_uningested",

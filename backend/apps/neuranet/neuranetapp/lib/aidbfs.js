@@ -19,10 +19,10 @@ const crypto = require("crypto");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
-const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/utils.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
 const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
+const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
 	MODEL_DEFAULT = "embedding-openai-ada002", DEFAULT_ID = "unknownid", DEFAULT_ORG = "unknownorg";
@@ -208,7 +208,8 @@ const _getDBID = (id, org) => `${(id||DEFAULT_ID).toLowerCase()}_${(org||DEFAULT
 
 async function _extractTextViaPluginsUsingStreams(inputstream, aiModelObject, filepath) {
     for (const textExtractor of aiModelObject.text_extraction_plugins) {
-        const extractedTextStream = await (NEURANET_CONSTANTS.getPlugin(textExtractor)).getContentStream(inputstream, filepath);
+        const pluginThis = NEURANET_CONSTANTS.getPlugin(textExtractor); 
+        const extractedTextStream = await pluginThis.getContentStream(inputstream, filepath);
         if (extractedTextStream) return extractedTextStream;
     } 
 

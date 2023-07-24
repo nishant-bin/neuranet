@@ -8,7 +8,7 @@ const register = require(`${LOGINAPP_CONSTANTS.API_DIR}/register.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 
-exports.init = _ => {
+exports.initSync = _ => {
     dblayer.initDB(); 
 
     login.addLoginListener(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`, "viewInjector");

@@ -11,3 +11,6 @@ backend/apps/neuranet/xbinapp/drive/**/*
 backend/apps/neuranet/neuranetapp/temp/**/*
 !backend/apps/neuranet/neuranetapp/temp/_do_not_delete_
 backend/apps/neuranet/neuranetapp/plugins/webspider/*.crawl
+backend/apps/neuranet/neuranetapp/plugins/webspider/temp_crawls/*
+!backend/apps/neuranet/neuranetapp/plugins/webspider/temp_crawls/_do_not_delete_
+backend/apps/neuranet/drive/*
