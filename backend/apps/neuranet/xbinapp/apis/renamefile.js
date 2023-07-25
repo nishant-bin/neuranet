@@ -16,7 +16,7 @@ exports.doService = async (jsonReq, _, headers) => {
 	return exports.renameFile(headers, jsonReq.old, jsonReq.new);
 }
 
-exports.renameFile = async function(headersOrIDAndOrg, cmsOldPath, cmsNewPath) {
+exports.renameFile = async function(headersOrIDAndOrg, cmsOldPath, cmsNewPath, noevent) {
 	LOG.debug("Got renamefile request for path: " + cmsOldPath);
 
 	const oldPath = path.resolve(`${await cms.getCMSRoot(headersOrIDAndOrg)}/${cmsOldPath}`), 
@@ -45,10 +45,10 @@ exports.renameFile = async function(headersOrIDAndOrg, cmsOldPath, cmsNewPath) {
 				if (XBIN_CONSTANTS.XBIN_IGNORE_PATH_SUFFIXES.includes(path.extname(fullpath))) return;
 				const remotePathNew = cmsNewPath+"/"+relativePath, oldfullpath = path.resolve(oldPath+"/"+relativePath);
 				await uploadfile.updateDiskFileMetadataRemotePaths(fullpath, remotePathNew);
-				_broadcastFileRenamed(oldfullpath, fullpath, ip, id, org);
+				if (!noevent) _broadcastFileRenamed(oldfullpath, fullpath, ip, id, org);
 				await db.runCmd("UPDATE shares SET fullpath = ? WHERE fullpath = ?", [fullpath, oldfullpath]);	// update shares
 			}, true);
-		} else _broadcastFileRenamed(oldPath, newPath, ip, id, org);
+		} else if (!noevent) _broadcastFileRenamed(oldPath, newPath, ip, id, org);
 
         return CONSTANTS.TRUE_RESULT;
 	} catch (err) {LOG.error(`Error renaming  path: ${oldPath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}

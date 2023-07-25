@@ -47,6 +47,12 @@ exports.getCMSRootRelativePath = async function(headersOrLoginIDAndOrg, fullpath
 	return relativePath;
 }
 
+exports.getFullPath = async function(headersOrLoginIDAndOrg, cmsPath) {
+	const cmsroot = await exports.getCMSRoot(headersOrLoginIDAndOrg);
+	const fullpath = path.resolve(`${cmsroot}/${cmsPath}`);
+	return fullpath;
+}
+
 exports.initXbinPath = async (result) => {
 	const home = _getPathForIDAndOrg(result.id, result.org);
 	try {await utils.rmrf(home); return true;} catch(err) {

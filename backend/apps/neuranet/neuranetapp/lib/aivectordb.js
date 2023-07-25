@@ -246,13 +246,16 @@ exports.ingest = async function(metadata, document, chunk_size, split_separators
 
     const vectorsToReturn = []; let tailChunkRemains = false;
     while (split_end <= document.length && (split_start != split_end)) {
-        const split = document.substring(split_start, split_end).trim();
-        const createdVector = await exports.create(undefined, metadata, split, embedding_generator, db_path);
-        if (!createdVector) {
-            _log_error("Unable to inject, creation failed", db_path, "Adding the new chunk failed");
-            await _deleteAllCreatedVectors(vectorsToReturn);
-            return false;
-        } else vectorsToReturn.push(createdVector);
+        const split = document.substring(split_start, split_end).trim(), skipSegement = (split == ""); 
+        
+        if (!skipSegement) {    // blank space has no meaning
+            const createdVector = await exports.create(undefined, metadata, split, embedding_generator, db_path);
+            if (!createdVector) {
+                _log_error("Unable to inject, creation failed", db_path, "Adding the new chunk failed");
+                await _deleteAllCreatedVectors(vectorsToReturn, db_path);
+                return false;
+            } else vectorsToReturn.push(createdVector);
+        }
 
         if (split_end-overlap+chunk_size > document.length && return_tail_do_not_ingest) {tailChunkRemains = true; break;}
         split_start = split_end - overlap; split_end = (split_start+chunk_size) < document.length ? 
@@ -275,7 +278,7 @@ exports.ingeststream = async function(metadata, stream, encoding="utf8", chunk_s
             if (chunk_to_ingest.length >= chunk_size) {
                 const ingestionResult = await exports.ingest(metadata, chunk_to_ingest, chunk_size, split_separators, overlap, embedding_generator, db_path, true);
                 if ((!ingestionResult) || (!ingestionResult.vectors_ingested)) {
-                    _deleteAllCreatedVectors(vectors_ingested); stream.destroy("VectorDB ingestion failed."); return; }
+                    _deleteAllCreatedVectors(vectors_ingested, db_path); stream.destroy("VectorDB ingestion failed."); return; }
                 chunk_to_ingest = ingestionResult.tail_chunk||""; // whatever was left - start there next time
                 vectors_ingested.push(...ingestionResult.vectors_ingested);
             }
@@ -291,7 +294,7 @@ exports.ingeststream = async function(metadata, stream, encoding="utf8", chunk_s
             if (chunk_to_ingest.trim() != "") { // ingest the remaining document tail which we read but didn't ingest before
                 const ingestionResult_ending = await exports.ingest(metadata, chunk_to_ingest, chunk_size, 
                     split_separators, overlap, embedding_generator, db_path);
-                if (!ingestionResult_ending) { _deleteAllCreatedVectors(vectors_ingested); 
+                if (!ingestionResult_ending) { _deleteAllCreatedVectors(vectors_ingested, db_path); 
                     stream.destroy("VectorDB ingestion failed."); reject("VectorDB ingestion failed."); return; }
                 else vectors_ingested.push(...ingestionResult_ending.vectors_ingested);
             }
@@ -413,7 +416,7 @@ const _get_db_index_file = db_path => path.resolve(`${db_path}/${DB_INDEX_NAME}`
 
 const _get_db_index_text_file = (vector, db_path) => path.resolve(`${db_path}/text_${_get_vector_hash(vector)}.txt`);
 
-const _deleteAllCreatedVectors = async vectors => {for (const vector of vectors) await exports.delete(vector, db_path);}
+const _deleteAllCreatedVectors = async (vectors, db_path) => {for (const vector of vectors) await exports.delete(vector, db_path);}
 
 function _get_vector_hash(vector) {
     const shasum = crypto.createHash("sha1"); shasum.update(vector.toString());

@@ -77,21 +77,21 @@ async function _handleFileEvent(message) {
 }
 
 async function _ingestfile(pathIn, id, org, isxbin, lang) {
-    const indexer = _getFileIndexer(pathIn, isxbin, id, org), filePlugin = await _searchForFilePlugin(indexer);
+    const indexer = _getFileIndexer(pathIn, isxbin, id, org, lang), filePlugin = await _searchForFilePlugin(indexer);
     if (filePlugin) return {result: await filePlugin.ingest(indexer)};
-    else return aidbfs.ingestfile(pathIn, id, org, lang, isxbin?_=>downloadfile.getReadStream(pathIn):undefined);
+    else return await aidbfs.ingestfile(pathIn, id, org, lang, isxbin?_=>downloadfile.getReadStream(pathIn):undefined);
 }
 
 async function _uningestfile(pathIn, id, org, lang) {
-    const indexer = _getFileIndexer(pathIn, undefined, id, org), filePlugin = await _searchForFilePlugin(indexer);
+    const indexer = _getFileIndexer(pathIn, undefined, id, org, lang), filePlugin = await _searchForFilePlugin(indexer);
     if (filePlugin) return {result: await filePlugin.uningest(indexer)};
-    else return aidbfs.uningestfile(pathIn, id, org, lang);
+    else return await aidbfs.uningestfile(pathIn, id, org, lang);
 }
 
 async function _renamefile(from, to, id, org, lang) {
-    const indexer = _getFileIndexer(pathIn, isxbin, id, org), filePlugin = await _searchForFilePlugin(indexer);
+    const indexer = _getFileIndexer(pathIn, isxbin, id, org, lang), filePlugin = await _searchForFilePlugin(indexer);
     if (filePlugin) return {result: await filePlugin.renamefile(indexer)};
-    else return aidbfs.renamefile(from, to, id, org, lang);
+    else return await aidbfs.renamefile(from, to, id, org, lang);
 }
 
 async function _initPluginsSync() {
@@ -114,26 +114,35 @@ async function _searchForFilePlugin(fileindexerForFile) {
     return false;
 }
 
-function _getFileIndexer(pathIn, isxbin, id, org) {
+function _getFileIndexer(pathIn, isxbin, id, org, lang) {
     return {
         filepath: pathIn, id: id, org: org,
         getContents: _ => neuranetutils.readFullFile(isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn)),
         getReadstream: _ => isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn),
-        addFile: (bufferOrStream, cmsPath, comment) => isxbin ? 
-            uploadfile.uploadFile(id, org, bufferOrStream, cmsPath, comment) : 
-            (async _=>{
-                try {
-                    const pathToWriteTo = await _getNonCMSDrivePath(cmsPath, id, org);
-                    await fs.promises.writeFile(pathToWriteTo, Buffer.isBuffer(bufferOrStream) ? 
-                        bufferOrStream : neuranetutils.readFullFile(bufferOrStream));    // write to the disk
+        addFile: async (bufferOrStream, cmsPath, comment, runAsNewInstructions) => {
+            try {
+                const pathToWriteTo = isxbin ? await cms.getFullPath(cmsPath) : await _getNonCMSDrivePath(cmsPath, id, org);
+                // write the file to the file system being used whether it is XBin or Neuranet's internal drive
+                if (isxbin && (!(await uploadfile.uploadFile(id, org, bufferOrStream, cmsPath, comment, true))?.result)) 
+                    throw new Error(`CMS upload failed for ${cmsPath}`);
+                else await fs.promises.writeFile(pathToWriteTo, Buffer.isBuffer(bufferOrStream) ? 
+                    bufferOrStream : neuranetutils.readFullFile(bufferOrStream));    // write to the disk
+
+                // if run as new instructions then publish a message which triggers file indexer to restart the 
+                // whole process else ingest it directly into the DB as a regular file. it is a security risk
+                // to setup runAsNewInstructions = true e.g. a website can have a .crawl file for Neuranet to
+                // crawl bad data, so unless needed this should not be setup to true
+                if (runAsNewInstructions) {
                     blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, // ingest it into Neuranet
-                        {type: NEURANET_CONSTANTS.EVENTS.FILE_CREATED, path: pathToWriteTo, id, org, ip: serverutils.getLocalIPs()[0]});
+                        {type: NEURANET_CONSTANTS.EVENTS.FILE_CREATED, path: pathToWriteTo, id, org, 
+                            ip: serverutils.getLocalIPs()[0]});
                     return CONSTANTS.TRUE_RESULT;
-                } catch (err) {
-                    LOG.error(`Error writing file ${cmsPath} for ID ${id} and org ${org} due to ${err}.`);
-                    return CONSTANTS.FALSE_RESULT;
-                }
-            })()
+                } else return await aidbfs.ingestfile(pathToWriteTo, id, org, lang, isxbin?_=>downloadfile.getReadStream(pathIn):undefined);
+            } catch (err) {
+                LOG.error(`Error writing file ${cmsPath} for ID ${id} and org ${org} due to ${err}.`);
+                return CONSTANTS.FALSE_RESULT;
+            }
+        }
     }
 }
 

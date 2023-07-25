@@ -34,7 +34,7 @@ exports.doService = async (jsonReq, _, headers) => {
 	} catch (err) {LOG.error(`Error deleting  path: ${fullpath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}
 }
 
-exports.deleteFile = async (headersOrIDAndOrg, cmsPath) => {
+exports.deleteFile = async (headersOrIDAndOrg, cmsPath, noevent) => {
 	const ip = utils.getLocalIPs()[0], id = headersOrIDAndOrg.xbin_id||cms.getID(headersOrIDAndOrg), 
 		org = headersOrIDAndOrg.xbin_org||cms.getOrg(headersOrIDAndOrg);
 
@@ -43,14 +43,14 @@ exports.deleteFile = async (headersOrIDAndOrg, cmsPath) => {
 	const fullpath = path.resolve(`${await cms.getCMSRoot(headersOrIDAndOrg)}/${cmsPath}`);
 	if (!await cms.isSecure(headersOrIDAndOrg, fullpath)) {LOG.error(`Path security validation failure: ${fullpath}`); return CONSTANTS.FALSE_RESULT;}
 
-	await rmrf(fullpath, id, org, ip);
+	await rmrf(fullpath, id, org, ip, noevent);
 	return CONSTANTS.TRUE_RESULT;
 }
 
-async function rmrf(path, id, org, ip) {
+async function rmrf(path, id, org, ip, noevent) {
 	const _deleteFile = async path => {
 		await unlinkFileAndRemoveFromDB(path); 
-		blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_DELETED, path, id, org, ip, isxbin: true});
+		if (!noevent) blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_DELETED, path, id, org, ip, isxbin: true});
 	}
 
 	if ((await fspromises.stat(path)).isFile()) { await _deleteFile(path); return; }

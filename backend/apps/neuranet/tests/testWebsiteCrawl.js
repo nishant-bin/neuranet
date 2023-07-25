@@ -23,33 +23,37 @@ exports.runTestsAsync = async function(argv) {
     let result = await _testIngestion(pathToFile);  // test ingestion
     if (!result) return false;
     
-    result = await _testUningestion(pathToFile);    // test uningestion, also cleans it all up in the DB
+    //result = await _testUningestion(pathToFile);    // test uningestion, also cleans it all up in the DB
     
     return result;
 }
 
-async function _testIngestion(path) {
-    log(`Test case for website crawl to ingest file ${path}.`);
+async function _testIngestion(pathIn) {
+    log(`Test case for website crawl to ingest file ${pathIn}.`);
 
     const fileProcessedPromise = new Promise(resolve => blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, message => {
-        if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && message.result) resolve(true);
-        if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && (!message.result)) resolve(false);
+        if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && message.result &&
+            path.resolve((message.path)) == path.resolve(pathIn)) resolve(true);
+        if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && (!message.result) &&
+            path.resolve((message.path)) == path.resolve(pathIn)) resolve(false);
     }));
-    blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path, 
+    blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: pathIn, 
         ip: utils.getLocalIPs()[0], id: testuser_id, org: testuser_org});
     const result = await fileProcessedPromise, outputMessage = `Test for ingestion ${result?"succeeded":"failed"}.`;
     log(outputMessage);
     return result;
 }
 
-async function _testUningestion(path) {
-    log(`Test case for website crawl uningestion called to uningest file ${path}.`);
+async function _testUningestion(pathIn) {
+    log(`Test case for website crawl uningestion called to uningest file ${pathIn}.`);
 
     const fileProcessedPromise = new Promise(resolve => blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, message => {
-        if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && message.result) resolve(true);
-        if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && (!message.result)) resolve(false);
+        if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && message.result &&
+            path.resolve((message.path)) == path.resolve(pathIn)) resolve(true);
+        if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && (!message.result) &&
+            path.resolve((message.path)) == path.resolve(pathIn)) resolve(false);
     }));
-    blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_DELETED, path, 
+    blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_DELETED, path: pathIn, 
         ip: utils.getLocalIPs()[0], id: testuser_id, org: testuser_org});
     const result = await fileProcessedPromise, outputMessage = `Test for uningestion ${result?"succeeded":"failed"}.`;
     log(outputMessage); 

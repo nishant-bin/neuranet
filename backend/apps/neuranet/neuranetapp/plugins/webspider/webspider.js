@@ -50,7 +50,7 @@ async function _ingestFolder(pathIn, cmsPath, fileindexer, rootPathIn) {
             const pathThisEntry = path.resolve(pathIn + "/" + direntry.name);
             const cmsPathThisEntry = cmsPath+"/"+path.relative(pathIn, pathThisEntry);
 
-            if (direntry.isDirectory()) return _ingestFolder(pathThisEntry, cmsPathThisEntry, fileindexer, rootPathIn||pathIn); 
+            if (direntry.isDirectory()) return await _ingestFolder(pathThisEntry, cmsPathThisEntry, fileindexer, rootPathIn||pathIn); 
             else if (direntry.isFile()) {   // ignore anything which is neither a file nor a directory
                 const fileJSON = JSON.parse((await fspromises.readFile(pathThisEntry, "utf8")));
                 const result = await fileindexer.addFile(Buffer.from(fileJSON.text, 
@@ -58,7 +58,7 @@ async function _ingestFolder(pathIn, cmsPath, fileindexer, rootPathIn) {
                 if ((!result) || (!result.result)) {
                     LOG.error(`AI ingestion of URL ${fileJSON.url} failed.`);
                     return false;
-                } else LOG.error(`AI ingestion of URL ${fileJSON.url} to path ${cmsPathThisEntry} succeeded.`);
+                } else LOG.info(`AI ingestion of URL ${fileJSON.url} to path ${cmsPathThisEntry} succeeded.`);
             }
         }
         return true;    // all done

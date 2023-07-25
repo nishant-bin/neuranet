@@ -45,7 +45,7 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 	}
 }
 
-exports.uploadFile = async function(xbin_id, xbin_org, readstreamOrContents, cmsPath, comment) {
+exports.uploadFile = async function(xbin_id, xbin_org, readstreamOrContents, cmsPath, comment, noevent) {
 	LOG.debug("Got uploadfile request for cms path: " + cmsPath + " for ID: " + xbin_id + " and org: " + xbin_org);
 
 	const transferID = Date.now(), fullpath = path.resolve(`${await cms.getCMSRoot({xbin_id, xbin_org})}/${cmsPath}`);
@@ -53,25 +53,25 @@ exports.uploadFile = async function(xbin_id, xbin_org, readstreamOrContents, cms
 
 	if (Buffer.isBuffer(readstreamOrContents)) {
 		if (await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, readstreamOrContents, true, 
-			true, comment)) return CONSTANTS.TRUE_RESULT; else return CONSTANTS.FALSE_RESULT;
+			true, comment, noevent)) return CONSTANTS.TRUE_RESULT; else return CONSTANTS.FALSE_RESULT;
 	} else if (readstreamOrContents instanceof stream.Readable) return new Promise(resolve => {
 		let startOfFile = true, ignoreEvents = false;
 		readstreamOrContents.on("data", async chunk => {
 			if (ignoreEvents) return;	// failed already
 			if (!await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, chunk, startOfFile, 
-				false, comment)) { resolve(CONSTANTS.FALSE_RESULT); ignoreEvents = true }; 
+				false, comment, noevent)) { resolve(CONSTANTS.FALSE_RESULT); ignoreEvents = true }; 
 			startOfFile = false; 
 		});
 		readstreamOrContents.on("end", async _ => {
 			if (ignoreEvents) return;	// failed already
 			if (await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, Buffer.from([]), false, 
-				true, comment)) resolve(CONSTANTS.TRUE_RESULT); else resolve(CONSTANTS.FALSE_RESULT);
+				true, comment, noevent)) resolve(CONSTANTS.TRUE_RESULT); else resolve(CONSTANTS.FALSE_RESULT);
 		});
 	}); else return CONSTANTS.FALSE_RESULT;	// neither a buffer, nor a stream - we can't deal with it
 }
 
 exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath, chunk, startOfFile, 
-		endOfFile, comment) {
+		endOfFile, comment, noevent) {
 	const temppath = path.resolve(`${fullpath}${transferid}${XBIN_CONSTANTS.XBIN_TEMP_FILE_SUFFIX}`)
 
 	if (startOfFile) {	// delete the old files if they exist
@@ -84,7 +84,7 @@ exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath
 	if (endOfFile) {
 		await fspromises.rename(temppath, fullpath);
 		LOG.info(`Finished uploading file ${fullpath} successfully.`);
-		blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: fullpath, 
+		if (!noevent) blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: fullpath, 
 			ip: utils.getLocalIPs()[0], id: cms.getID(headersOrLoginIDAndOrg), org: cms.getOrg(headersOrLoginIDAndOrg), isxbin: true});
 	}
 
