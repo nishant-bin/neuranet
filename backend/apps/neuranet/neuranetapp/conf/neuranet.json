@@ -41,7 +41,8 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.000002"
+            "price_per_unit": "0.000002",
+            "max_memory_tokens": 1000
         },
 
         "lang-code-gen35": {

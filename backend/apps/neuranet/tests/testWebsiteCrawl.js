@@ -23,7 +23,7 @@ exports.runTestsAsync = async function(argv) {
     let result = await _testIngestion(pathToFile);  // test ingestion
     if (!result) return false;
     
-    //result = await _testUningestion(pathToFile);    // test uningestion, also cleans it all up in the DB
+    result = await _testUningestion(pathToFile);    // test uningestion, also cleans it all up in the DB
     
     return result;
 }

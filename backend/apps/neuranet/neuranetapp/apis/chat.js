@@ -25,7 +25,7 @@ const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
 	MODEL_DEFAULT = "chat-gpt35-turbo", CHAT_SESSION_UPDATE_TIMESTAMP_KEY = "__last_update",
 	CHAT_SESSION_MEMORY_KEY_PREFIX = "__org_monkshu_neuranet_chatsession", PROMPT_FILE = "chat_prompt.txt",
-	DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
+	DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode, DEFAULT_MAX_MEMORY_TOKENS = 1000;
 
 exports.doService = async jsonReq => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
@@ -47,7 +47,9 @@ exports.doService = async jsonReq => {
 	
 	const {chatsession, sessionID, sessionKey} = exports.getUsersChatSession(jsonReq.id, jsonReq.session_id);
 
-	const finalSessionObject = _jsonifyContentsInThisSession([...chatsession, ...(utils.clone(jsonReq.session))]); 
+	const finalSessionObject = _trimSession(aiModelObject.max_memory_tokens||DEFAULT_MAX_MEMORY_TOKENS,
+		_jsonifyContentsInThisSession([...chatsession, ...(utils.clone(jsonReq.session))]), aiModelToUse, 
+			aiModelObject.token_approximation_uplift, aiModelObject.tokenizer, aiLibrary); 
 	finalSessionObject[finalSessionObject.length-1].last = true;
 
 	const response = await aiLibrary.process({session: finalSessionObject}, 
@@ -87,6 +89,20 @@ const _jsonifyContentsInThisSession = session => {
 		sessionObject.content = jsonifiedStr;
 	}
 	return session;
+}
+
+const _trimSession = (max_session_tokens, sessionObjects, aiModelName, token_approximation_uplift, 
+		tokenizer_name, tokenprocessor) => {
+
+	let tokensSoFar = 0; const sessionTrimmed = [];
+	for (let i = sessionObjects.length - 1; i >= 0; i--) {
+		const sessionObjectThis = sessionObjects[i];
+		tokensSoFar = tokensSoFar + tokenprocessor.countTokens(aisessionObjectThis.content,
+			aiModelName, token_approximation_uplift, tokenizer_name);
+		if (tokensSoFar > max_session_tokens) break;
+		sessionTrimmed.unshift(sessionObjectThis);
+	}
+	return sessionTrimmed;
 }
 
 function _unmarshallAIResponse(response, userPrompt) {

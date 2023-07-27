@@ -14,3 +14,6 @@ backend/apps/neuranet/neuranetapp/plugins/webspider/*.crawl
 backend/apps/neuranet/neuranetapp/plugins/webspider/temp_crawls/*
 !backend/apps/neuranet/neuranetapp/plugins/webspider/temp_crawls/_do_not_delete_
 backend/apps/neuranet/drive/*
+backend/apps/neuranet/cms/*
+!backend/apps/neuranet/cms/_do_not_delete_
+

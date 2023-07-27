@@ -27,14 +27,13 @@ exports.ingest = async function(fileindexer) {
         return false;
     }
 
-    /*
     const output_folder = path.resolve(`${__dirname}/${spiderconf.crawl_output_root}/${crawler.coredomain(crawlingInstructions.url)}.${Date.now()}`);
     LOG.info(`Starting crawling the URL ${crawlingInstructions.url} to path ${output_folder}.`);
     const crawlResult = await crawler.crawl(crawlingInstructions.url, output_folder, 
         spiderconf.accepted_mimes||DEFAULT_MIMES, spiderconf.timegap||50, spiderconf.max_dispersal||0, 
-        spiderconf.max_path||150);*/
-    const output_folder = path.resolve(`${__dirname}/${spiderconf.crawl_output_root}/${crawler.coredomain(crawlingInstructions.url)}.${'1690182353593'}`),
-        crawlResult = true; // for testing only
+        spiderconf.max_path||150);
+    /*const output_folder = path.resolve(`${__dirname}/${spiderconf.crawl_output_root}/${crawler.coredomain(crawlingInstructions.url)}.${'1690182353593'}`),
+        crawlResult = true; // for testing only*/
     if (crawlResult) {
         LOG.info(`Site crawl completed for ${crawlingInstructions.url}, ingesting into the AI databases and stores.`);
         return await _ingestFolder(output_folder, 
