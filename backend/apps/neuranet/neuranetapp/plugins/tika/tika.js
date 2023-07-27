@@ -56,14 +56,13 @@ exports.getContentStream = async function (inputstream, filepath) {
         thisOutputPath = java.callStaticMethodSync("java.nio.file.Paths", "get", workingareaWritePath);
     const thisTikaInputStream = java.callStaticMethodSync("org.apache.tika.io.TikaInputStream", "get", thisInputPath);
     const thisOutputStream = java.callStaticMethodSync("java.nio.file.Files", "newOutputStream", thisOutputPath);
-    const javaPrintWriter = java.import("java.io.PrintWriter"), thisPrintWriter = new javaPrintWriter(thisOutputStream);
-    const javaBodyContentHandler = java.import("org.apache.tika.sax.BodyContentHandler"), thisBodyContentHandler = new javaBodyContentHandler(thisPrintWriter);
+    const javaToTextContentHandler = java.import("org.apache.tika.sax.ToTextContentHandler"), thisToTextContentHandler = new javaToTextContentHandler(thisOutputStream, "UTF-8");
     const javaAutoDetectParser =  java.import("org.apache.tika.parser.AutoDetectParser"), thisParser = new javaAutoDetectParser();
     const javaMetadata = java.import("org.apache.tika.metadata.Metadata"), thisMetadata = new javaMetadata();
     const javaParseContext = java.import("org.apache.tika.parser.ParseContext"), thisContext = new javaParseContext();
 
     try {
-        await thisParser.parseAsync(thisTikaInputStream, thisBodyContentHandler, thisMetadata, thisContext);
+        await thisParser.parseAsync(thisTikaInputStream, thisToTextContentHandler, thisMetadata, thisContext);
         return fs.createReadStream(workingareaWritePath);   // return file input stream of extracted text
     } catch (err) {
         LOG.error(`Tika error parsing file ${filepath}.`); return null;

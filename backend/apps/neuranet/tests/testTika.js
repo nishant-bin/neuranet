@@ -20,6 +20,7 @@ exports.runTestsAsync = async function(argv) {
     const result = await tika.getContent(pathToFile);  // test text extraction using the Tika plugin
     if (!result) return false;
 
-    const output = `Extracted text follows\n\n\n--------\n${result}\n--------\n\n\n`; LOG.info(output); LOG.console(output);
+    const outputText = result.toString("utf8");
+    const outputMsg = `Extracted text follows\n\n\n--------\n${outputText}\n--------\n\n\n`; LOG.info(outputMsg); LOG.console(outputMsg);
     return true;
 }

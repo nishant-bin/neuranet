@@ -38,7 +38,7 @@
             "user_role": "user",
             "assistant_role": "assistant",
             "sample_ai_response": "chat_ai_response.json",
-            "read_ai_response_from_samples": true,
+            "read_ai_response_from_samples": false,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.000002",

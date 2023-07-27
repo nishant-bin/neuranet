@@ -47,7 +47,7 @@ exports.doService = async jsonReq => {
 	
 	const {chatsession, sessionID, sessionKey} = exports.getUsersChatSession(jsonReq.id, jsonReq.session_id);
 
-	const finalSessionObject = _trimSession(aiModelObject.max_memory_tokens||DEFAULT_MAX_MEMORY_TOKENS,
+	const finalSessionObject = await _trimSession(aiModelObject.max_memory_tokens||DEFAULT_MAX_MEMORY_TOKENS,
 		_jsonifyContentsInThisSession([...chatsession, ...(utils.clone(jsonReq.session))]), aiModelToUse, 
 			aiModelObject.token_approximation_uplift, aiModelObject.tokenizer, aiLibrary); 
 	finalSessionObject[finalSessionObject.length-1].last = true;
@@ -91,13 +91,13 @@ const _jsonifyContentsInThisSession = session => {
 	return session;
 }
 
-const _trimSession = (max_session_tokens, sessionObjects, aiModelName, token_approximation_uplift, 
+const _trimSession = async (max_session_tokens, sessionObjects, aiModelName, token_approximation_uplift, 
 		tokenizer_name, tokenprocessor) => {
 
 	let tokensSoFar = 0; const sessionTrimmed = [];
 	for (let i = sessionObjects.length - 1; i >= 0; i--) {
 		const sessionObjectThis = sessionObjects[i];
-		tokensSoFar = tokensSoFar + tokenprocessor.countTokens(aisessionObjectThis.content,
+		tokensSoFar = tokensSoFar + await tokenprocessor.countTokens(sessionObjectThis.content,
 			aiModelName, token_approximation_uplift, tokenizer_name);
 		if (tokensSoFar > max_session_tokens) break;
 		sessionTrimmed.unshift(sessionObjectThis);
