@@ -21,7 +21,8 @@
             "read_ai_response_from_samples": false,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.000002"
+            "price_per_unit": "0.000002",
+            "api_overloaded_max_retries": 3
         },
 
         "chat-gpt35-turbo": {
@@ -42,7 +43,9 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.000002",
-            "max_memory_tokens": 1000
+            "max_memory_tokens": 1000,
+            "api_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
         },
 
         "lang-code-gen35": {
@@ -60,7 +63,8 @@
             "read_ai_response_from_samples": false,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.000002"
+            "price_per_unit": "0.000002",
+            "api_overloaded_max_retries": 3
         },
 
         "lang-code-chaingen35": {
@@ -79,7 +83,8 @@
             "read_ai_response_from_samples": false,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.000002"
+            "price_per_unit": "0.000002",
+            "api_overloaded_max_retries": 3
         },
 
         "chat-knowledgebase-gpt35-turbo": {
@@ -104,7 +109,9 @@
             "read_ai_response_from_samples": false,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.000002"
+            "price_per_unit": "0.000002",
+            "max_memory_tokens": 1000,
+            "api_overloaded_max_retries": 3
         },
 
         "simplellm-gpt35-turbo": {
@@ -127,7 +134,8 @@
             "read_ai_response_from_samples": false,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.000002"
+            "price_per_unit": "0.000002",
+            "api_overloaded_max_retries": 3
         },
 
         "embedding-openai-ada002": {
@@ -147,7 +155,8 @@
             "sample_ai_response": "module(genRandomEmbedding.js),embedding_ai_response.json,1536,data.data[0].embedding",
             "read_ai_response_from_samples": false,
             "token_approximation_uplift": 1.10,
-            "price_per_unit": "0.0000001"
+            "price_per_unit": "0.0000001",
+            "api_overloaded_max_retries": 3
         }
     }
 }

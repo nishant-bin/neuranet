@@ -11,7 +11,8 @@ const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 
 const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}", SAMPLE_MODULE_PREFIX = "module(", DEFAULT_GPT_CHARS_PER_TOKEN = 4,
-    INTERNAL_TOKENIZER = "internal", DEFAULT_GPT_TOKENIZER = "gpt-tokenizer", DEFAULT_TOKEN_UPLIFT = 1.05;
+    INTERNAL_TOKENIZER = "internal", DEFAULT_GPT_TOKENIZER = "gpt-tokenizer", DEFAULT_TOKEN_UPLIFT = 1.05,
+    DEFAULT_503_RETRIES = 3;
 
 exports.process = async function(data, promptOrPromptFile, apiKey, model, dontInflatePrompt) {
     const prompt = dontInflatePrompt ? promptOrPromptFile : mustache.render(await aiutils.getPrompt(promptOrPromptFile), data).replace(/\r\n/gm,"\n");   // create the prompt
@@ -33,18 +34,27 @@ exports.process = async function(data, promptOrPromptFile, apiKey, model, dontIn
         const promptMustacheStr = JSON.stringify(modelObject.request).replace(PROMPT_VAR, "{{{prompt}}}"), 
             promptJSONStr = JSON.stringify(prompt),
             promptInjectedStr = mustache.render(promptMustacheStr, {prompt: promptJSONStr.substring(1,promptJSONStr.length-1)});
+        LOG.info(`Pre JSON parsing, the raw prompt object is: ${promptJSONStr}`);
         promptObject = JSON.parse(promptInjectedStr);
     } else {
         promptObject = {...modelObject.request};
+        LOG.info(`Pre JSON parsing, the raw prompt is: ${prompt}`);
         utils.setObjProperty(promptObject, modelObject.request_contentpath, JSON.parse(prompt));
     }
         
     LOG.info(`Calling AI engine for request ${JSON.stringify(data)} and prompt ${JSON.stringify(prompt)}`);
     LOG.info(`The prompt object for this call is ${JSON.stringify(promptObject)}.`);
     if (modelObject.read_ai_response_from_samples) LOG.info("Reading sample response as requested by the model.");
-    const response = modelObject.read_ai_response_from_samples ? await _getSampleResponse(modelObject.sample_ai_response) : 
+    
+    let response, retries = 0;
+    do {    // auto retry if API is overloaded (503 error)
+        response = modelObject.read_ai_response_from_samples ? await _getSampleResponse(modelObject.sample_ai_response) : 
         await rest.postHttps(modelObject.driver.host, modelObject.driver.port, modelObject.driver.path, 
             {"Authorization": `Bearer ${apiKey}`}, promptObject);
+        retries++;
+    } while (response && ( (modelObject.http_retry_codes && modelObject.http_retry_codes.includes(response.status)) || 
+            ((!modelObject.http_retry_codes) && response.status == 503) ) && 
+            (retries <= (modelObject.api_max_retries||DEFAULT_503_RETRIES)))
 
     if ((!response) || (!response.data) || (response.error)) {
         LOG.error(`Error: AI engine call error.`);

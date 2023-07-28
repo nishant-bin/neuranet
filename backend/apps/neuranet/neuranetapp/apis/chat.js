@@ -47,8 +47,8 @@ exports.doService = async jsonReq => {
 	
 	const {chatsession, sessionID, sessionKey} = exports.getUsersChatSession(jsonReq.id, jsonReq.session_id);
 
-	const finalSessionObject = await _trimSession(aiModelObject.max_memory_tokens||DEFAULT_MAX_MEMORY_TOKENS,
-		_jsonifyContentsInThisSession([...chatsession, ...(utils.clone(jsonReq.session))]), aiModelToUse, 
+	const finalSessionObject = await exports.trimSession(aiModelObject.max_memory_tokens||DEFAULT_MAX_MEMORY_TOKENS,
+		exports.jsonifyContentsInThisSession([...chatsession, ...(utils.clone(jsonReq.session))]), aiModelToUse, 
 			aiModelObject.token_approximation_uplift, aiModelObject.tokenizer, aiLibrary); 
 	finalSessionObject[finalSessionObject.length-1].last = true;
 
@@ -80,19 +80,11 @@ exports.getUsersChatSession = (userid, session_id_in) => {
 	const idSessions = DISTRIBUTED_MEMORY.get(sessionKey, {}); chatsession = idSessions[sessionID]||[];
 	LOG.debug(`Distributed memory key for this session is: ${sessionKey}.`);
 	LOG.debug(`Chat session saved previously is ${JSON.stringify(chatsession)}.`); 
-	return {chatsession, sessionID, sessionKey};
+	return {chatsession: utils.clone(chatsession), sessionID, sessionKey};
 }
 
-const _jsonifyContentsInThisSession = session => {
-	for (const sessionObject of session) try {JSON.parse(sessionObject.content);} catch (err) {
-		const jsonStr = JSON.stringify(sessionObject.content), jsonifiedStr = jsonStr.substring(1, jsonStr.length-1);
-		sessionObject.content = jsonifiedStr;
-	}
-	return session;
-}
-
-const _trimSession = async (max_session_tokens, sessionObjects, aiModelName, token_approximation_uplift, 
-		tokenizer_name, tokenprocessor) => {
+exports.trimSession = async function(max_session_tokens, sessionObjects, aiModelName, 
+		token_approximation_uplift, tokenizer_name, tokenprocessor) {
 
 	let tokensSoFar = 0; const sessionTrimmed = [];
 	for (let i = sessionObjects.length - 1; i >= 0; i--) {
@@ -103,6 +95,14 @@ const _trimSession = async (max_session_tokens, sessionObjects, aiModelName, tok
 		sessionTrimmed.unshift(sessionObjectThis);
 	}
 	return sessionTrimmed;
+}
+
+exports.jsonifyContentsInThisSession = session => {
+	for (const sessionObject of session) try {JSON.parse(sessionObject.content);} catch (err) {
+		const jsonStr = JSON.stringify(sessionObject.content), jsonifiedStr = jsonStr.substring(1, jsonStr.length-1);
+		sessionObject.content = jsonifiedStr;
+	}
+	return session;
 }
 
 function _unmarshallAIResponse(response, userPrompt) {
