@@ -10,6 +10,8 @@ const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
 const register = require(`${LOGINAPP_CONSTANTS.API_DIR}/register.js`);
 const updateuser = require(`${LOGINAPP_CONSTANTS.API_DIR}/updateuser.js`);
 
+const DEFAULT_MAX_PATH_LENGTH = 50;
+
 exports.init = _ => {
 	updateuser.addIDChangeListener(async (oldID, newID, org) => {	// ID changes listener
 		const oldPath = _getPathForIDAndOrg(oldID, org), newPath = _getPathForIDAndOrg(newID, org);
@@ -69,4 +71,14 @@ exports.isSecure = async (headersOrLoginIDAndOrg, path) => XBIN_CONSTANTS.isSubd
 
 const _getPathForIDAndOrg = (id, org) => `${XBIN_CONSTANTS.CONF.CMS_ROOT}/${_convertToPathFriendlyString(org.toLowerCase())}/${_convertToPathFriendlyString(id.toLowerCase())}`;
 
-const _convertToPathFriendlyString = s => Buffer.from(s).toString("base64url");
+const _convertToPathFriendlyString = (s, maxPathLength=DEFAULT_MAX_PATH_LENGTH) => {
+	let tentativeFilepath = encodeURIComponent(s);
+	if (tentativeFilepath.endsWith(".")) tentativeFilepath = tentativeFilepath.substring(0,finalPath.length-1)+"%2E";
+		
+	if (tentativeFilepath.length > maxPathLength) {
+		tentativeFilepath = tentativeFilepath + "." + Date.now();
+		tentativeFilepath = tentativeFilepath.substring(tentativeFilepath.length-maxPathLength);
+	}
+	
+	return tentativeFilepath;
+}
