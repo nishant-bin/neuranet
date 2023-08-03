@@ -24,6 +24,7 @@ const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
 const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
 
 let conf;
+const DEFAULT_MINIMIMUM_SUCCESS_PERCENT = 0.5;
 
 exports.initSync = _ => {
     blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message));
@@ -116,9 +117,12 @@ async function _searchForFilePlugin(fileindexerForFile) {
 
 function _getFileIndexer(pathIn, isxbin, id, org, lang) {
     return {
-        filepath: pathIn, id: id, org: org,
+        filepath: pathIn, id: id, org: org, minimum_success_percent: DEFAULT_MINIMIMUM_SUCCESS_PERCENT,
         getContents: _ => neuranetutils.readFullFile(isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn)),
         getReadstream: _ => isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn),
+        start: _ => {},
+        end: async _ => { try {await aidbfs.rebuild(id, org, lang); await aidbfs.flush(id, org, lang); return true;} catch (err) {
+            LOG.error(`Error ending AI databases. The error is ${err}`); return false;} },
         addFile: async (bufferOrStream, cmsPath, comment, runAsNewInstructions) => {
             try {
                 const pathToWriteTo = isxbin ? await cms.getFullPath(cmsPath) : await _getNonCMSDrivePath(cmsPath, id, org);
@@ -137,7 +141,9 @@ function _getFileIndexer(pathIn, isxbin, id, org, lang) {
                         {type: NEURANET_CONSTANTS.EVENTS.FILE_CREATED, path: pathToWriteTo, id, org, 
                             ip: serverutils.getLocalIPs()[0]});
                     return CONSTANTS.TRUE_RESULT;
-                } else return await aidbfs.ingestfile(pathToWriteTo, id, org, lang, isxbin?_=>downloadfile.getReadStream(pathIn):undefined);
+                } else if ((await aidbfs.ingestfile(pathToWriteTo, id, org, lang, 
+                    isxbin?_=>downloadfile.getReadStream(pathIn):undefined, true))?.result) return CONSTANTS.TRUE_RESULT;
+                else return CONSTANTS.FALSE_RESULT;
             } catch (err) {
                 LOG.error(`Error writing file ${cmsPath} for ID ${id} and org ${org} due to ${err}.`);
                 return CONSTANTS.FALSE_RESULT;

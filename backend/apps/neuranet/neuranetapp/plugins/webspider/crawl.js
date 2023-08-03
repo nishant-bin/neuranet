@@ -81,17 +81,22 @@ function init() {
 }
 
 async function crawl(url, output_folder_streamer_function, accepted_mimes=DEFAULT_MIMES, 
-        timegap=0, max_dispersal_depth=0, max_path_for_files=150, 
+        timegap=0, max_host_dispersal_depth=0, max_page_dispersal_depth=-1, max_path_for_files=150, 
         memory={urls: {}, initial_url: url, crawls_waiting: 1, promiseToResolve: _getPromiseToResolve()}, 
-        current_dispersal_depth=0) {
+        current_host_dispersal_depth=0, current_page_dispersal_depth=0) {
 
     try {
         if (!initialized) init(); 
-        const requestedDispersalDepth = _getDispersalDept(current_dispersal_depth, url, memory.initial_url);
-        if (requestedDispersalDepth > max_dispersal_depth) {
-            LOG.info(`Requested crawl URL ${url} exceeds maximum dispersal depth of ${max_dispersal_depth} as its dispersal depth is ${requestedDispersalDepth}. Not crawling.`)
+
+        if (max_page_dispersal_depth != -1 && current_page_dispersal_depth > max_page_dispersal_depth) {
+            LOG.info(`Requested crawl URL ${url} exceeds maximum page dispersal depth of ${max_page_dispersal_depth} as its dispersal depth is ${current_page_dispersal_depth}. Not crawling.`)
             return false; 
-        } else LOG.info(`Requested crawl URL ${url} dispersal depth is ${requestedDispersalDepth}, maximum is ${max_dispersal_depth}. Crawling.`)
+        }
+        const requestedDispersalDepth = _getDispersalDept(current_host_dispersal_depth, url, memory.initial_url);
+        if (max_host_dispersal_depth != -1 && requestedDispersalDepth > max_host_dispersal_depth) {
+            LOG.info(`Requested crawl URL ${url} exceeds maximum dispersal depth of ${max_host_dispersal_depth} as its dispersal depth is ${requestedDispersalDepth}. Not crawling.`)
+            return false; 
+        } else LOG.info(`Requested crawl URL ${url} dispersal depth is ${requestedDispersalDepth}, maximum is ${max_host_dispersal_depth}. Crawling.`)
 
         const response = await httpClient.fetch(url, {undici: false, headers: {accept: Object.keys(accepted_mimes).join(",")}, 
             enforce_mime: true, ssl_options:{_org_monkshu_httpclient_forceHTTP1: true}}); 
@@ -109,12 +114,12 @@ async function crawl(url, output_folder_streamer_function, accepted_mimes=DEFAUL
                 outpath = path.resolve(`${outfolder}/${_convertURLToFSSafePath(url, mime, accepted_mimes, max_path_for_files)}`);
             LOG.debug(`Serializing the URL ${url} to a file at path ${outpath}.`);
             try{ 
-                await _createFolderIfNeeded(outfolder, {recursive: true}); 
-                fspromises.writeFile(outpath, JSON.stringify({...outputObject, text: outputText}), "utf8");
+                await _createFolderIfNeeded(outfolder, {recursive: true}); const outObject = {...outputObject}; outObject.text = outputText;
+                fspromises.writeFile(outpath, JSON.stringify(outObject), "utf8");
             } catch (err) { LOG.error(`Unable to save the crawled file for URL ${url}. Error is ${error}.`); }
         })();   // async block with no wait - run the steps to save in the right order but overall don't wait for writing to finish
         if (output_folder_streamer_function && typeof output_folder_streamer_function == "function") 
-            output_folder_streamer_function({...outputObject, stream: stream.Readable.from([outputText])});
+            output_folder_streamer_function({...outputObject, stream: stream.Readable.from([Buffer.from(outputText, "utf-8")])});
 
         const links = []; memory.urls[new URL(url).href] = true;
         for (const aElement of aElements) {
@@ -132,7 +137,8 @@ async function crawl(url, output_folder_streamer_function, accepted_mimes=DEFAUL
         for (const link of links) {
             memory.crawls_waiting++; 
             queueExecutor.add(_=>crawl(link, output_folder_streamer_function, accepted_mimes, timegap, 
-                max_dispersal_depth, max_path_for_files, memory, requestedDispersalDepth), [], false, timegap);
+                max_host_dispersal_depth, max_page_dispersal_depth, max_path_for_files, memory, 
+                requestedDispersalDepth, current_page_dispersal_depth+1), [], false, timegap);
         }
         return memory.promiseToResolve;
     } catch (error) { LOG.error(`Crawler error URL: ${url}. Error is: ${error.message||error}. Cause is ${error.cause||"unknown"}. Stack is ${error.stack}.`); return false; }

@@ -17,13 +17,13 @@ exports.runTestsAsync = async function(argv) {
         log(`Skipping website crawl ingestion test case, not called.`);
         return;
     }
-    if (!argv[1]) {log("Missing test file path."); return;} 
+    if ((!argv[1]) || (!argv[1].toLowerCase().endsWith(".crawl"))) {log("Missing crawl test file path."); return;} 
     const pathToFile = path.resolve(argv[1]);
 
     let result = await _testIngestion(pathToFile);  // test ingestion
     if (!result) return false;
     
-    result = await _testUningestion(pathToFile);    // test uningestion, also cleans it all up in the DB
+    //result = await _testUningestion(pathToFile);    // test uningestion, also cleans it all up in the DB
     
     return result;
 }

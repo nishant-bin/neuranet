@@ -34,9 +34,12 @@ const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT:
  * @param {string} org The user ORG
  * @param {string} lang The language to use to ingest, defaults to English. Use ISO codes, e.g. "en"
  * @param {object} streamGenerator A read stream generator for this file, if available, else null
+ * @param {boolean} dontRebuildDBs If true, the underlying DBs are not rebuilt. If this is used then the
+ *                                 DBs must be manually rebuilt later.
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
  */
-async function ingestfile(pathIn, id, org, lang, streamGenerator) {
+async function ingestfile(pathIn, id, org, lang, streamGenerator, dontRebuildDBs) {
+    LOG.info(`AI DB FS ingestion of file ${pathIn} for ID ${id} and org ${org} started.`);
     if (!(await quota.checkQuota(id))) {
 		LOG.error(`Disallowing the ingest call for the path ${pathIn}, as the user ${id} of org ${org} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
@@ -62,26 +65,56 @@ async function ingestfile(pathIn, id, org, lang, streamGenerator) {
     // ingest into the TF.IDF DB
     const tfidfDB = await getTFIDFDBForIDAndOrg(id, org, lang); 
     try {
+        LOG.info(`Starting text extraction of file ${pathIn}.`);
         const fileContents = await neuranetutils.readFullFile(await _getExtractedTextStream(), "utf8");
-        tfidfDB.create(fileContents, metadata);
+        LOG.info(`Ended text extraction, starting TFIDF ingestion of file ${pathIn}.`);
+        tfidfDB.create(fileContents, metadata, dontRebuildDBs);
     } catch (err) {
         LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
         return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
     }
+    LOG.info(`Ended TFIDF ingestion of file ${pathIn}.`);
 
     // ingest into the vector DB
+    LOG.info(`Starting Vector DB ingestion of file ${pathIn}.`);
 	try { 
         await vectordb.ingeststream(metadata, await _getExtractedTextStream(), 
             aiModelObjectForEmbeddings.encoding, aiModelObjectForEmbeddings.chunk_size, 
             aiModelObjectForEmbeddings.split_separators, aiModelObjectForEmbeddings.overlap);
     } catch (err) { 
-        tfidfDB.delete(metadata);   // delete the file from tf.idf DB too to keep them in sync
+        //tfidfDB.delete(metadata);   // delete the file from tf.idf DB too to keep them in sync
         LOG.error(`Vector ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
         return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
     }
+    LOG.info(`Ended Vector DB ingestion of file ${pathIn}.`);
 
-    LOG.info(`Vector DB ingestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
+    LOG.info(`AI DB FS ingestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
     return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
+}
+
+/** 
+ * Rebuilds the AI databases in memory.
+ * @param {string} id The user ID
+ * @param {string} org The user ORG
+ * @param {string} lang The language to use to ingest, defaults to English. Use ISO codes, e.g. "en"
+ * @throws Exception on error
+ */
+async function rebuild(id, org, lang) {
+    const tfidfDB = await getTFIDFDBForIDAndOrg(id, org, lang); 
+    tfidfDB.rebuild();
+}
+
+/**
+ * Flushes the databases to the file system.
+ * @param {string} id The user ID
+ * @param {string} org The user ORG
+ * @param {string} lang The language to use to ingest, defaults to English. Use ISO codes, e.g. "en"
+ * @throws Exception on error
+ */
+async function flush(id, org, lang) {
+    const tfidfDB = await getTFIDFDBForIDAndOrg(id, org, lang); 
+    const vectordb = await getVectorDBForIDAndOrg(id, org, null);
+    await tfidfDB.flush(); await vectordb.flush_db();
 }
 
 /**
@@ -219,4 +252,4 @@ async function _extractTextViaPluginsUsingStreams(inputstream, aiModelObject, fi
 const _getDocID = pathIn => crypto.createHash("md5").update(path.resolve(pathIn)).digest("hex");
 
 module.exports = {ingestfile, uningestfile, renamefile, getVectorDBForIDAndOrg, getTFIDFDBForIDAndOrg,
-    getAIModelForFiles, REASONS, MODEL_DEFAULT, DEFAULT_ID, DEFAULT_ORG};
+    getAIModelForFiles, rebuild, flush, REASONS, MODEL_DEFAULT, DEFAULT_ID, DEFAULT_ORG};

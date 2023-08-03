@@ -127,6 +127,7 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
     const hash = _get_vector_hash(vector); if (!dbToUse.index[hash]) {  // only add the vector if we already don't have it
         dbToUse.index[hash] = {vector, hash, metadata, length: _getVectorLength(vector)};
         
+        
         try {await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");}
         catch (err) {
             delete dbToUse.index[hash]; 
@@ -274,7 +275,7 @@ exports.ingeststream = async function(metadata, stream, encoding="utf8", chunk_s
         let chunk_to_ingest = "", vectors_ingested = []; 
         stream.on("data", async chunk => {
             stream.pause(); // read more only after we ingest this first
-            chunk_to_ingest += chunk.toString(encoding)
+            chunk_to_ingest += chunk.toString(encoding).replace(/\s*\n\s*/g, "\n").replace(/[ \t]+/g, " ");   // remove extra whitespaces. #1 they destroy the semantics, #2 at least openai can choke on them for embeddings
             if (chunk_to_ingest.length >= chunk_size) {
                 const ingestionResult = await exports.ingest(metadata, chunk_to_ingest, chunk_size, split_separators, overlap, embedding_generator, db_path, true);
                 if ((!ingestionResult) || (!ingestionResult.vectors_ingested)) {
@@ -419,8 +420,8 @@ const _get_db_index_text_file = (vector, db_path) => path.resolve(`${db_path}/te
 const _deleteAllCreatedVectors = async (vectors, db_path) => {for (const vector of vectors) await exports.delete(vector, db_path);}
 
 function _get_vector_hash(vector) {
-    const shasum = crypto.createHash("sha1"); shasum.update(vector.toString());
-    const hash = shasum.digest("hex"); return hash;
+    const hashAlgo = crypto.createHash("md5"); hashAlgo.update(vector.toString());
+    const hash = hashAlgo.digest("hex"); return hash;
 }
 
 const _log_error = (message, db_path, error) => (global.LOG||console).error(

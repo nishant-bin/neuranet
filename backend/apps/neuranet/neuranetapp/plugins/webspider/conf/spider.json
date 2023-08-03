@@ -1,5 +1,6 @@
 {
-    "max_dispersal": 0,
+    "default_host_dispersal_depth": 0,
+    "default_page_dispersal_depth": -1,
     "accepted_mimes": {
         "text/html": {"ending": ".html"}, 
         "application/pdf": {"ending": ".pdf"}, 

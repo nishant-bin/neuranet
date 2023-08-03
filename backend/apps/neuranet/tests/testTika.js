@@ -13,11 +13,13 @@ exports.runTestsAsync = async function(argv) {
         LOG.console(`Skipping extract text test case, not called.\n`)
         return;
     }
-    if (!argv[1]) {LOG.console("Missing test file path.\n"); return;} 
+    if (!argv[1]) {LOG.console("Missing extraction file's path.\n"); return;} 
     const pathToFile = path.resolve(argv[1]);
 
+    const forceTika = (argv[2]?.toLowerCase() == true);
+
     try { await tika.initAsync(); } catch (err) { LOG.error(`Can't initialize Tika. Error is ${err}.`); return false; }
-    const result = await tika.getContent(pathToFile);  // test text extraction using the Tika plugin
+    const result = await tika.getContent(pathToFile, forceTika);  // test text extraction using the Tika plugin
     if (!result) return false;
 
     const outputText = result.toString("utf8");

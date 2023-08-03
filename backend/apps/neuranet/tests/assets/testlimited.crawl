@@ -1,0 +1,6 @@
+{
+    "url": "https://www.tangentia.com/",
+    "outfolder": "tangentia.crawl",
+    "page_dispersal_depth": 1,
+    "host_dispersal_depth": 0
+}

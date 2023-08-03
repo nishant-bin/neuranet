@@ -2,6 +2,8 @@
  * Can return text from lots of different file types - uses Apache Tika. 
  * https://tika.apache.org/
  * 
+ * Needs htmlparser2 NPM for HTML files.
+ * 
  * (C) Apache.org - LICENSE - https://www.apache.org/licenses/LICENSE-2.0
  * 
  * (C) 2023 TekMonks. All rights reserved.
@@ -11,14 +13,16 @@
 const fs = require("fs");
 const path = require("path");
 const fspromises = fs.promises;
+const stream = require("stream");
 const mustache = require("mustache");
 const calljava = require(`${CONSTANTS.LIBDIR}/calljava.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
 
 const ONE_GB_STRINGS = 1024*1024*1024, TIKA_TEMP_SUBDIR_WRITE = `${NEURANET_CONSTANTS.TEMPDIR}/tika/out`, 
     TIKA_TEMP_SUBDIR_READ = `${NEURANET_CONSTANTS.TEMPDIR}/tika/in`;
 
-let tikaconf, tikaFacade, java;
+let tikaconf, tikaFacade, java, htmlparser2;
 
 exports.initAsync = async _ => {
     await _createTikaFacade();
@@ -30,9 +34,10 @@ exports.initAsync = async _ => {
         if (err.code == "ENOENT") await fspromises.mkdir(TIKA_TEMP_SUBDIR_WRITE, {recursive: true});
         else {LOG.error(`Can't access temporary paths needed by Tika. The error was ${err}.`); throw err;}
     }
+    try { htmlparser2 = require("htmlparser2"); } catch (err) { LOG.error(`Tika plugin unable to load htmlparser2. Will be using Tika for HTML parsing.`); }
 }
 
-exports.getContentStream = async function (inputstream, filepath) {
+exports.getContentStream = async function (inputstream, filepath, forcetika) {
     if (!tikaFacade) try { await exports.initAsync(); } catch (err) {
         LOG.error(`Unable to initialize the Tika plugin for text extraction. Error was ${err}`);
         return null; 
@@ -41,9 +46,13 @@ exports.getContentStream = async function (inputstream, filepath) {
     const basename = path.basename(filepath), extension = path.extname(filepath);
     if (!tikaconf.supported_types.includes(extension)) return null;
 
-    if (filepath.toLowerCase().endsWith(".text") || filepath.toLowerCase().endsWith(".txt")) {
+    if ((!forcetika) && filepath.toLowerCase().endsWith(".text") || filepath.toLowerCase().endsWith(".txt")) {
         LOG.info(`Tika.js using native text reader assuming UTF8 for the file ${filepath}.`);
         return inputstream;
+    }
+    if ((!forcetika) && htmlparser2 && (filepath.toLowerCase().endsWith(".html") || filepath.toLowerCase().endsWith(".htm"))) {
+        LOG.info(`Tika.js using native html reader for the file ${filepath}.`);
+        return await _getHTMLReadStream(inputstream);
     }
 
     LOG.info(`Tika.js using 3P Apache Tika libraries for the file ${filepath}.`);
@@ -71,8 +80,8 @@ exports.getContentStream = async function (inputstream, filepath) {
     }
 }
 
-exports.getContent = async function(filepath) {
-    const readstreamTExtractedText = await exports.getContentStream(fs.createReadStream(filepath), filepath);
+exports.getContent = async function(filepath, forcetika) {
+    const readstreamTExtractedText = await exports.getContentStream(fs.createReadStream(filepath), filepath, forcetika);
     return new Promise((resolve, reject) => {
         if (!readstreamTExtractedText) reject("Failed on Tika stream creation.");
         const contents = [];
@@ -99,4 +108,16 @@ function _copyFileToWorkingArea(inputstream, workingareaPath) {
         fileoutstreamTemp.on("close", _ => resolve());
         inputstream.pipe(fileoutstreamTemp);
     });
+}
+
+async function _getHTMLReadStream(inputstream) {
+    const html = await neuranetutils.readFullFile(inputstream, "utf8");
+    let text = "", skipText = false; const skippableTags = ["style", "script"];
+    const htmlparser = new htmlparser2.Parser({
+        ontext: data => {if (!skipText) text += data},
+        onopentagname: name => skipText = skippableTags.includes(name.toLowerCase()),
+        onclosetag: _ => skipText = false
+    }, {decodeEntities: true});
+    htmlparser.write(html); htmlparser.end();
+    return stream.Readable.from([Buffer.from(text, "utf8")]);
 }
