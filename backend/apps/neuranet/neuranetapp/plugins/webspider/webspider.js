@@ -32,31 +32,34 @@ exports.ingest = async function(fileindexer) {
 
     let allCrawlsResult = true;
     for (const crawlingInstructionsThis of crawlingInstructions) {
-        const output_folder = path.resolve(`${__dirname}/${spiderconf.crawl_output_root}/${crawler.coredomain(crawlingInstructionsThis.url)}.${"1691473773221"/*Date.now()*/}`);
+        const output_folder = path.resolve(`${__dirname}/${spiderconf.crawl_output_root}/${
+            spiderconf.test_ingestion ? spiderconf.ingestion_folder : crawler.coredomain(crawlingInstructionsThis.url)+"."+Date.now()}`);
         LOG.info(`Starting crawling the URL ${crawlingInstructionsThis.url} to path ${output_folder}.`);
-        const crawlResult = /*await crawler.crawl(crawlingInstructionsThis.url, output_folder, 
+        const crawlResult = spiderconf.test_ingestion ? true : await crawler.crawl(crawlingInstructionsThis.url, output_folder, 
             spiderconf.accepted_mimes||DEFAULT_MIMES, spiderconf.timegap||50, 
             crawlingInstructionsThis.host_dispersal_depth||spiderconf.default_host_dispersal_depth||0,
             crawlingInstructionsThis.page_dispersal_depth||spiderconf.default_page_dispersal_depth||-1, 
-            spiderconf.max_path||150);*/ true;
-        if (crawlResult) {
-            LOG.info(`Site crawl completed for ${crawlingInstructionsThis.url}, ingesting into the AI databases and stores.`);
-            fileindexer.start();
-            const ingestionResult = await _ingestFolder(output_folder, 
-                crawlingInstructionsThis.outfolder||`${crawler.coredomain(crawlingInstructionsThis.url)}_${Date.now()}`,
-                fileindexer);
-            if (!await fileindexer.end()) {_logCrawlError(crawlingInstructionsThis.url); allCrawlsResult = false;}  // rebuild AI DBs etc.
-            const percentSuccess = ingestionResult.result?ingestionResult.successfully_ingested.length/
-                (ingestionResult.successfully_ingested.length+ingestionResult.failed_ingestion.length):0;
-            const thisCrawlResult = ingestionResult.result && ingestionResult.successfully_ingested != 0 && percentSuccess > 
-                (fileindexer.minimum_success_percent||DEFAULT_MINIMUM_SUCCESS_PERCENT);
-            if (!thisCrawlResult) {
-                LOG.error(`Ingestion of ${crawlingInstructionsThis.url} failed. Folder ingestion into AI databases failed, partial ingestion may have occured requiring database cleanup.`);
-                allCrawlsResult = false;
-            } else LOG.info(`Ingestion of ${crawlingInstructionsThis.url} succeeded. Folder ingestion into AI databases completed.`);
-            if (ingestionResult.result) LOG.debug(`List of successfully ingested files: ${ingestionResult.successfully_ingested.toString()}`);
-            if (ingestionResult.result) LOG.debug(`List of failed to ingest files: ${ingestionResult.failed_ingestion.toString()}`);
-        } else {_logCrawlError(crawlingInstructionsThis.url); allCrawlsResult = false;}
+            spiderconf.max_path||150);
+        if (!crawlResult) {_logCrawlError(crawlingInstructionsThis.url); allCrawlsResult = false; continue;}
+        if (spiderconf.test_crawl) continue;    // only testing crawling
+        
+        // start ingestion into Neuranet databases
+        LOG.info(`Site crawl completed for ${crawlingInstructionsThis.url}, ingesting into the AI databases and stores.`);
+        fileindexer.start();
+        const ingestionResult = await _ingestFolder(output_folder, 
+            crawlingInstructionsThis.outfolder||`${crawler.coredomain(crawlingInstructionsThis.url)}_${Date.now()}`,
+            fileindexer);
+        if (!await fileindexer.end()) {_logCrawlError(crawlingInstructionsThis.url); allCrawlsResult = false;}  // rebuild AI DBs etc.
+        const percentSuccess = ingestionResult.result?ingestionResult.successfully_ingested.length/
+            (ingestionResult.successfully_ingested.length+ingestionResult.failed_ingestion.length):0;
+        const thisCrawlResult = ingestionResult.result && ingestionResult.successfully_ingested != 0 && percentSuccess > 
+            (fileindexer.minimum_success_percent||DEFAULT_MINIMUM_SUCCESS_PERCENT);
+        if (!thisCrawlResult) {
+            LOG.error(`Ingestion of ${crawlingInstructionsThis.url} failed. Folder ingestion into AI databases failed, partial ingestion may have occured requiring database cleanup.`);
+            allCrawlsResult = false;
+        } else LOG.info(`Ingestion of ${crawlingInstructionsThis.url} succeeded. Folder ingestion into AI databases completed.`);
+        if (ingestionResult.result) LOG.debug(`List of successfully ingested files: ${ingestionResult.successfully_ingested.toString()}`);
+        if (ingestionResult.result) LOG.debug(`List of failed to ingest files: ${ingestionResult.failed_ingestion.toString()}`);
     }
     return allCrawlsResult;
 }

@@ -9,5 +9,9 @@
     },
     "timegap": 50,
     "crawl_output_root": "temp_crawls",
-    "max_path": 150
+    "max_path": 150,
+    
+    "test_crawl": false,
+    "test_ingestion": true,
+    "ingestion_folder": "tangentia.1691473773221"
 }
