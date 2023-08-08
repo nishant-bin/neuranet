@@ -43,7 +43,7 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.000002",
-            "max_memory_tokens": 1000,
+            "max_memory_tokens": 3500,
             "api_max_retries": 3,
             "http_retry_codes": [503, 500, 504]
         },
@@ -110,7 +110,7 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.000002",
-            "max_memory_tokens": 1100,
+            "max_memory_tokens": 3300,
             "api_overloaded_max_retries": 3
         },
 

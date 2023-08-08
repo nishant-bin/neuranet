@@ -1,0 +1,6 @@
+{
+    "url": "https://www.sec.rakuten.com.hk/en/",
+    "outfolder": "rshk.crawl",
+    "page_dispersal_depth": 1,
+    "host_dispersal_depth": 0
+}

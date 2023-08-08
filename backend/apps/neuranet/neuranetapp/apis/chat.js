@@ -47,11 +47,12 @@ exports.doService = async jsonReq => {
 	
 	const {chatsession, sessionID, sessionKey} = exports.getUsersChatSession(jsonReq.id, jsonReq.session_id);
 
-	const finalSessionObject = await exports.trimSession(aiModelObject.max_memory_tokens||DEFAULT_MAX_MEMORY_TOKENS,
-		exports.jsonifyContentsInThisSession([...chatsession, ...(utils.clone(jsonReq.session))]), aiModelToUse, 
-			aiModelObject.token_approximation_uplift, aiModelObject.tokenizer, aiLibrary); 
+	const jsonifiedSession = exports.jsonifyContentsInThisSession([...chatsession, ...(utils.clone(jsonReq.session))]);
+	let finalSessionObject = await exports.trimSession(aiModelObject.max_memory_tokens||DEFAULT_MAX_MEMORY_TOKENS,
+		jsonifiedSession, aiModelToUse, aiModelObject.token_approximation_uplift, aiModelObject.tokenizer, aiLibrary); 
+	if (!finalSessionObject.length) finalSessionObject = [jsonifiedSession[0]];	// at least send the latest question
 	finalSessionObject[finalSessionObject.length-1].last = true;
-
+	
 	const response = await aiLibrary.process({session: finalSessionObject}, 
 		`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${PROMPT_FILE}`, aiKey, aiModelToUse);
 

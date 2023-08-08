@@ -63,9 +63,9 @@ exports.initXbinPath = async (result) => {
 	}
 }
 
-exports.getID = headersOrLoginIDAndOrg => headersOrLoginIDAndOrg.xbin_id || login.getID(headers);
+exports.getID = headersOrLoginIDAndOrg => headersOrLoginIDAndOrg.xbin_id || login.getID(headersOrLoginIDAndOrg);
 
-exports.getOrg = headersOrLoginIDAndOrg => headersOrLoginIDAndOrg.xbin_org || login.getOrg(headers);
+exports.getOrg = headersOrLoginIDAndOrg => headersOrLoginIDAndOrg.xbin_org || login.getOrg(headersOrLoginIDAndOrg);
 
 exports.isSecure = async (headersOrLoginIDAndOrg, path) => {	// add domain check here to ensure ID and org domains are ok
 	const isKeySecure = headersOrLoginIDAndOrg.xbin_org && headersOrLoginIDAndOrg.headers ? 
