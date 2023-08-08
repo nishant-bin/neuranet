@@ -32,13 +32,13 @@ exports.ingest = async function(fileindexer) {
 
     let allCrawlsResult = true;
     for (const crawlingInstructionsThis of crawlingInstructions) {
-        const output_folder = path.resolve(`${__dirname}/${spiderconf.crawl_output_root}/${crawler.coredomain(crawlingInstructionsThis.url)}.${"1690906094137"/*Date.now()*/}`);
+        const output_folder = path.resolve(`${__dirname}/${spiderconf.crawl_output_root}/${crawler.coredomain(crawlingInstructionsThis.url)}.${"1691473773221"/*Date.now()*/}`);
         LOG.info(`Starting crawling the URL ${crawlingInstructionsThis.url} to path ${output_folder}.`);
-        const crawlResult = await crawler.crawl(crawlingInstructionsThis.url, output_folder, 
+        const crawlResult = /*await crawler.crawl(crawlingInstructionsThis.url, output_folder, 
             spiderconf.accepted_mimes||DEFAULT_MIMES, spiderconf.timegap||50, 
             crawlingInstructionsThis.host_dispersal_depth||spiderconf.default_host_dispersal_depth||0,
             crawlingInstructionsThis.page_dispersal_depth||spiderconf.default_page_dispersal_depth||-1, 
-            spiderconf.max_path||150);
+            spiderconf.max_path||150);*/ true;
         if (crawlResult) {
             LOG.info(`Site crawl completed for ${crawlingInstructionsThis.url}, ingesting into the AI databases and stores.`);
             fileindexer.start();
@@ -78,8 +78,8 @@ async function _ingestFolder(pathIn, cmsPath, fileindexer, memory) {
                     LOG.error(`Error ingesting file ${pathThisEntry} for CMS path ${cmsPathThisEntry} due to error: ${err}.`);
                     continue;
                 }
-                const result = await fileindexer.addFile(Buffer.from(fileJSON.text, 
-                    fileJSON.is_binary?"base64":"utf8"), cmsPathThisEntry, `URL: ${fileJSON.url}`, false);   // don't rebuild DBs
+                const result = await _promiseExceptionToBoolean(fileindexer.addFile(Buffer.from(fileJSON.text, 
+                    fileJSON.is_binary?"base64":"utf8"), cmsPathThisEntry, `URL: ${fileJSON.url}`, false));   // don't rebuild DBs
                 if ((!result) || (!result.result)) {
                     memory.failed_ingestion.push(pathThisEntry); 
                     LOG.error(`AI ingestion of URL ${fileJSON.url} failed.`); 
@@ -97,3 +97,5 @@ async function _ingestFolder(pathIn, cmsPath, fileindexer, memory) {
             failed_ingestion: memory?memory.failed_ingestion:undefined}; 
     }
 }
+
+const _promiseExceptionToBoolean = async promise => {try{const result = await promise; return result||true;} catch(err) {return false;}}

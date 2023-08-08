@@ -15,9 +15,11 @@ exports.doService = async (jsonReq, _, headers) => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return CONSTANTS.FALSE_RESULT;}
 	
 	LOG.debug("Got deletefile request for path: " + jsonReq.path);
+	const headersOrLoginIDAndOrg = jsonReq.id && jsonReq.org ? 
+		{xbin_id: jsonReq.id, xbin_org: jsonReq.org, headers} : headers;
 
-	const fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${jsonReq.path}`);
-	if (!await cms.isSecure(headers, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
+	const fullpath = path.resolve(`${await cms.getCMSRoot(headersOrLoginIDAndOrg)}/${jsonReq.path}`);
+	if (!await cms.isSecure(headersOrLoginIDAndOrg, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 
 	try {await fspromises.access(fullpath)} catch (err) { 
 		if (err.code == "ENOENT") {
@@ -26,7 +28,7 @@ exports.doService = async (jsonReq, _, headers) => {
 		}
 	}
 
-	const ip = utils.getLocalIPs()[0], id = cms.getID(headers), org = cms.getOrg(headers);
+	const ip = utils.getLocalIPs()[0], id = cms.getID(headersOrLoginIDAndOrg), org = cms.getOrg(headersOrLoginIDAndOrg);
 
 	try {
 		await rmrf(fullpath, id, org, ip); 

@@ -87,6 +87,14 @@ exports.getOrg = headers => {
 	return logins[headers["authorization"].toLowerCase()]?logins[headers["authorization"].toLowerCase()].org:null;
 }
 
+exports.getKey = headers => APIREGISTRY.getExtension("apikeychecker").getIncomingAPIKey(headers);
+
+exports.isAPIKeySecure = async (headers, org) => {
+	const incomingKey = APIREGISTRY.getExtension("apikeychecker").getIncomingAPIKey(headers);
+	const orgKeys = await userid.getKeysForOrg(org);
+	return orgKeys.includes(incomingKey);
+}
+
 exports.getRole = headers => {
 	if (!headers["authorization"]) return null; const logins = CLUSTER_MEMORY.get(LOGINS_MEMORY_KEY) || {};
 	return logins[headers["authorization"].toLowerCase()]?logins[headers["authorization"].toLowerCase()].role:null;

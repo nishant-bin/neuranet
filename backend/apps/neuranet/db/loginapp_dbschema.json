@@ -12,6 +12,7 @@
 	
 	"CREATE TABLE credit_cards(number varchar not null primary key, expiry_month integer not null, expiry_year integer not null, name varchar not null, ccv varchar not null, org varchar not null, foreign key(org) references orgs(name) on delete cascade on update cascade)",
 	
+    "CREATE TABLE keys(key varchar not null, org varchar not null, foreign key(org) references orgs(name) on delete cascade on update cascade)",
 
     "COMMIT TRANSACTION"
 ]

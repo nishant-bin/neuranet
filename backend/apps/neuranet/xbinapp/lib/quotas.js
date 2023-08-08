@@ -6,11 +6,11 @@ const fspromises = require("fs").promises;
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const CONF = XBIN_CONSTANTS.CONF;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
-const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
 const db = require(`${XBIN_CONSTANTS.LIB_DIR}/xbindb.js`).getDB();
 
-exports.checkQuota = async function(headers, writeLength, id) {
-	const cmsRoot = await cms.getCMSRoot(headers); if (!id) id = login.getID(headers);
+exports.checkQuota = async function(headersOrLoginIDAndOrg, writeLength, id) {
+	const cmsRoot = await cms.getCMSRoot(headersOrLoginIDAndOrg); 
+	if (!id) id = cms.getID(headersOrLoginIDAndOrg);
     if (!id) {LOG.error("Not valid ID "+id); return {result: false};}
 	let quota; try {quota = (await db.getQuery("SELECT quota FROM quotas WHERE id = ?", [id]))[0]} catch (err) {
 		LOG.error(`Error retrieving quota for ID ${id} due to error: ${err}, using DEFAULT_QUOTA of ${CONF.DEFAULT_QUOTA}`);

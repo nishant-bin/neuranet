@@ -17,31 +17,41 @@ const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const addablereadstream = require(`${XBIN_CONSTANTS.LIB_DIR}/addablereadstream.js`)
 const ADDABLE_STREAM_TIMEOUT = CONF.UPLOAD_STREAM_MAX_WAIT||120000;	// 2 minutes to receive new data else we timeout
 
+const UTF8CONTENTTYPE_MATCHER = /^\s*?text.*?;\s*charset\s*=\s*utf-?8\s*$/;
 const _existing_streams = [];	// holds existing streams for files under upload progress
 
 exports.doService = async (jsonReq, _servObject, headers, _url) => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return CONSTANTS.FALSE_RESULT;}
 	
 	LOG.debug("Got uploadfile request for path: " + jsonReq.path);
-
-	const transferID = jsonReq.transfer_id || Date.now(), fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${jsonReq.path}`);
-	if (!await cms.isSecure(headers, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
+	const headersOrLoginIDAndOrg = jsonReq.id && jsonReq.org ? 
+		{xbin_id: jsonReq.id, xbin_org: jsonReq.org, headers} : headers;
+	const transferID = jsonReq.transfer_id || Date.now(), fullpath = path.resolve(`${await cms.getCMSRoot(headersOrLoginIDAndOrg)}/${jsonReq.path}`);
+	if (!await cms.isSecure(headersOrLoginIDAndOrg, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 	
-	LOG.debug("Resolved full path for upload file: " + fullpath);
+	LOG.debug(`Resolved full path for upload file: ${fullpath}. Transfer ID is ${transferID}`);
 
 	try {
-        const matches = jsonReq.data.match(/^data:.*;base64,(.*)$/); 
-        if (!matches) throw `Bad data encoding: ${jsonReq.data}`;
-		const bufferToWrite = Buffer.from(matches[1], "base64");
-		if (!(await quotas.checkQuota(headers, bufferToWrite.length)).result) throw (`Quota is full write failed for path ${fullpath}.`);
+		const pureUTF8TextDataType = jsonReq.content_type?.toLowerCase().match(UTF8CONTENTTYPE_MATCHER) != null;	// matches "text/[whatever]; charset=utf-8"
+        let bufferToWrite; if (!pureUTF8TextDataType) {	// if not pure UTF8 text then must be BASE64 encoded
+			const matches = jsonReq.data.match(/^data:.*;base64,(.*)$/); 
+			if (!matches) {
+				LOG.error(`Bad encoding for ${fullpath}. First 100 bytes of data are ${data && data.substring?data.substring(0, 100<data.length?100:data.length):"null"}.`);
+				return {...CONSTANTS.TRUE_RESULT, transfer_id, error: "Unsupported data encoding."};
+			}
+			bufferToWrite = Buffer.from(matches[1], "base64");
+		} else bufferToWrite = Buffer.from(jsonReq.data, "utf8");
+		if (!(await quotas.checkQuota(headersOrLoginIDAndOrg, bufferToWrite.length, jsonReq.xbin_id)).result) 
+			{LOG.error(`Quota is full write failed for path ${fullpath}.`); return {...CONSTANTS.TRUE_RESULT, error: "Quota is full."};}
         
-		await exports.writeChunk(headers, transferID, fullpath, bufferToWrite, jsonReq.startOfFile, jsonReq.endOfFile);
+		await exports.writeChunk(headersOrLoginIDAndOrg, transferID, fullpath, bufferToWrite, 
+			jsonReq.startOfFile, jsonReq.endOfFile, jsonReq.comment);
 
 		return {...CONSTANTS.TRUE_RESULT, transfer_id: transferID};
 	} catch (err) {
 		LOG.error(`Error writing to path: ${fullpath}, error is: ${err}, stack is ${err.stack}`); 
 		try {await fspromises.unlink(fullpath); await exports.deleteDiskFileMetadata(fullpath)} catch(err) {};
-		return {...CONSTANTS.FALSE_RESULT, transfer_id: transferID};
+		return {...CONSTANTS.FALSE_RESULT, transfer_id: transferID, error: "Error writing."};
 	}
 }
 
@@ -50,22 +60,24 @@ exports.uploadFile = async function(xbin_id, xbin_org, readstreamOrContents, cms
 
 	const transferID = Date.now(), fullpath = path.resolve(`${await cms.getCMSRoot({xbin_id, xbin_org})}/${cmsPath}`);
 	if (!await cms.isSecure({xbin_id, xbin_org}, fullpath)) {LOG.error(`Path security validation failure: ${fullpath}`); return CONSTANTS.FALSE_RESULT;}
+	const cmsHostingFolder = await cms.getCMSRootRelativePath({xbin_id, xbin_org}, path.dirname(fullpath)); 
+	await exports.createFolder({xbin_id, xbin_org}, cmsHostingFolder);	// create the hosting folder if needed.
 
 	if (Buffer.isBuffer(readstreamOrContents)) {
-		if (await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, readstreamOrContents, true, 
-			true, comment, noevent)) return CONSTANTS.TRUE_RESULT; else return CONSTANTS.FALSE_RESULT;
+		if (await utils.promiseExceptionToBoolean(exports.writeChunk({xbin_id, xbin_org}, transferID, 
+			fullpath, readstreamOrContents, true, true, comment, noevent))) return CONSTANTS.TRUE_RESULT; else return CONSTANTS.FALSE_RESULT;
 	} else if (readstreamOrContents instanceof stream.Readable) return new Promise(resolve => {
 		let startOfFile = true, ignoreEvents = false;
 		readstreamOrContents.on("data", async chunk => {
 			if (ignoreEvents) return;	// failed already
-			if (!await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, chunk, startOfFile, 
-				false, comment, noevent)) { resolve(CONSTANTS.FALSE_RESULT); ignoreEvents = true }; 
+			if (!(await utils.promiseExceptionToBoolean(exports.writeChunk({xbin_id, xbin_org}, transferID, 
+				fullpath, chunk, startOfFile, false, comment, noevent)))) { resolve(CONSTANTS.FALSE_RESULT); ignoreEvents = true }; 
 			startOfFile = false; 
 		});
 		readstreamOrContents.on("end", async _ => {
 			if (ignoreEvents) return;	// failed already
-			if (await exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, Buffer.from([]), false, 
-				true, comment, noevent)) resolve(CONSTANTS.TRUE_RESULT); else resolve(CONSTANTS.FALSE_RESULT);
+			if (await utils.promiseExceptionToBoolean(exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, Buffer.from([]), false, 
+				true, comment, noevent))) resolve(CONSTANTS.TRUE_RESULT); else resolve(CONSTANTS.FALSE_RESULT);
 		});
 	}); else return CONSTANTS.FALSE_RESULT;	// neither a buffer, nor a stream - we can't deal with it
 }
@@ -170,11 +182,12 @@ exports.getFolderSize = async fullpath => {
 	return size;
 }
 
-exports.createFolder = async function(headers, inpath) {
-	const fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${inpath}`);
-	if (!await cms.isSecure(headers, fullpath)) throw (`Path security validation failure: ${inpath}`);
-	try {await fspromises.mkdir(fullpath);} catch (err) {if (err.code !== "EEXIST") throw err; else LOG.warn("Told to create a folder which already exists, ignorning: "+fullpath);}	// already exists is ok
-	await exports.updateFileStats(fullpath, inpath, undefined, true, XBIN_CONSTANTS.XBIN_FOLDER);
+exports.createFolder = async function(headersOrLoginIDAndOrg, inpath) {
+	const fullpath = path.resolve(`${await cms.getCMSRoot(headersOrLoginIDAndOrg)}/${inpath}`);
+	if (!await cms.isSecure(headersOrLoginIDAndOrg, fullpath)) throw (`Path security validation failure: ${inpath}`);
+	if (await utils.createDirectory(fullpath)) await exports.updateFileStats(fullpath, inpath, undefined, 
+		true, XBIN_CONSTANTS.XBIN_FOLDER);
+	else throw (`Error creating folder: ${fullpath}.`);
 }
 
 exports.isZippable = fullpath => !((CONF.DONT_GZIP_EXTENSIONS||[]).includes(path.extname(fullpath)));

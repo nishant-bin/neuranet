@@ -13,7 +13,9 @@ const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
 
 exports.doService = async (jsonReq, _, headers) => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return CONSTANTS.FALSE_RESULT;}
-	return exports.renameFile(headers, jsonReq.old, jsonReq.new);
+	const headersOrLoginIDAndOrg = jsonReq.id && jsonReq.org ? 
+		{xbin_id: jsonReq.id, xbin_org: jsonReq.org, headers} : headers;
+	return exports.renameFile(headersOrLoginIDAndOrg, jsonReq.old, jsonReq.new);
 }
 
 exports.renameFile = async function(headersOrIDAndOrg, cmsOldPath, cmsNewPath, noevent) {

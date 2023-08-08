@@ -63,11 +63,15 @@ exports.initXbinPath = async (result) => {
 	}
 }
 
-exports.getID = headers => login.getID(headers);
+exports.getID = headersOrLoginIDAndOrg => headersOrLoginIDAndOrg.xbin_id || login.getID(headers);
 
-exports.getOrg = headers => login.getOrg(headers);
+exports.getOrg = headersOrLoginIDAndOrg => headersOrLoginIDAndOrg.xbin_org || login.getOrg(headers);
 
-exports.isSecure = async (headersOrLoginIDAndOrg, path) => XBIN_CONSTANTS.isSubdirectory(path, await this.getCMSRoot(headersOrLoginIDAndOrg));
+exports.isSecure = async (headersOrLoginIDAndOrg, path) => {	// add domain check here to ensure ID and org domains are ok
+	const isKeySecure = headersOrLoginIDAndOrg.xbin_org && headersOrLoginIDAndOrg.headers ? 
+		await login.isAPIKeySecure(headersOrLoginIDAndOrg.headers, headersOrLoginIDAndOrg.xbin_org) : true;
+	return isKeySecure && XBIN_CONSTANTS.isSubdirectory(path, await this.getCMSRoot(headersOrLoginIDAndOrg));
+}
 
 const _getPathForIDAndOrg = (id, org) => `${XBIN_CONSTANTS.CONF.CMS_ROOT}/${_convertToPathFriendlyString(org.toLowerCase())}/${_convertToPathFriendlyString(id.toLowerCase())}`;
 

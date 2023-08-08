@@ -31,5 +31,6 @@ exports.isSubdirectory = (child, parent) => { // from: https://stackoverflow.com
 
     const relative = path.relative(parent, child);
     const isSubdir = !!relative && !relative.startsWith('..') && !path.isAbsolute(relative);
-    return isSubdir;
+    if (isSubdir) return true;
+    else return false;
 }

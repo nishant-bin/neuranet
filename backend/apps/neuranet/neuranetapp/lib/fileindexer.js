@@ -125,11 +125,13 @@ function _getFileIndexer(pathIn, isxbin, id, org, lang) {
             LOG.error(`Error ending AI databases. The error is ${err}`); return false;} },
         addFile: async (bufferOrStream, cmsPath, comment, runAsNewInstructions) => {
             try {
-                const pathToWriteTo = isxbin ? await cms.getFullPath(cmsPath) : await _getNonCMSDrivePath(cmsPath, id, org);
+                const pathToWriteTo = isxbin ? await cms.getFullPath({xbin_id: id, xbin_org: org}, cmsPath) : 
+                    await _getNonCMSDrivePath(cmsPath, id, org);
                 // write the file to the file system being used whether it is XBin or Neuranet's internal drive
-                if (isxbin && (!(await uploadfile.uploadFile(id, org, bufferOrStream, cmsPath, comment, true))?.result)) 
-                    throw new Error(`CMS upload failed for ${cmsPath}`);
-                else await fs.promises.writeFile(pathToWriteTo, Buffer.isBuffer(bufferOrStream) ? 
+                if (isxbin) {
+                    if (!(await uploadfile.uploadFile(id, org, bufferOrStream, cmsPath, comment, true))?.result)
+                        throw new Error(`CMS upload failed for ${cmsPath}`);
+                } else await fs.promises.writeFile(pathToWriteTo, Buffer.isBuffer(bufferOrStream) ? 
                     bufferOrStream : neuranetutils.readFullFile(bufferOrStream));    // write to the disk
 
                 // if run as new instructions then publish a message which triggers file indexer to restart the 
@@ -142,7 +144,7 @@ function _getFileIndexer(pathIn, isxbin, id, org, lang) {
                             ip: serverutils.getLocalIPs()[0]});
                     return CONSTANTS.TRUE_RESULT;
                 } else if ((await aidbfs.ingestfile(pathToWriteTo, id, org, lang, 
-                    isxbin?_=>downloadfile.getReadStream(pathIn):undefined, true))?.result) return CONSTANTS.TRUE_RESULT;
+                    isxbin?_=>downloadfile.getReadStream(pathToWriteTo):undefined, true))?.result) return CONSTANTS.TRUE_RESULT;
                 else return CONSTANTS.FALSE_RESULT;
             } catch (err) {
                 LOG.error(`Error writing file ${cmsPath} for ID ${id} and org ${org} due to ${err}.`);
