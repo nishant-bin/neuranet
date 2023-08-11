@@ -104,7 +104,7 @@ div#filecontainer {
 <div id="singlenotification">
     <span id="path" title="{{path}}">{{path}}</span>
     <span id="donenotifier">{{#done}}{{i18n.EnterpriseSearch_Done}}{{/done}}{{^done}}{{i18n.EnterpriseSearch_Processing}}{{/done}}</span>
-    <span id="progressimage"><img src="{{{VIEW_PATH}}}/img/spinner{{#done}}done{{/done}}{{^done}}progress{{/done}}.svg"></span>
+    <span id="progressimage"><img src="{{{VIEW_PATH}}}/img/spinner{{#success}}{{#done}}done{{/done}}{{/success}}{{#error}}error{{/error}}{{^done}}progress{{/done}}.svg"></span>
 </div>
 {{/events}}
 {{^events}}{{i18n.EnterpriseSearch_NoEvents}}{{/events}}

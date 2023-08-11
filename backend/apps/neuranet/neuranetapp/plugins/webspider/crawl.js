@@ -81,13 +81,18 @@ function init() {
 }
 
 async function crawl(url, output_folder_streamer_function, accepted_mimes=DEFAULT_MIMES, 
-        timegap=0, max_host_dispersal_depth=0, max_page_dispersal_depth=-1, max_path_for_files=150, 
-        memory={urls: {}, initial_url: url, crawls_waiting: 1, promiseToResolve: _getPromiseToResolve()}, 
-        current_host_dispersal_depth=0, current_page_dispersal_depth=0) {
+        timegap=0, max_host_dispersal_depth=0, max_page_dispersal_depth=-1, restrict_to_hostname,
+        max_path_for_files=150, memory={urls: {}, initial_url: url, crawls_waiting: 1, 
+        promiseToResolve: _getPromiseToResolve()}, current_host_dispersal_depth=0, 
+        current_page_dispersal_depth=0) {
 
     try {
-        if (!initialized) init(); 
+        if (!initialized) init(); const urlObject = new URL(url);
 
+        if (restrict_to_hostname && (!urlObject.hostname.endsWith(restrict_to_hostname))) {
+            LOG.info(`Requested crawl URL ${url} hostname doesn't match restricted hostname. Not crawling.`)
+            return false; 
+        }
         if (max_page_dispersal_depth != -1 && current_page_dispersal_depth > max_page_dispersal_depth) {
             LOG.info(`Requested crawl URL ${url} exceeds maximum page dispersal depth of ${max_page_dispersal_depth} as its dispersal depth is ${current_page_dispersal_depth}. Not crawling.`)
             return false; 
@@ -121,7 +126,7 @@ async function crawl(url, output_folder_streamer_function, accepted_mimes=DEFAUL
         if (output_folder_streamer_function && typeof output_folder_streamer_function == "function") 
             output_folder_streamer_function({...outputObject, stream: stream.Readable.from([Buffer.from(outputText, "utf-8")])});
 
-        const links = []; memory.urls[new URL(url).href] = true;
+        const links = []; memory.urls[urlObject.href] = true;
         for (const aElement of aElements) {
             const link = aElement.attribs.href, absoluteUrl = link?new URL(link, url).href:undefined;
 
@@ -137,8 +142,9 @@ async function crawl(url, output_folder_streamer_function, accepted_mimes=DEFAUL
         for (const link of links) {
             memory.crawls_waiting++; 
             queueExecutor.add(_=>crawl(link, output_folder_streamer_function, accepted_mimes, timegap, 
-                max_host_dispersal_depth, max_page_dispersal_depth, max_path_for_files, memory, 
-                requestedDispersalDepth, current_page_dispersal_depth+1), [], false, timegap);
+                max_host_dispersal_depth, max_page_dispersal_depth, restrict_to_hostname, 
+                max_path_for_files, memory, requestedDispersalDepth, 
+                current_page_dispersal_depth+1), [], false, timegap);
         }
         return memory.promiseToResolve;
     } catch (error) { LOG.error(`Crawler error URL: ${url}. Error is: ${error.message||error}. Cause is ${error.cause||"unknown"}. Stack is ${error.stack}.`); return false; }

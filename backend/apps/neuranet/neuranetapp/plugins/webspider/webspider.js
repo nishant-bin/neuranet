@@ -16,7 +16,11 @@ const DEFAULT_MIMES = {"text/html":{ending:".html"}, "application/pdf":{ending:"
 exports.canHandle = async function(fileindexer) {
     if (fileindexer.filepath.toLowerCase().endsWith(PLUGIN_EXTENSION)) {
         const fileContents = await fileindexer.getContents();
-        if (JSON.parse(fileContents).url) return true;  // minimally we should have URL we need to crawl
+        let crawlInstructions; try { crawlInstructions = JSON.parse(fileContents); } catch (err) { return false; }
+        if (_normalizePath(fileindexer.cmspath.toLowerCase()) == 
+            _normalizePath(crawlInstructions.outfolder.toLowerCase())) throw new Error(
+                `File paths clash ${fileindexer.cmspath} is same as output folder.`, {cause: "PATH_CLASH"});
+        if (crawlInstructions.url) return true;  // minimally we should have URL we need to crawl
     } else return false;
 }
 
@@ -33,15 +37,16 @@ exports.ingest = async function(fileindexer) {
     let allCrawlsResult = true;
     for (const crawlingInstructionsThis of crawlingInstructions) {
         const output_folder = path.resolve(`${__dirname}/${spiderconf.crawl_output_root}/${
-            spiderconf.test_ingestion ? spiderconf.ingestion_folder : crawler.coredomain(crawlingInstructionsThis.url)+"."+Date.now()}`);
+            spiderconf.dont_crawl ? spiderconf.ingestion_folder : crawler.coredomain(crawlingInstructionsThis.url)+"."+Date.now()}`);
         LOG.info(`Starting crawling the URL ${crawlingInstructionsThis.url} to path ${output_folder}.`);
-        const crawlResult = spiderconf.test_ingestion ? true : await crawler.crawl(crawlingInstructionsThis.url, output_folder, 
+        const crawlResult = spiderconf.dont_crawl ? true : await crawler.crawl(crawlingInstructionsThis.url, output_folder, 
             spiderconf.accepted_mimes||DEFAULT_MIMES, spiderconf.timegap||50, 
             crawlingInstructionsThis.host_dispersal_depth||spiderconf.default_host_dispersal_depth||0,
             crawlingInstructionsThis.page_dispersal_depth||spiderconf.default_page_dispersal_depth||-1, 
-            spiderconf.max_path||150);
+            crawlingInstructionsThis.restrict_host, spiderconf.max_path||150);
         if (!crawlResult) {_logCrawlError(crawlingInstructionsThis.url); allCrawlsResult = false; continue;}
-        if (spiderconf.test_crawl) continue;    // only testing crawling
+        else LOG.info(`Crawl of ${crawlingInstructionsThis.url} completed successfully.`);
+        if (spiderconf.dont_ingest) continue;    // only testing crawling
         
         // start ingestion into Neuranet databases
         LOG.info(`Site crawl completed for ${crawlingInstructionsThis.url}, ingesting into the AI databases and stores.`);
@@ -102,3 +107,5 @@ async function _ingestFolder(pathIn, cmsPath, fileindexer, memory) {
 }
 
 const _promiseExceptionToBoolean = async promise => {try{const result = await promise; return result||true;} catch(err) {return false;}}
+
+const _normalizePath = pathIn => pathIn.replace(/^\/+/g,"").replace(/\/+/g,"/");

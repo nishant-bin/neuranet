@@ -78,20 +78,26 @@ async function _handleFileEvent(message) {
 }
 
 async function _ingestfile(pathIn, id, org, isxbin, lang) {
-    const indexer = _getFileIndexer(pathIn, isxbin, id, org, lang), filePlugin = await _searchForFilePlugin(indexer);
-    if (filePlugin) return {result: await filePlugin.ingest(indexer)};
+    const cmspath = isxbin ? await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn) : pathIn;
+    const indexer = _getFileIndexer(pathIn, isxbin, id, org, lang, cmspath), filePluginResult = await _searchForFilePlugin(indexer);
+    if (filePluginResult.plugin) return {result: await filePluginResult.plugin.ingest(indexer)};
+    if (filePluginResult.error) return {result: false, cause: "Plugin validation failed."}
     else return await aidbfs.ingestfile(pathIn, id, org, lang, isxbin?_=>downloadfile.getReadStream(pathIn):undefined);
 }
 
 async function _uningestfile(pathIn, id, org, lang) {
-    const indexer = _getFileIndexer(pathIn, undefined, id, org, lang), filePlugin = await _searchForFilePlugin(indexer);
-    if (filePlugin) return {result: await filePlugin.uningest(indexer)};
+    const cmspath = isxbin ? await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn) : pathIn;
+    const indexer = _getFileIndexer(pathIn, undefined, id, org, lang, cmspath), filePluginResult = await _searchForFilePlugin(indexer);
+    if (filePluginResult.plugin) return {result: await filePluginResult.plugin.uningest(indexer)};
+    if (filePluginResult.error) return {result: false, cause: "Plugin validation failed."}
     else return await aidbfs.uningestfile(pathIn, id, org, lang);
 }
 
 async function _renamefile(from, to, id, org, lang) {
-    const indexer = _getFileIndexer(pathIn, isxbin, id, org, lang), filePlugin = await _searchForFilePlugin(indexer);
-    if (filePlugin) return {result: await filePlugin.renamefile(indexer)};
+    const cmspath = isxbin ? await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn) : pathIn;
+    const indexer = _getFileIndexer(pathIn, isxbin, id, org, lang, cmspath), filePluginResult = await _searchForFilePlugin(indexer);
+    if (filePluginResult.plugin) return {result: await filePluginResult.plugin.rename(indexer)};
+    if (filePluginResult.error) return {result: false, cause: "Plugin validation failed."}
     else return await aidbfs.renamefile(from, to, id, org, lang);
 }
 
@@ -109,15 +115,17 @@ async function _searchForFilePlugin(fileindexerForFile) {
 
     for (const file_plugin of aiModelObject.file_handling_plugins) {
         const pluginThis = NEURANET_CONSTANTS.getPlugin(file_plugin);
-        if (await pluginThis.canHandle(fileindexerForFile)) return pluginThis;
+        try {if (await pluginThis.canHandle(fileindexerForFile)) return {plugin: pluginThis, result: true, error: null};}
+        catch (err) { LOG.error(`Plugin validation failed for ${file_plugin}. The error was ${err}`);
+            return {error: err, result: false}}
     }
 
-    return false;
+    return {error: null, result: false};
 }
 
-function _getFileIndexer(pathIn, isxbin, id, org, lang) {
+function _getFileIndexer(pathIn, isxbin, id, org, lang, cmspath) {
     return {
-        filepath: pathIn, id: id, org: org, minimum_success_percent: DEFAULT_MINIMIMUM_SUCCESS_PERCENT,
+        filepath: pathIn, id: id, org: org, minimum_success_percent: DEFAULT_MINIMIMUM_SUCCESS_PERCENT, cmspath,
         getContents: _ => neuranetutils.readFullFile(isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn)),
         getReadstream: _ => isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn),
         start: _ => {},

@@ -11,7 +11,7 @@
     "crawl_output_root": "temp_crawls",
     "max_path": 150,
     
-    "test_crawl": false,
-    "test_ingestion": false,
-    "ingestion_folder": "tangentia.1691473773221"
+    "dont_crawl": false,
+    "ingestion_folder": "rakuten.1691652546272",
+    "dont_ingest": true
 }

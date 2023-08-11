@@ -28,7 +28,9 @@ async function getNotifications() {
         org: org.toString()}, true);
     if ((!events) || (!events.result)) LOG.error(`Error fetching events.`); 
 
-    const eventsArray = []; if (events?.result) for (const event of Object.values(events.events)) eventsArray.push({...event, VIEW_PATH});
+    const eventsArray = []; if (events?.result) for (const event of Object.values(events.events)) 
+        eventsArray.push({...event, success: event.result == true ? true : undefined, 
+            error: event.result == true ? undefined : true, VIEW_PATH});
     
     const eventsTemplate = document.querySelector("#notificationstemplate"), eventsHTML = eventsTemplate.innerHTML,
         matches = /<!--([\s\S]+)-->/g.exec(eventsHTML), template = matches[1]; 

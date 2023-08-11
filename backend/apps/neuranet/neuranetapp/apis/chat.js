@@ -50,7 +50,7 @@ exports.doService = async jsonReq => {
 	const jsonifiedSession = exports.jsonifyContentsInThisSession([...chatsession, ...(utils.clone(jsonReq.session))]);
 	let finalSessionObject = await exports.trimSession(aiModelObject.max_memory_tokens||DEFAULT_MAX_MEMORY_TOKENS,
 		jsonifiedSession, aiModelToUse, aiModelObject.token_approximation_uplift, aiModelObject.tokenizer, aiLibrary); 
-	if (!finalSessionObject.length) finalSessionObject = [jsonifiedSession[0]];	// at least send the latest question
+	if (!finalSessionObject.length) finalSessionObject = [jsonifiedSession[jsonifiedSession.length-1]];	// at least send the latest question
 	finalSessionObject[finalSessionObject.length-1].last = true;
 	
 	const response = await aiLibrary.process({session: finalSessionObject}, 

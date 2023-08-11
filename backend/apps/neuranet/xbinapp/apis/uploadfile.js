@@ -61,7 +61,8 @@ exports.uploadFile = async function(xbin_id, xbin_org, readstreamOrContents, cms
 	const transferID = Date.now(), fullpath = path.resolve(`${await cms.getCMSRoot({xbin_id, xbin_org})}/${cmsPath}`);
 	if (!await cms.isSecure({xbin_id, xbin_org}, fullpath)) {LOG.error(`Path security validation failure: ${fullpath}`); return CONSTANTS.FALSE_RESULT;}
 	const cmsHostingFolder = await cms.getCMSRootRelativePath({xbin_id, xbin_org}, path.dirname(fullpath)); 
-	await exports.createFolder({xbin_id, xbin_org}, cmsHostingFolder);	// create the hosting folder if needed.
+	try { await exports.createFolder({xbin_id, xbin_org}, cmsHostingFolder); }	// create the hosting folder if needed.
+	catch (err) {LOG.error(`Error uploading file ${fullpath}, parent folder creation failed. Error is ${err}`); return CONSTANTS.FALSE_RESULT;}
 
 	if (Buffer.isBuffer(readstreamOrContents)) {
 		if (await utils.promiseExceptionToBoolean(exports.writeChunk({xbin_id, xbin_org}, transferID, 
@@ -182,12 +183,19 @@ exports.getFolderSize = async fullpath => {
 	return size;
 }
 
-exports.createFolder = async function(headersOrLoginIDAndOrg, inpath) {
-	const fullpath = path.resolve(`${await cms.getCMSRoot(headersOrLoginIDAndOrg)}/${inpath}`);
-	if (!await cms.isSecure(headersOrLoginIDAndOrg, fullpath)) throw (`Path security validation failure: ${inpath}`);
-	if (await utils.createDirectory(fullpath)) await exports.updateFileStats(fullpath, inpath, undefined, 
-		true, XBIN_CONSTANTS.XBIN_FOLDER);
-	else throw (`Error creating folder: ${fullpath}.`);
+exports.createFolder = async function(headersOrLoginIDAndOrg, cmsRelativePathIn) {
+	const cmsRoot = await cms.getCMSRoot(headersOrLoginIDAndOrg), 
+		cmsRelativePathUnix = utils.convertToUnixPathEndings(cmsRelativePathIn);
+	if (!await cms.isSecure(headersOrLoginIDAndOrg, `${cmsRoot}/${cmsRelativePathUnix}`)) throw (`Path security validation failure: ${cmsRelativePathUnix}`);
+
+	let cmsPathSoFar = ""; for (const thisPathSegment of cmsRelativePathUnix.split("/")) {
+		cmsPathSoFar += `/${thisPathSegment}`;
+		const fullpath = path.resolve(`${cmsRoot}/${cmsPathSoFar}`);
+		if (!(await utils.exists(fullpath))) {
+			await fs.promises.mkdir(fullpath);
+			await exports.updateFileStats(fullpath, cmsPathSoFar, undefined, true, XBIN_CONSTANTS.XBIN_FOLDER);
+		}
+	}
 }
 
 exports.isZippable = fullpath => !((CONF.DONT_GZIP_EXTENSIONS||[]).includes(path.extname(fullpath)));
