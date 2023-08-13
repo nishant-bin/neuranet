@@ -66,7 +66,8 @@ exports.getContentStream = async function (inputstream, filepath, forcetika) {
     const thisTikaInputStream = java.callStaticMethodSync("org.apache.tika.io.TikaInputStream", "get", thisInputPath);
     const thisOutputStream = java.callStaticMethodSync("java.nio.file.Files", "newOutputStream", thisOutputPath);
     const javaToTextContentHandler = java.import("org.apache.tika.sax.ToTextContentHandler"), thisToTextContentHandler = new javaToTextContentHandler(thisOutputStream, "UTF-8");
-    const javaAutoDetectParser =  java.import("org.apache.tika.parser.AutoDetectParser"), thisParser = new javaAutoDetectParser();
+    const javaTikaConfig  = java.import("org.apache.tika.config.TikaConfig"), thisConfig = tikaconf.tika_config ? new javaTikaConfig(tikaconf.tika_config) : undefined;
+    const javaAutoDetectParser =  java.import("org.apache.tika.parser.AutoDetectParser"), thisParser = thisConfig ? new javaAutoDetectParser(thisConfig) : new javaAutoDetectParser();
     const javaMetadata = java.import("org.apache.tika.metadata.Metadata"), thisMetadata = new javaMetadata();
     const javaParseContext = java.import("org.apache.tika.parser.ParseContext"), thisContext = new javaParseContext();
 

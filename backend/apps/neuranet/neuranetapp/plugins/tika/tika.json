@@ -1,6 +1,7 @@
 {
     "classpath": ["{{{__dirname}}}/tika-app-2.8.0.jar"],
     "max_content_length": 1262485504,
+    "tika_config": "{{{__dirname}}}/tikaconfig.xml",
     "supported_types": [".apxl", ".asp", ".aspx", ".c", ".cc", ".cpp", ".cxx", ".doc", ".docm", ".docx", ".dotm", ".dotx", 
         ".dwfx", ".epub", ".fb2", ".fbz", ".groovy", ".htm", ".html", ".ibook", ".java", ".key", ".mbox", ".mdb", 
         ".mpp", ".msg", ".ncx", ".numbers", ".odc", ".odf", ".odft", ".odg", ".odi", ".odm", ".odp", ".ods", ".odt", 
