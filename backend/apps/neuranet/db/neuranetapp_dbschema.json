@@ -12,7 +12,7 @@
 
     "INSERT INTO views (domain, view) VALUES ('tekmonks.com', 'gencode')",
 
-    "INSERT INTO views (domain, view) VALUES ('tekmonks.com', 'search')",
+    "INSERT INTO views (domain, view) VALUES ('tekmonks.com', 'enterpriseassist')",
 
     "INSERT INTO views (domain, view) VALUES ('tekmonks.com', 'sqltranslate')",
 
