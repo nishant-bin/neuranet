@@ -20,7 +20,7 @@ export const i18n = {
 "TypeMessage": "Type Message",
 
 "ViewLabel_gencode": "Generate Code",
-"ViewLabel_search": "Enterprise Search",
+"ViewLabel_enterpriseassist": "Enterprise Assistant",
 "ViewLabel_sqltranslate": "Translate SQL",
 "ViewLabel_chat": "General Chat",
 

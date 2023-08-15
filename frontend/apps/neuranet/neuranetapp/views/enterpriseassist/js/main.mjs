@@ -10,16 +10,16 @@ import {router} from "/framework/js/router.mjs";
 import {session} from "/framework/js/session.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
-const API_GET_EVENTS = "events", MODULE_PATH = util.getModulePath(import.meta),
-    VIEW_PATH = util.resolveURL(`${MODULE_PATH}/../`), SESSION_OBJ_TEMPLATE = {"role": "user", "content": ""};
+const API_GET_EVENTS = "events", MODULE_PATH = util.getModulePath(import.meta), VIEW_PATH = util.resolveURL(`${MODULE_PATH}/../`);
 
 let chatsessionID;
 
 function initView(data) {
     window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {
-        ...(window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME]||{}), searchmain: main}; 
+        ...(window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME]||{}), enterprise_assist_main: main}; 
     data.VIEW_PATH = VIEW_PATH;
-    data.shownotifications = {action: "monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].searchmain.getNotifications()"};
+    data.userrole = session.get(APP_CONSTANTS.CURRENT_USERROLE).toString();
+    data.shownotifications = {action: "monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].enterprise_assist_main.getNotifications()"};
 }
 
 async function getNotifications() {

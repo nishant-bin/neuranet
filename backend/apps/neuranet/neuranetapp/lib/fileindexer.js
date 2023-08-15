@@ -1,9 +1,7 @@
 /**
- * Will index files including XBin documents in and out of 
- * the AI databases.
+ * Will index files including XBin documents in and out of the AI databases.
  * 
- * Bridge between drive documents including XBin and Neuranet 
- * knowledgebases.
+ * Bridge between drive documents including XBin and Neuranet knowledgebases.
  * 
  * (C) 2023 Tekmonks Corp. All rights reserved.
  * License: See enclosed LICENSE file.

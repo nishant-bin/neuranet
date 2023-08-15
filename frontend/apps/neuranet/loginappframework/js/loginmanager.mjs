@@ -22,6 +22,7 @@ async function signin(id, pass, otp) {
         session.set(APP_CONSTANTS.USERID, resp.id); 
         session.set(APP_CONSTANTS.USERNAME, resp.name);
         session.set(APP_CONSTANTS.USERORG, resp.org);
+        session.set(APP_CONSTANTS.CURRENT_USERROLE, resp.role); 
         session.set(APP_CONSTANTS.USER_NEEDS_VERIFICATION, resp.verified);
         session.set(APP_CONSTANTS.USERORGDOMAIN, resp.domain);
         session.set(APP_CONSTANTS.LOGIN_RESPONSE, resp);
@@ -62,6 +63,7 @@ async function registerOrUpdate(old_id, name, id, pass, org, totpSecret, totpCod
         session.set(APP_CONSTANTS.USERID, id); 
         session.set(APP_CONSTANTS.USERNAME, name);
         session.set(APP_CONSTANTS.USERORG, org);
+        session.set(APP_CONSTANTS.CURRENT_USERROLE, resp.role);
         session.set(APP_CONSTANTS.USERORGDOMAIN, resp.domain);
         session.set(APP_CONSTANTS.USER_NEEDS_VERIFICATION, resp.needs_verification);
         session.set(APP_CONSTANTS.LOGIN_RESPONSE, resp);
