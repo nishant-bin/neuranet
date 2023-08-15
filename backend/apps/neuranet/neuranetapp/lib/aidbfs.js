@@ -51,7 +51,7 @@ async function ingestfile(pathIn, id, org, lang, streamGenerator, dontRebuildDBs
 			if (response.reason != embedding.REASONS.OK) return null;
 			else return response.embedding;
 		}
-    let vectordb; try { vectordb = await getVectorDBForIDAndOrg(id, org, embeddingsGenerator) } catch(err) { 
+    let vectordb; try { vectordb = await getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator) } catch(err) { 
         LOG.error(`Can't instantiate the vector DB ${vectorDB_ID} for ID ${id} and org ${org}. Unable to continue.`);
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
@@ -63,7 +63,7 @@ async function ingestfile(pathIn, id, org, lang, streamGenerator, dontRebuildDBs
         streamGenerator() : fs.createReadStream(pathIn), aiModelObjectForEmbeddings, pathIn);
 
     // ingest into the TF.IDF DB
-    const tfidfDB = await getTFIDFDBForIDAndOrg(id, org, lang); 
+    const tfidfDB = await getPrivateTFIDFDBForIDAndOrg(id, org, lang); 
     try {
         LOG.info(`Starting text extraction of file ${pathIn}.`);
         const fileContents = await neuranetutils.readFullFile(await _getExtractedTextStream(), "utf8");
@@ -100,7 +100,7 @@ async function ingestfile(pathIn, id, org, lang, streamGenerator, dontRebuildDBs
  * @throws Exception on error
  */
 async function rebuild(id, org, lang) {
-    const tfidfDB = await getTFIDFDBForIDAndOrg(id, org, lang); 
+    const tfidfDB = await getPrivateTFIDFDBForIDAndOrg(id, org, lang); 
     tfidfDB.rebuild();
 }
 
@@ -112,8 +112,8 @@ async function rebuild(id, org, lang) {
  * @throws Exception on error
  */
 async function flush(id, org, lang) {
-    const tfidfDB = await getTFIDFDBForIDAndOrg(id, org, lang); 
-    const vectordb = await getVectorDBForIDAndOrg(id, org, null);
+    const tfidfDB = await getPrivateTFIDFDBForIDAndOrg(id, org, lang); 
+    const vectordb = await getPrivateVectorDBForIDAndOrg(id, org, null);
     await tfidfDB.flush(); await vectordb.flush_db();
 }
 
@@ -126,13 +126,13 @@ async function flush(id, org, lang) {
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
  */
 async function uningestfile(pathIn, id, org, lang) {
-    let vectordb; try { vectordb = await getVectorDBForIDAndOrg(id, org) } catch(err) { 
+    let vectordb; try { vectordb = await getPrivateVectorDBForIDAndOrg(id, org) } catch(err) { 
         LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
     // delete from the TF.IDF DB
-    const docID = _getDocID(pathIn), tfidfDB = await getTFIDFDBForIDAndOrg(id, org, lang), 
+    const docID = _getDocID(pathIn), tfidfDB = await getPrivateTFIDFDBForIDAndOrg(id, org, lang), 
         docsFound = tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
         metadata = docsFound.length > 0 ? docsFound[0].metadata : null;
     if (!metadata) {
@@ -169,7 +169,7 @@ async function uningestfile(pathIn, id, org, lang) {
  */
 async function renamefile(from, to, id, org, lang) {
     // update TF.IDF DB 
-    const docID = _getDocID(pathIn), tfidfDB = await getTFIDFDBForIDAndOrg(id, org, lang), 
+    const docID = _getDocID(pathIn), tfidfDB = await getPrivateTFIDFDBForIDAndOrg(id, org, lang), 
         docsFound = tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
         metadata = docsFound.length > 0 ? docsFound[0].metadata : null, 
         newmetadata = {...metadata, fullpath: to}; 
@@ -180,7 +180,7 @@ async function renamefile(from, to, id, org, lang) {
     } else tfidfDB.update(metadata, newmetadata);
 
     // update vector DB
-    let vectordb; try { vectordb = await getVectorDBForIDAndOrg(id, org); } catch(err) { 
+    let vectordb; try { vectordb = await getPrivateVectorDBForIDAndOrg(id, org); } catch(err) { 
         LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
@@ -202,26 +202,26 @@ async function renamefile(from, to, id, org, lang) {
 }
 
 /**
- * Returns a Vector DB instance for the given ID, ORG and embeddings generator.
+ * Returns the private Vector DB instance for the given ID, ORG and embeddings generator.
  * @param {string} id The user ID
  * @param {string} org The user ORG
  * @param {function} embeddingsGenerator The vector embeddings generator to use. Function that takes text and returns a vector of floats.
  * @returns The Vector DB instance, throws an exception on error.
  */
-async function getVectorDBForIDAndOrg(id, org, embeddingsGenerator) {
+async function getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator) {
     const vectordb = await aivectordb.get_vectordb(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org)}/vectordb`, 
         embeddingsGenerator);
     return vectordb;
 }
 
 /**
- * Returns a TF.IDF DB instance for the given ID, ORG and language.
+ * Returns the private TF.IDF DB instance for the given ID, ORG and language.
  * @param {string} id The user ID
  * @param {string} org The user ORG
  * @param {string} lang The language to use to ingest, defaults to English. Use ISO codes, e.g. "en"
  * @returns The TF.IDF DB instance, throws an exception on error.
  */
-async function getTFIDFDBForIDAndOrg(id, org, lang="en") {
+async function getPrivateTFIDFDBForIDAndOrg(id, org, lang="en") {
     const tfidfdb = await aitfidfdb.get_tfidf_db(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org)}/tfidfdb`, 
         NEURANET_CONSTANTS.NEURANET_DOCID, lang, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`);
     return tfidfdb;
@@ -251,5 +251,5 @@ async function _extractTextViaPluginsUsingStreams(inputstream, aiModelObject, fi
 
 const _getDocID = pathIn => crypto.createHash("md5").update(path.resolve(pathIn)).digest("hex");
 
-module.exports = {ingestfile, uningestfile, renamefile, getVectorDBForIDAndOrg, getTFIDFDBForIDAndOrg,
+module.exports = {ingestfile, uningestfile, renamefile, getPrivateVectorDBForIDAndOrg, getPrivateTFIDFDBForIDAndOrg,
     getAIModelForFiles, rebuild, flush, REASONS, MODEL_DEFAULT, DEFAULT_ID, DEFAULT_ORG};

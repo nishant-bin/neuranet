@@ -71,8 +71,10 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 	} else questionToUseForSearch = jsonReq.question;
 	
 	// strategy is to first find matching documents using TF.IDF and then use their vectors for a sematic 
-	// search to build the in-context prompt training documents
-	const tfidfDB = await aidbfs.getTFIDFDBForIDAndOrg(id, org, jsonReq.lang);
+	// search to build the in-context training documents. this is a much superior search and memory strategy
+	// to little embeddings vector search as it firsts finds the most relevant documents and the uses vectors
+	// only because the LLM prompt sizes are small. it also allows rejustments later to better train the LLMs.
+	const tfidfDB = await aidbfs.getPrivateTFIDFDBForIDAndOrg(id, org, jsonReq.lang);
 	const tfidfScoredDocuments = tfidfDB.query(questionToUseForSearch, aiModelObjectForChat.topK_tfidf, null, 
 		aiModelObjectForChat.cutoff_score_tfidf);	// search using TF.IDF for matching documents first - only will use semantic search on vectors from these documents later
 	if (tfidfScoredDocuments.length == 0) return {reason: REASONS.NOKNOWLEDGE, ...CONSTANTS.FALSE_RESULT};	// no knowledge
@@ -91,7 +93,7 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 	}
 
-	let vectordb; try { vectordb = await aidbfs.getVectorDBForIDAndOrg(id, org, embeddingsGenerator) } catch(err) { 
+	let vectordb; try { vectordb = await aidbfs.getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator) } catch(err) { 
 		LOG.error(`Can't instantiate the vector DB for ID ${id}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
 	}
