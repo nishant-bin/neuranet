@@ -1,0 +1,5 @@
+Convert this Cobol working storage to {{{langto}}} variables with the same name as the Cobol variables. Use camel casing in naming variables. Ignore incomplete functions. Do not add comments. Use plaintext.
+
+{{{request}}}
+
+{{{langto}}}

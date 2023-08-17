@@ -1,0 +1,7 @@
+Convert this Cobol routine to {{{langto}}} function with the same name as Cobol routine. Ignore incomplete functions. Do not add comments. Use plaintext.
+Do not use underscore in naming variables, parameters, objects and methods.
+Use camel casing in naming variables, parameters, objects and methods.
+Replace question mark with empty space after conversion.
+{{{request}}}
+
+{{{langto}}}

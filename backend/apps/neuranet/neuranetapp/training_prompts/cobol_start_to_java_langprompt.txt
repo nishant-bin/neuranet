@@ -1,4 +1,7 @@
 Convert this code from Cobol to {{{langto}}} and ignore incomplete functions. Convert all variable declarations seen. Do not add comments.  Use plaintext.
+Do not use underscore in naming variables, parameters, objects and methods.
+Use camel casing in naming variables, parameters, objects and methods.
+
 {{{request}}}
 
 {{{langto}}}
