@@ -24,10 +24,9 @@ const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const chatAPI = require(`${NEURANET_CONSTANTS.APIDIR}/chat.js`);
-const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
+const search = require(`${NEURANET_CONSTANTS.LIBDIR}/search.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const simplellm = require(`${NEURANET_CONSTANTS.LIBDIR}/simplellm.js`);
-const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
 		LIMIT: "limit", NOKNOWLEDGE: "noknowledge"}, CHAT_MODEL_DEFAULT = "chat-knowledgebase-gpt35-turbo", 
@@ -70,35 +69,8 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 		questionToUseForSearch = standaloneQuestionResult;
 	} else questionToUseForSearch = jsonReq.question;
 	
-	// strategy is to first find matching documents using TF.IDF and then use their vectors for a sematic 
-	// search to build the in-context training documents. this is a much superior search and memory strategy
-	// to little embeddings vector search as it firsts finds the most relevant documents and the uses vectors
-	// only because the LLM prompt sizes are small. it also allows rejustments later to better train the LLMs.
-	const tfidfDB = await aidbfs.getPrivateTFIDFDBForIDAndOrg(id, org, jsonReq.lang);
-	const tfidfScoredDocuments = tfidfDB.query(questionToUseForSearch, aiModelObjectForChat.topK_tfidf, null, 
-		aiModelObjectForChat.cutoff_score_tfidf);	// search using TF.IDF for matching documents first - only will use semantic search on vectors from these documents later
-	if (tfidfScoredDocuments.length == 0) return {reason: REASONS.NOKNOWLEDGE, ...CONSTANTS.FALSE_RESULT};	// no knowledge
-	const documentsToUseDocIDs = []; for (const tfidfScoredDoc of tfidfScoredDocuments) 
-		documentsToUseDocIDs.push(tfidfScoredDoc.metadata[NEURANET_CONSTANTS.NEURANET_DOCID]);
-	
-	const aiModelToUseForEmbeddings = aiModelObjectForChat.embeddings_model;
-	const embeddingsGenerator = async text => {
-		const response = await embedding.createEmbeddingVector(id, text, aiModelToUseForEmbeddings); 
-		if (response.reason != embedding.REASONS.OK) return null;
-		else return response.embedding;
-	}
-	const vectorForUserPrompts = await embeddingsGenerator(questionToUseForSearch);
-	if (!vectorForUserPrompts) {
-		LOG.error(`Embedding vector generation failed for ${questionToUseForSearch}. Can't continue.`);
-		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
-	}
-
-	let vectordb; try { vectordb = await aidbfs.getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator) } catch(err) { 
-		LOG.error(`Can't instantiate the vector DB for ID ${id}. Unable to continue.`); 
-		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
-	}
-	const similarityResultsForPrompt = await vectordb.query(vectorForUserPrompts, aiModelObjectForChat.topK_vectors, 
-		aiModelObjectForChat.min_distance_vectors, metadata => documentsToUseDocIDs.includes(metadata[NEURANET_CONSTANTS.NEURANET_DOCID]));
+	const similarityResultsForPrompt = await search.find("docvectorsearch", id, org, questionToUseForSearch, 
+		aiModelToUseForChat, jsonReq.lang);
 	if ((!similarityResultsForPrompt) || (!similarityResultsForPrompt.length)) return {reason: REASONS.NOKNOWLEDGE, ...CONSTANTS.FALSE_RESULT};
 	const documents = [], metadatasForResponse = []; for (const [i,similarityResult] of similarityResultsForPrompt.entries()) {
 		documents.push({content: similarityResult.text, document_index: i+1}); metadatasForResponse.push(similarityResult.metadata) };

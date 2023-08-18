@@ -3,7 +3,7 @@
 	
 	
     "CREATE TABLE quotas(id varchar not null, quota integer not null)",
-    "INSERT INTO quotas (id, quota) VALUES ('_default_', '0.3')",
+    "INSERT INTO quotas (id, quota) VALUES ('_default_', '0.6')",
 
 
     "CREATE TABLE views(domain varchar not null, view varchar not null)",
@@ -17,7 +17,8 @@
     "CREATE TABLE usage(timestamp TIMESTAMP DEFAULT (strftime('%s', 'now')), id varchar not null, usage integer not null, model varchar not null)",
 
 
-    "CREATE TABLE aifederationmodes(domain not null, aifederationmode) --can be as_mapped_and_private, admin_master_and_private, only_admin_master, only_private, only_as_mapped",
+    "CREATE TABLE aifederationmodes(domain not null, aifederationmode) --can be mapped_and_private, master_and_private, only_master, only_private, only_mapped",
+    "INSERT INTO aifederationmodes (domain, aifederationmode) VALUES ('tekmonks.com', 'only_master')",
 
 
     "COMMIT TRANSACTION"
