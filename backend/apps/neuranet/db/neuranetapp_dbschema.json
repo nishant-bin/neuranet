@@ -17,8 +17,8 @@
     "CREATE TABLE usage(timestamp TIMESTAMP DEFAULT (strftime('%s', 'now')), id varchar not null, usage integer not null, model varchar not null)",
 
 
-    "CREATE TABLE aifederationmodes(domain not null, aifederationmode) --can be mapped_and_private, master_and_private, only_master, only_private, only_mapped",
-    "INSERT INTO aifederationmodes (domain, aifederationmode) VALUES ('tekmonks.com', 'only_master')",
+    "CREATE TABLE aifederationmodes(org not null, aifederationmode) --can be mapped_and_private, master_and_private, only_master, only_private, only_mapped",
+    "INSERT INTO aifederationmodes (org, aifederationmode) VALUES ('Tekmonks', 'only_master')",
 
 
     "COMMIT TRANSACTION"

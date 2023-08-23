@@ -165,6 +165,11 @@ exports.getAdminsFor = async id => {
 	if (admins && admins.length) return admins; else return null;
 }
 
+exports.getAdminsForOrgOrSuborg = async org => {
+	const admins = await db.getQuery("SELECT * FROM users WHERE role = 'admin' AND (org = ? OR suborg = ?) COLLATE NOCASE", [org]);
+	if (admins && admins.length) return admins; else return null;
+}
+
 exports.shouldAllowDomain = async domain => {
 	const orgMainDomain = _flattenArray(	// retrieve the main domain for this domain's org, if in the DB
 		await db.getQuery("SELECT domain FROM orgs WHERE name IN (SELECT org FROM domains WHERE domain=? COLLATE NOCASE LIMIT 1);",[domain]),

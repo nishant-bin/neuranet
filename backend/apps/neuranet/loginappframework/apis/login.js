@@ -96,11 +96,17 @@ exports.isAPIKeySecure = async (headers, org) => {
 }
 
 exports.getRole = headers => {
-	if (!headers["authorization"]) return null; const logins = CLUSTER_MEMORY.get(LOGINS_MEMORY_KEY) || {};
+	if (!headers["authorization"]) return null;
+	const logins = CLUSTER_MEMORY.get(LOGINS_MEMORY_KEY) || {};
 	return logins[headers["authorization"].toLowerCase()]?logins[headers["authorization"].toLowerCase()].role:null;
 }
 
 exports.isAdmin = headers => (exports.getRole(headers))?.toLowerCase() == APP_CONSTANTS.ROLES.ADMIN.toLowerCase();
+
+exports.isIDAdminForOrg = async (id, org) => {
+	const adminsForOrg = await userid.getAdminsForOrgOrSuborg(org); 
+	if (adminsForOrg && adminsForOrg.includes(id)) return true; else return false;
+}
 
 exports.REASONS = REASONS;
 

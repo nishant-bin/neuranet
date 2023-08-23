@@ -192,14 +192,14 @@ exports.query = (query, topK, filter_function, lang="en", cutoff_score, options=
     const queryWords = _getLangNormalizedWords(query, lang, db), scoredDocs = []; let highestScore = 0; 
     for (const document of Object.values(db.tfidfDocStore)) {
         if (filter_function && (!options.filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
-        let scoreThisDoc = 0, queryWordsFoundInThisDoc = 0; if (query) for (const queryWord of queryWords) {
+        let scoreThisDoc = 0, tfScoreThisDoc = 0, queryWordsFoundInThisDoc = 0; if (query) for (const queryWord of queryWords) {
             const wordIndex = _getWordIndex(queryWord, db); if (wordIndex == null) continue;  // query word not found in the vocabulary
-            if (document.scores[wordIndex]) {scoreThisDoc += document.scores[wordIndex].tfidf; queryWordsFoundInThisDoc++;}
+            if (document.scores[wordIndex]) {tfScoreThisDoc += document.scores[wordIndex]; scoreThisDoc += document.scores[wordIndex].tfidf; queryWordsFoundInThisDoc++;}
         }
         const max_coord_boost = options.max_coord_boost||DEFAULT_MAX_COORD_BOOST, 
             coordScore = (query && (!options.ignoreCoord)) ? 1+(max_coord_boost*queryWordsFoundInThisDoc/queryWords.length) : 1;
         scoreThisDoc = scoreThisDoc*coordScore; // add in coord scoring
-        scoredDocs.push({metadata: document.metadata, score: scoreThisDoc, coord_score: coordScore, 
+        scoredDocs.push({metadata: document.metadata, score: scoreThisDoc, coord_score: coordScore, tf_score: tfScoreThisDoc,
             tfidf_score: scoreThisDoc/coordScore, query_tokens_found: queryWordsFoundInThisDoc, total_query_tokens: queryWords.length}); 
         if (scoreThisDoc > highestScore) highestScore = scoreThisDoc;
     }

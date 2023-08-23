@@ -5,6 +5,7 @@
  */
 
 const path = require("path");
+const userid = require(`${LOGINAPP_CONSTANTS.LIB_DIR}/userid.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const DB_PATH = path.resolve(`${NEURANET_CONSTANTS.DBDIR}/neuranet.db`);
 const DB_CREATION_SQLS = require(`${NEURANET_CONSTANTS.DBDIR}/neuranetapp_dbschema.json`);
@@ -44,6 +45,16 @@ exports.getQuota = async id => {
 	} else try { return parseFloat(quota[0].quota); } catch (err) {
 		LOG.error(`Error parsing quota ${quota[0].quota} for ID ${id}.`); return -1;
 	}
+}
+
+exports.getAIFederationModeForOrg = async function(org) {
+	const rootOrg = userid.getRootOrg(org);
+	const federationModes = await db.getQuery("SELECT aifederationmode from aifederationmodes where org=?",
+		[rootOrg]);
+	if ((!federationModes) || (!federationModes.length) || (!federationModes[0].totaluse)) {
+		LOG.warn(`No AI federation mode found for domain ${domain}.`);
+		return null;
+	} else return _flattenArray(federationModes, aifederationmode);
 }
 
 function _flattenArray(results, columnName, functionToCall) { 

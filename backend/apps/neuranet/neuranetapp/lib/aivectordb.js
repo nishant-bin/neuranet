@@ -42,7 +42,13 @@
  * 
  * TODO: An upcoming new algorithm for fast, 100% accurate exhaustive search would be
  * added by Tekmonks once testing is completed. Making this the easiest, and a really 
- * fast vector database for all types of production loads and AI applications.
+ * fast vector database for all types of production loads and AI applications. Algo will be 
+ * based on quantized buckets for cosine distance from a reference vector (middle of dimensional
+ * cube for the vectors may be a good starting reference vector). Unlike KNN algorithms which are
+ * approximate (as they divide the space), such an approach would be 100% accurate but won't be
+ * as fast as KNN as the resulting quantized buckets will not be encoding the direction of the
+ * distance, so an exhaustive search inside the bucket would still be needed. But the bucket size
+ * which depends on the quantization interval can be controlled making this still a good approach.
  * 
  * (C) 2023 TekMonks. All rights reserved.
  * License: See the enclosed LICENSE file.
