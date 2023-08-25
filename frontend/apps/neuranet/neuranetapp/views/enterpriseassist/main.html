@@ -25,7 +25,7 @@ div#maincontainer {
     flex-direction: row;
 }
 
-chat-box#enterprisechat {width: 60%}
+chat-box#enterpriseassistant {width: 60%}
 
 span#filecontainerheader { 
     height: 2em;
@@ -91,7 +91,7 @@ div#maincontainer {
     overflow-y: auto;
     overflow-x: hidden;
 }
-chat-box#enterprisechat {
+chat-box#enterpriseassistant {
     width: 100%; 
     height: 100%;
 }
@@ -106,17 +106,17 @@ span#collapser {display: none; ismobile: true}
 
 <div id="maincontainer">
 
-<chat-box id="enterprisechat" chatapi="{{APP_CONSTANTS.BACKEND}}/apps/{{APP_CONSTANTS.APP_NAME}}/knowledgebasechat"
-    onresult="window.monkshu_env.apps.neuranetapp.enterprise_assist_main.processChatResponse(result, 'enterprisechat')"
-    onrequest="window.monkshu_env.apps.neuranetapp.enterprise_assist_main.getChatRequest(prompt, 'enterprisechat')"></chat-box>
+<chat-box id="enterpriseassistant" chatapi="{{APP_CONSTANTS.BACKEND}}/apps/{{APP_CONSTANTS.APP_NAME}}/enterpriseassistant"
+    onresult="window.monkshu_env.apps.neuranetapp.enterprise_assist_main.processAssistantResponse(result, 'enterpriseassistant')"
+    onrequest="window.monkshu_env.apps.neuranetapp.enterprise_assist_main.getAssistantRequest(prompt, 'enterpriseassistant')"></chat-box>
 
 <div id="filecontainer">
     <span id="filecontainerheader">
-        <span id="filecontainerheaderlabel">{{i18n.EnterpriseSearch_KnowledgeBase}}</span>
+        <span id="filecontainerheaderlabel">{{i18n.EnterpriseAssist_KnowledgeBase}}</span>
         <span id="collapser" onclick="this.parentNode.parentNode.style.width='4em';
             this.parentNode.parentNode.querySelector('#fm').style.display='none';
             this.parentNode.parentNode.style.flexGrow=0; 
-            this.parentNode.parentNode.parentNode.querySelector('#enterprisechat').style.flexGrow=1;
+            this.parentNode.parentNode.parentNode.querySelector('#enterpriseassistant').style.flexGrow=1;
             this.parentNode.parentNode.querySelector('#filecontainerheaderlabel').style.display='none';
             this.style.display='none';
             this.parentNode.querySelector('#expander').style.display='inline';
@@ -125,21 +125,27 @@ span#collapser {display: none; ismobile: true}
         <span id="expander" onclick="this.parentNode.parentNode.style.width='auto';
             this.parentNode.parentNode.querySelector('#fm').style.display='block';
             this.parentNode.parentNode.style.flexGrow=1; 
-            this.parentNode.parentNode.parentNode.querySelector('#enterprisechat').style.flexGrow=0;
+            this.parentNode.parentNode.parentNode.querySelector('#enterpriseassistant').style.flexGrow=0;
             this.parentNode.parentNode.querySelector('#filecontainerheaderlabel').style.display='inline';
             this.style.display='none';
             this.parentNode.querySelector('#collapser').style.display='inline';
             this.parentNode.parentNode.querySelector('#verticalheader').style.display='none'">&lt;&lt;&lt;</span>
     </span>
     <file-manager id="fm" disable="sharefile"></file-manager>
-    <div id="verticalheader"><span>{{i18n.EnterpriseSearch_KnowledgeBase}}</span></span>
+    <div id="verticalheader"><span>{{i18n.EnterpriseAssist_KnowledgeBase}}</span></span>
 </div>
 
 </div>
 
 <script defer>
-    window.onload=_=>{ if ("{{{userrole}}}" != "admin" && (document.querySelector("span#collapser").offsetWidth != 0)) 
-        document.querySelector("span#collapser").click(); }
+    window.onload=_=>{ 
+        if ("{{{show_ai_training}}}".toLowerCase() == "false") {
+            LOG.info("Told to not show AI training"); 
+            document.querySelector("div#filecontainer").style.display = "none"; return; 
+        }
+        if ("{{{collapse_ai_training}}}".toLowerCase() == "true" && (document.querySelector("span#collapser").offsetWidth != 0)) 
+            document.querySelector("span#collapser").click();  
+    }
 </script>
 
 <template id="notificationstemplate">
@@ -156,11 +162,11 @@ span#collapser {display: none; ismobile: true}
 {{#events}}
 <div id="singlenotification">
     <span id="path" title="{{path}}">{{path}}</span>
-    <span id="donenotifier">{{#done}}{{i18n.EnterpriseSearch_Done}}{{/done}}{{^done}}{{i18n.EnterpriseSearch_Processing}}{{/done}}</span>
+    <span id="donenotifier">{{#done}}{{i18n.EnterpriseAssist_Done}}{{/done}}{{^done}}{{i18n.EnterpriseAssist_Processing}}{{/done}}</span>
     <span id="progressimage"><img src="{{{VIEW_PATH}}}/img/spinner{{#success}}{{#done}}done{{/done}}{{/success}}{{#error}}error{{/error}}{{^done}}progress{{/done}}.svg"></span>
 </div>
 {{/events}}
-{{^events}}{{i18n.EnterpriseSearch_NoEvents}}{{/events}}
+{{^events}}{{i18n.EnterpriseAssist_NoEvents}}{{/events}}
 </div>
 <%={{ }}=%> -->
 </template>

@@ -13,6 +13,8 @@ exports.initSync = _ => {
     const events = require(`${NEURANET_CONSTANTS.APIDIR}/events.js`);
     const fileindexer = require(`${NEURANET_CONSTANTS.LIBDIR}/fileindexer.js`);
     const loginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`);
+    const securitychecker = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranet_key_checker.js`);
+    securitychecker.initSync();
     loginhandler.initSync(); 
     fileindexer.initSync();
     events.initSync();

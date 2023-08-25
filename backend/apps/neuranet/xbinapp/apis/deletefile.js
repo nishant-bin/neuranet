@@ -49,6 +49,8 @@ exports.deleteFile = async (headersOrIDAndOrg, cmsPath, noevent) => {
 	return CONSTANTS.TRUE_RESULT;
 }
 
+exports.getFullPath = uploadfile.getFullPath;
+
 async function rmrf(path, id, org, ip, noevent) {
 	const _deleteFile = async path => {
 		await unlinkFileAndRemoveFromDB(path); 

@@ -107,17 +107,24 @@ exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath
 	return true;
 }
 
-exports.writeUTF8File = async function (headers, inpath, data) {
-	const fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${inpath}`);
-	if (!await cms.isSecure(headers, fullpath)) throw `Path security validation failure: ${fullpath}`;
+exports.writeUTF8File = async function (headersOrLoginIDAndOrg, inpath, data, noevent) {
+	const fullpath = path.resolve(`${await cms.getCMSRoot(headersOrLoginIDAndOrg)}/${inpath}`);
+	if (!await cms.isSecure(headersOrLoginIDAndOrg, fullpath)) throw `Path security validation failure: ${fullpath}`;
+
+	const cmsHostingFolder = await cms.getCMSRootRelativePath(headersOrLoginIDAndOrg, path.dirname(fullpath)); 
+	try { await exports.createFolder(headersOrLoginIDAndOrg, cmsHostingFolder); }	// create the hosting folder if needed.
+	catch (err) {LOG.error(`Error uploading file ${fullpath}, parent folder creation failed. Error is ${err}`); return CONSTANTS.FALSE_RESULT;}
 
 	let additionalBytesToWrite = data.length; 
 	try {additionalBytesToWrite = data.length - (await exports.getFileStats(fullpath)).size;} catch (err) {};	// file may not exist at all
-	if (!(await quotas.checkQuota(headers, additionalBytesToWrite)).result) throw `Quota is full write failed for ${fullpath}`;
+	if (!(await quotas.checkQuota(headersOrLoginIDAndOrg, additionalBytesToWrite)).result) throw `Quota is full write failed for ${fullpath}`;
 
 	await _appendOrWrite(fullpath, data, true, true, exports.isZippable(fullpath));
 
 	exports.updateFileStats(fullpath, inpath, data.length, true, XBIN_CONSTANTS.XBIN_FILE);	
+
+	if (!noevent) blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: fullpath, 
+		ip: utils.getLocalIPs()[0], id: cms.getID(headersOrLoginIDAndOrg), org: cms.getOrg(headersOrLoginIDAndOrg), isxbin: true});
 }
 
 exports.updateFileStats = async function (fullpathOrRequestHeaders, remotepath, dataLengthWritten, transferFinished, type, commentin) {
@@ -256,6 +263,8 @@ exports.isFileConsistentOnDisk = async fullpath => {
 }
 
 exports.normalizeRemotePath = pathIn => pathIn.replace(/\\+/g, "/").replace(/\/+/g, "/");
+
+exports.getFullPath = async (headersOrIDAndOrg, cmsPath) => path.resolve(`${await cms.getCMSRoot(headersOrIDAndOrg)}/${cmsPath}`);
 
 async function _getSecureFullPath(headers, inpath) {
 	const fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${inpath}`);

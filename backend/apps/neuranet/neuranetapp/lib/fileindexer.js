@@ -36,12 +36,12 @@ exports.initSync = _ => {
 async function _handleFileEvent(message) {
     const awaitPromisePublishFileEvent = async (promise, path, type, id, org) => {  // this is mostly to inform listeners about file being processed events
         // we have started processing a file
-        blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, { type: NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSING, 
+        blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, { type: NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSING, 
             result: true, subtype: type, id, org, path, 
                 cmspath: await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path) });
         const result = await promise;   // wait for it to complete
         // we have finished processing this file
-        blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED, 
+        blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED, 
             path, result: result?result.result:false, subtype: type, id, org, 
             cmspath: await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path)});
     }

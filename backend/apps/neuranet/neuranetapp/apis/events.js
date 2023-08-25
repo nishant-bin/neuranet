@@ -11,8 +11,8 @@ const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const EVENTS_KEY = "__org_monkshu_neuranet_events_key", MEM_TO_USE = CLUSTER_MEMORY;
 
 exports.initSync = _ => blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, message => {
-    if ((message.type != NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSING && 
-        message.type != NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED) || (!message.path)) return;  // we only care about these two
+    if ((message.type != NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSING && 
+        message.type != NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED) || (!message.path)) return;  // we only care about these two
 
     const usermemory = _getUserMemory(message.id, message.org)
     usermemory[message.cmspath] = {...message, path: message.cmspath,   // overwrite full path as we don't want top send this out

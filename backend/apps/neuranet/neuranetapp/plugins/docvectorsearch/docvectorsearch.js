@@ -28,9 +28,8 @@ exports.search = async function(id, org, query, aimodelToUse=SEARCH_MODEL_DEFAUL
 	if (tfidfScoredDocuments.length == 0) return [];	// no knowledge
 
 	// now we need to rerank these documents according to their TF score only (IDF is not material for this collection)
-	tfidfScoredDocuments.sort((doc1, doc2) => doc1.tf_score < doc2.tf_score ? 1 : doc1.tf_score > doc2.tf_score ? -1 : 0);
-	tfidfScoredDocuments = tfidfScoredDocuments.slice(0, (aiModelObjectForSearch.topK_tfidf < 
-		tfidfScoredDocuments.length ? aiModelObjectForSearch.topK_tfidf : tfidfScoredDocuments.length))
+	tfidfDBs[0].sortForTF(tfidfScoredDocuments); tfidfScoredDocuments = tfidfScoredDocuments.slice(0, 
+		(aiModelObjectForSearch.topK_tfidf < tfidfScoredDocuments.length ? aiModelObjectForSearch.topK_tfidf : tfidfScoredDocuments.length))
 
 	const documentsToUseDocIDs = []; for (const tfidfScoredDoc of tfidfScoredDocuments) 
 		documentsToUseDocIDs.push(tfidfScoredDoc.metadata[NEURANET_CONSTANTS.NEURANET_DOCID]);
@@ -51,15 +50,14 @@ exports.search = async function(id, org, query, aimodelToUse=SEARCH_MODEL_DEFAUL
 		LOG.error(`Can't instantiate the vector DB for ID ${id}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
 	}
-	let similarityResultsForPrompt = [];
-	for (const vectordb of vectordbs) similarityResultsForPrompt.push(await vectordb.query(
+	let vectorResultsForPrompt = [];
+	for (const vectordb of vectordbs) vectorResultsForPrompt.push(await vectordb.query(
 		vectorForUserPrompts, aiModelObjectForSearch.topK_vectors, aiModelObjectForSearch.min_distance_vectors, 
 			metadata => documentsToUseDocIDs.includes(metadata[NEURANET_CONSTANTS.NEURANET_DOCID])));
-	if ((!similarityResultsForPrompt) || (!similarityResultsForPrompt.length)) return [];
+	if ((!vectorResultsForPrompt) || (!vectorResultsForPrompt.length)) return [];
 
 	// slice the vectors after resorting as we combined DBs
-	similarityResultsForPrompt.sort((a,b) => b.similarity - a.similarity);
-	similarityResultsForPrompt = similarityResultsForPrompt.slice(0, (aiModelObjectForSearch.topK_vectors < 
-		similarityResultsForPrompt.length ? aiModelObjectForSearch.topK_vectors : similarityResultsForPrompt.length))
-    return similarityResultsForPrompt;
+	vectordbs[0].sort(vectorResultsForPrompt); vectorResultsForPrompt = vectorResultsForPrompt.slice(0, 
+		(aiModelObjectForSearch.topK_vectors < vectorResultsForPrompt.length ? aiModelObjectForSearch.topK_vectors : vectorResultsForPrompt.length))
+    return vectorResultsForPrompt;
 }

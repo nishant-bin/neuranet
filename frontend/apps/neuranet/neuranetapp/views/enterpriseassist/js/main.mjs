@@ -1,5 +1,5 @@
 /** 
- * View main module for the search view.
+ * View main module for the Enterprise assistant view.
  * 
  * (C) 2023 Tekmonks Corp.
  */
@@ -15,10 +15,13 @@ const API_GET_EVENTS = "events", MODULE_PATH = util.getModulePath(import.meta), 
 let chatsessionID;
 
 function initView(data) {
+    const loginresponse = session.set(APP_CONSTANTS.LOGIN_RESPONSE, resp);
+    LOG.info(`The login response object is ${JSON.stringify(loginresponse)}`);
     window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {
         ...(window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME]||{}), enterprise_assist_main: main}; 
     data.VIEW_PATH = VIEW_PATH;
-    data.userrole = session.get(APP_CONSTANTS.CURRENT_USERROLE).toString();
+    data.show_ai_training = (loginresponse.aifederationmode != "only_master") && (loginresponse.aifederationmode != "only_mapped");
+    data.collapse_ai_training = (data.show_ai_training == true) && (session.get(APP_CONSTANTS.CURRENT_USERROLE).toString() != "admin");
     data.shownotifications = {action: "monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].enterprise_assist_main.getNotifications()"};
 }
 
@@ -39,21 +42,21 @@ async function getNotifications() {
     return renderedEvents;
 }
 
-async function processChatResponse(result, _chatboxid) {
-    if (!result) return {error: (await i18n.get("ChatAIError")), ok: false}
+async function processAssistantResponse(result, _chatboxid) {
+    if (!result) return {error: (await i18n.get("EnterpriseAssist_AIError")), ok: false}
     if (result.session_id) chatsessionID = result.session_id;  // save session ID so that backend can maintain session
     if ((!result.result) && (result.reason == "limit")) return {error: await i18n.get("ErrorConvertingAIQuotaLimit"), ok: false};
 
-    // in case of no knowledge, allow the chat to continue still, with the message that we have no knowledge to answer this particular prompt
-    if ((!result.result) && (result.reason == "noknowledge")) return {ok: true, response: await i18n.get("EnterpriseSearch_ErrorNoKnowledge")};
+    // in case of no knowledge, allow the assistant to continue still, with the message that we have no knowledge to answer this particular prompt
+    if ((!result.result) && (result.reason == "noknowledge")) return {ok: true, response: await i18n.get("EnterpriseAssist_ErrorNoKnowledge")};
 
     if (!result.result) return {error: await i18n.get("ChatAIError"), ok: false};
 
     return {ok: true, response: result.response};
 }
 
-const getChatRequest = (question, _chatboxid) => {
+const getAssistantRequest = (question, _chatboxid) => {
     return {id: session.get(APP_CONSTANTS.USERID), question, session_id: chatsessionID};
 }
 
-export const main = {initView, getNotifications, processChatResponse, getChatRequest};
+export const main = {initView, getNotifications, processAssistantResponse, getAssistantRequest};

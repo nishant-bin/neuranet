@@ -333,6 +333,7 @@ exports.get_vectordb = async function(path, embedding_generator, isMultithreaded
             benchmarkIterations),
         flush_db: async _ => exports.save_db(path),
         get_path: _ => path, get_embedding_generator: _ => embedding_generator,
+	    sort: vectorResults => vectorResults.sort((a,b) => b.similarity - a.similarity),
         unload: async _ => {if (save_timer) clearInterval(save_timer); await exports.free(path);}
     }
 }

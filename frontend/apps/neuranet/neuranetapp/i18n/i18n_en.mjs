@@ -31,9 +31,10 @@ export const i18n = {
 
 "NotImplemented": "Not implemented yet.",
 
-"EnterpriseSearch_Done": "Done",
-"EnterpriseSearch_Processing": "Reading",
-"EnterpriseSearch_NoEvents": "No Events.",
-"EnterpriseSearch_KnowledgeBase": "AI Training",
-"EnterpriseSearch_ErrorNoKnowledge": "Sorry I have no knowledge of this topic."
+"EnterpriseAssist_Done": "Done",
+"EnterpriseAssist_Processing": "Reading",
+"EnterpriseAssist_NoEvents": "No Events.",
+"EnterpriseAssist_KnowledgeBase": "AI Training",
+"EnterpriseAssist_ErrorNoKnowledge": "Sorry I have no knowledge of this topic.",
+"EnterpriseAssist_AIError": "AI error in processing. Please reload the page to start a new assistant request."
 }

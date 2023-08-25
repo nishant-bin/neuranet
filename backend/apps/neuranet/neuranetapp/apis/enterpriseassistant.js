@@ -1,5 +1,5 @@
 /**
- * AI based chat API for a private knowledge base indexed by the vector DB.
+ * AI based assistant API for a private knowledge base indexed by the AI DBs.
  * 
  * API Request
  * 	id - The user ID
@@ -20,7 +20,6 @@
 
 const mustache = require("mustache");
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
-const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const chatAPI = require(`${NEURANET_CONSTANTS.APIDIR}/chat.js`);
@@ -33,12 +32,12 @@ const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATI
 	PROMPT_FILE_KNOWLEDGEBASE = "chat_knowledgebase_prompt.txt", PROMPT_FILE_STANDALONE_QUESTION = "chat_knowledgebase_summarize_question_prompt.txt",
 	DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
 
-exports.doService = async (jsonReq, _servObject, headers, _url) => {
+exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
 
 	LOG.debug(`Got knowledge base chat request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
-	const id = login.getID(headers), org = login.getOrg(headers);
+	const id = jsonReq.id, org = jsonReq.org;
 	if (!(await quota.checkQuota(id))) {
 		LOG.error(`Disallowing the API call, as the user ${id} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
@@ -85,4 +84,4 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 	return {...response, metadatas_for_response: metadatasForResponse};
 }
 
-const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.question);
+const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.question && jsonReq.org);

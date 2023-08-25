@@ -2,6 +2,8 @@
     "/apps/{{app}}/log" : "{{server_lib}}/log.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&reloadOnDebug=false&logpath={{server}}/../apps/{{app}}/logs/remotelog.ndjson",
     "/apps/{{app}}/getremotelog" : "/loginappframework/apis/getremotelog.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&reloadOnDebug=false",
 
+
+    
     "/apps/{{app}}/login" : "/loginappframework/apis/login.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=false&addsToken=sub:{{{role}}},tokenflag:{{{tokenflag}}},id:{{{id}}},org:{{{org}}}",
     "/apps/{{app}}/resetuser" : "/loginappframework/apis/resetuser.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=false",
     "/apps/{{app}}/register" : "/loginappframework/apis/register.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=false&addsToken=sub:{{{role}}},tokenflag:{{{tokenflag}}},id:{{{id}}},org:{{{org}}}",
@@ -20,14 +22,19 @@
     "/apps/{{app}}/verifyemail" : "/loginappframework/apis/verifyemail.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=false",
     "/apps/{{app}}/addorupdateorg" : "/loginappframework/apis/addorupdateorg.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=admin&checkClaims=org&addsToken=sub:{{{role}}},tokenflag:{{{result}}},id:{{{id}}},org:{{{org}}}",
 
-    "/apps/{{app}}/getcurrentlogins": "/neuranetapp/apis/loginids.js?get=true&needsToken=admin&checkClaims=id,org",
+
+
     "/apps/{{app}}/convertsql" : "/neuranetapp/apis/convertsql.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
     "/apps/{{app}}/convertcode" : "/neuranetapp/apis/convertcode.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
     "/apps/{{app}}/convertcodechain" : "/neuranetapp/apis/convertcodechain.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
     "/apps/{{app}}/chat" : "/neuranetapp/apis/chat.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
-    "/apps/{{app}}/knowledgebasechat" : "/neuranetapp/apis/chat_knowledge_base.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&checkClaims=id",
-    "/apps/{{app}}/indexdoc" : "/neuranetapp/apis/indexdoc.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&checkClaims=id",
     "/apps/{{app}}/events" : "/neuranetapp/apis/events.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id,org",
+
+    "/apps/{{app}}/enterpriseassistant" : "/neuranetapp/apis/chat_knowledge_base.js?custom_security=neuranet_key_checker",
+    "/apps/{{app}}/indexdoc" : "/neuranetapp/apis/indexdoc.js?customSecurity=neuranet_key_checker",
+    "/apps/{{app}}/unindexdoc" : "/neuranetapp/apis/unindexdoc.js?customSecurity=neuranet_key_checker",
+
+
 
     "/apps/{{app}}/getfiles" : "/xbinapp/apis/getfiles.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=user,admin",
     "/apps/{{app}}/uploadfile" : "/xbinapp/apis/uploadfile.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&reloadOnDebug=false",
