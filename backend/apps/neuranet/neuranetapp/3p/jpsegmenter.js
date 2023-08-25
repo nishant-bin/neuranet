@@ -2,7 +2,8 @@
  * Japanese language segmenter.
  * 
  * Use require("jpsegmenter.js").getSegmenter() to get a new segmenter.
- * Use segmenter.segment("japanese text") to segment.
+ * Use segmenter.segment("japanese text") to segment. Returns word list
+ * as an array.
  * (C) 2023 Tekmonks 
  */
 
