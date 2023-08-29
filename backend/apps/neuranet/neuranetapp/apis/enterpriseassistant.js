@@ -38,7 +38,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 	LOG.debug(`Got knowledge base chat request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
 	const id = jsonReq.id, org = jsonReq.org;
-	if (!(await quota.checkQuota(id))) {
+	if (!(await quota.checkQuota(id, org))) {
 		LOG.error(`Disallowing the API call, as the user ${id} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
@@ -59,8 +59,8 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 
 	let questionToUseForSearch; if (finalSessionObject.length > 0) {
 		const standaloneQuestionResult = await simplellm.prompt_answer(
-			`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${PROMPT_FILE_STANDALONE_QUESTION}`, 
-			jsonReq.id, {session: finalSessionObject, question: jsonReq.question});
+			`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${PROMPT_FILE_STANDALONE_QUESTION}`, id, org, 
+			{session: finalSessionObject, question: jsonReq.question});
 		if (!standaloneQuestionResult) {
 			LOG.error("Couldn't create a stand alone version of the user's question.");
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
@@ -77,7 +77,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 	const knowledgebasePromptTemplate = await aiutils.getPrompt(`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${PROMPT_FILE_KNOWLEDGEBASE}`);
 	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, {documents, question: jsonReq.question});
 
-	const jsonReqChat = { id, maintain_session: true, session_id: jsonReq.session_id,
+	const jsonReqChat = { id, org, maintain_session: true, session_id: jsonReq.session_id,
 		session: [{"role": aiModelObjectForChat.user_role, "content": knowledegebaseWithQuestion}], model: aiModelToUseForChat };
 	const response = await chatAPI.doService(jsonReqChat);
 

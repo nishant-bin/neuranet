@@ -32,7 +32,7 @@ exports.doService = async jsonReq => {
 
 	LOG.debug(`Got chat request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
-	if (!(await quota.checkQuota(jsonReq.id))) {
+	if (!(await quota.checkQuota(jsonReq.id, jsonReq.org))) {
 		LOG.error(`Disallowing the API call, as the user ${jsonReq.id} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
@@ -121,5 +121,5 @@ function _unmarshallAIResponse(response, userPrompt) {
 	}	
 }
 
-const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.session && Array.isArray(jsonReq.session) && 
-	jsonReq.session.length >= 1);
+const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.org && jsonReq.session && 
+	Array.isArray(jsonReq.session) && jsonReq.session.length >= 1);

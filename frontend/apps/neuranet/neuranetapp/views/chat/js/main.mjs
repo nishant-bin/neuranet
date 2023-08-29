@@ -26,7 +26,7 @@ async function processChatResponse(result, _chatboxid) {
 function getChatRequest(prompt, _chatboxid) {
     const sessionRequest = {...SESSION_OBJ_TEMPLATE}; sessionRequest.content = prompt;
 
-    return {id: session.get(APP_CONSTANTS.USERID), session: [sessionRequest], 
+    return {id: session.get(APP_CONSTANTS.USERID), org: session.get(APP_CONSTANTS.USERORG), session: [sessionRequest], 
         maintain_session: true, session_id: chatsessionID};
 }
 

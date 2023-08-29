@@ -95,6 +95,16 @@ exports.isAPIKeySecure = async (headers, org) => {
 	return orgKeys.includes(incomingKey);
 }
 
+exports.getOrgKeys = async headersOrOrg => {
+	const orgIn = typeof headersOrOrg == "string" ? headersOrOrg : exports.getOrg(headersOrOrg);
+	return await await userid.getKeysForOrg(orgIn);
+}
+
+exports.setOrgKeys = async (headersOrOrg, keys) => {
+	const orgIn = typeof headersOrOrg == "string" ? headersOrOrg : exports.getOrg(headersOrOrg);
+	return await userid.setKeysForOrg(orgIn, keys);
+}
+
 exports.getRole = headers => {
 	if (!headers["authorization"]) return null;
 	const logins = CLUSTER_MEMORY.get(LOGINS_MEMORY_KEY) || {};

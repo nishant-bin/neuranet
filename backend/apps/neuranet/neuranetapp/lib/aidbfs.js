@@ -50,7 +50,7 @@ async function ingestfile(pathIn, id, org, lang, streamGenerator, dontRebuildDBs
     
     const aiModelToUseForEmbeddings = MODEL_DEFAULT, aiModelObjectForEmbeddings = await aiutils.getAIModel(aiModelToUseForEmbeddings), 
         embeddingsGenerator = async text => {
-			const response = await embedding.createEmbeddingVector(id, text, aiModelToUseForEmbeddings); 
+			const response = await embedding.createEmbeddingVector(id, org, text, aiModelToUseForEmbeddings); 
 			if (response.reason != embedding.REASONS.OK) return null;
 			else return response.embedding;
 		}
@@ -235,7 +235,7 @@ async function getVectorDBsForIDAndOrg(id, org, embeddingsGenerator) {
     if (aifederationmode == "only_private") return await _getPrivateVectorDBForIDAndOrg(id, org, lang);
     if (aifederationmode == "only_master" || "master_and_private") {
         const vectordbMaster = await _getMasterVectorDBForOrg(org, embeddingsGenerator);
-        if (aifederationmode == "only_master" || (await login.isIDAdminForOrg(id, org))) return vectordbMaster;  // admins control the master DB
+        if (aifederationmode == "only_master" || (await login.isIDAdminForOrg(id, org))) return [vectordbMaster];  // admins control the master DB
         else return [await _getPrivateVectorDBForIDAndOrg(id, org, lang), vectordbMaster];
     }
 

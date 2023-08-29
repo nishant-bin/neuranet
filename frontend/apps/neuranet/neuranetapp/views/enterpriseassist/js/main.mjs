@@ -15,13 +15,15 @@ const API_GET_EVENTS = "events", MODULE_PATH = util.getModulePath(import.meta), 
 let chatsessionID;
 
 function initView(data) {
-    const loginresponse = session.set(APP_CONSTANTS.LOGIN_RESPONSE, resp);
+    const loginresponse = session.get(APP_CONSTANTS.LOGIN_RESPONSE), 
+        isAdmin = session.get(APP_CONSTANTS.CURRENT_USERROLE).toString() == "admin";
     LOG.info(`The login response object is ${JSON.stringify(loginresponse)}`);
     window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {
         ...(window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME]||{}), enterprise_assist_main: main}; 
     data.VIEW_PATH = VIEW_PATH;
-    data.show_ai_training = (loginresponse.aifederationmode != "only_master") && (loginresponse.aifederationmode != "only_mapped");
-    data.collapse_ai_training = (data.show_ai_training == true) && (session.get(APP_CONSTANTS.CURRENT_USERROLE).toString() != "admin");
+    data.show_ai_training = (loginresponse.aifederationmode == "only_master") && isAdmin ? true : 
+        (loginresponse.aifederationmode.toLowerCase().includes("private")) ? true : false;
+    data.collapse_ai_training = data.show_ai_training && isAdmin ? false : true;
     data.shownotifications = {action: "monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].enterprise_assist_main.getNotifications()"};
 }
 
@@ -56,7 +58,8 @@ async function processAssistantResponse(result, _chatboxid) {
 }
 
 const getAssistantRequest = (question, _chatboxid) => {
-    return {id: session.get(APP_CONSTANTS.USERID), question, session_id: chatsessionID};
+    return {id: session.get(APP_CONSTANTS.USERID), org: session.get(APP_CONSTANTS.USERORG), question, 
+        session_id: chatsessionID};
 }
 
 export const main = {initView, getNotifications, processAssistantResponse, getAssistantRequest};

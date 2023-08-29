@@ -108,11 +108,12 @@ div#filelistingscontainer div.filemanagerentries {
     height: fit-content;
     display: flex;
     flex-direction: column;
-    padding: 0em 1em 0.5em 1em;
+    padding: {{style.fmPadding}};
     align-items: center;
     justify-content: center;
     width: 5em;
     text-align: center;
+    font-size: {{style.fmFontSize}};
 }
 
 div#filelistingscontainer div.filemanagerentries:focus, div#filelistingscontainer div.filemanagerentries:hover {
@@ -121,7 +122,7 @@ div#filelistingscontainer div.filemanagerentries:focus, div#filelistingscontaine
     outline: none;
 }
 
-div#filelistingscontainer div.filemanagerentries > img {width: 5em;}
+div#filelistingscontainer div.filemanagerentries > img {width: {{style.fmIconSize}};}
 
 div#filelistingscontainer div.filemanagerentries > span {
     display: inline-block;

@@ -24,8 +24,8 @@ const DEFAULT_SIMPLE_QA_MODEL = "simplellm-gpt35-turbo", DEBUG_MODE = NEURANET_C
  * @param {string} model The LLM model name to use. If not provided then a default is used.
  * @returns The LLM response, unparsed.
  */
-exports.prompt_answer = async function(promptFileOrPrompt, id, data, model=DEFAULT_SIMPLE_QA_MODEL) {
-    if (id && !(await quota.checkQuota(id))) {  // check quota if the ID was provided
+exports.prompt_answer = async function(promptFileOrPrompt, id, org, data, model=DEFAULT_SIMPLE_QA_MODEL) {
+    if (id && !(await quota.checkQuota(id, org))) {  // check quota if the ID was provided
 		LOG.error(`SimpleLLM: Disallowing the LLM call, as the user ${id} is over their quota.`);
 		return null;    // quota issue
 	}

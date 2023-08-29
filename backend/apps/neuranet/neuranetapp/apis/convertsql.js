@@ -21,7 +21,7 @@ exports.doService = async jsonReq => {
 
 	LOG.debug(`Got SQL conversion request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
-	if (!(await quota.checkQuota(jsonReq.id))) {
+	if (!(await quota.checkQuota(jsonReq.id, jsonReq.org))) {
 		LOG.error(`Disallowing the API call, as the user ${jsonReq.id} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
@@ -72,5 +72,6 @@ const _getDBMappings = async _ => {
 	else return DB_MAPPINGS;
 }
 
-const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.request && jsonReq.dbfrom && jsonReq.dbto &&
-	Object.keys(SUPPORTED_DBS).includes(jsonReq.dbfrom) && Object.keys(SUPPORTED_DBS).includes(jsonReq.dbto));
+const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.org && jsonReq.request && jsonReq.dbfrom && 
+	jsonReq.dbto && Object.keys(SUPPORTED_DBS).includes(jsonReq.dbfrom) && 
+	Object.keys(SUPPORTED_DBS).includes(jsonReq.dbto));

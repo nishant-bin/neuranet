@@ -117,5 +117,6 @@ export const i18n = {
 "OrgEditErrorDomain": "Error updating the new domain is not allowed. Please contact your company's administrator for help.",
 "OrgFetchError": "Unable to get organization details. Please retry later or contact support for help.",
 "ChangingSuborgsWillMigrateUsers": "WARNING: You have edited the list of suborganizations. This is a destructive operation that will also migrate users associated with the deleted suborganizations to the main organization. Press Cancel to avoid this. Press OK again to proceed.",
-"SomeUndeletableDomainsFound": "Undeletable domains found - {{domains}}. Please restore them as they have registered users or cancel."
+"SomeUndeletableDomainsFound": "Undeletable domains found - {{domains}}. Please restore them as they have registered users or cancel.",
+"APIKeys": "API Keys"
 }

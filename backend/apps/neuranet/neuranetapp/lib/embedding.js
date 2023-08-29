@@ -16,8 +16,8 @@ const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const MODEL_DEFAULT = "embedding-openai-ada002", EMBEDDING_PROMPT = `${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/embedding_prompt.txt`,
     REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", LIMIT: "limit"}
 
-async function createEmbeddingVector(id, text, model) {
-    if (!(await quota.checkQuota(id))) {
+async function createEmbeddingVector(id, org, text, model) {
+    if (!(await quota.checkQuota(id, org))) {
 		LOG.error(`Disallowing the embedding call, as the user ${id} is over their quota.`);
 		return {reason: REASONS.LIMIT, error: "User is over quota limit."};
 	}

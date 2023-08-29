@@ -197,7 +197,7 @@ exports.query = (query, topK, filter_function, lang="en", cutoff_score, options=
         if (filter_function && (!options.filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
         let scoreThisDoc = 0, tfScoreThisDoc = 0, queryWordsFoundInThisDoc = 0; if (query) for (const queryWord of queryWords) {
             const wordIndex = _getWordIndex(queryWord, db); if (wordIndex == null) continue;  // query word not found in the vocabulary
-            if (document.scores[wordIndex]) {tfScoreThisDoc += document.scores[wordIndex]; scoreThisDoc += document.scores[wordIndex].tfidf; queryWordsFoundInThisDoc++;}
+            if (document.scores[wordIndex]) {tfScoreThisDoc += document.scores[wordIndex].tf; scoreThisDoc += document.scores[wordIndex].tfidf; queryWordsFoundInThisDoc++;}
         }
         const max_coord_boost = options.max_coord_boost||DEFAULT_MAX_COORD_BOOST, 
             coordScore = (query && (!options.ignoreCoord)) ? 1+(max_coord_boost*queryWordsFoundInThisDoc/queryWords.length) : 1;
@@ -248,7 +248,7 @@ function _recalculateTFIDF(db) {  // rebuilds the entire TF.IDF index for all do
     for (const document of Object.values(db.tfidfDocStore)) for (const wordIndex of Object.keys(document.scores)) {
         const tf = document.scores[wordIndex].wordcount/document.length, 
             idf = 1+Math.log10(Object.keys(db.tfidfDocStore).length/(db.wordDocCounts[wordIndex]+1));
-        document.scores[wordIndex].tfidf = tf*idf;
+        document.scores[wordIndex].tfidf = tf*idf; document.scores[wordIndex].tf = tf;
     }
 }
 

@@ -306,6 +306,16 @@ exports.getKeysForOrg = async org => {
 	if (keys && keys.length) return _flattenArray(keys, "key"); else return null;
 }
 
+exports.setKeysForOrg = async (org, keys) => {
+	if (!keys) keys = [serverutils.generateUUID(false)];
+	const keysIn = []; if (!Array.isArray(keys)) keysIn[0] = keys; else keysIn = [...keys];
+	for (const key of keysIn) {
+		if (!await db.runCmd("DELETE FROM keys WHERE org = ? COLLATE NOCASE", [org])) return false;	// drop all current keys
+		if (!await db.runCmd("INSERT INTO KEYS (key, org) VALUES (?, ?)", [key, org])) return false;
+	}
+	return keysIn;
+}
+
 exports.addDomain = async (domain, org) => {
 	return {result: await db.runCmd("INSERT OR IGNORE INTO domains (domain, org) VALUES (?,?)", [domain, org]), domain, org};
 }

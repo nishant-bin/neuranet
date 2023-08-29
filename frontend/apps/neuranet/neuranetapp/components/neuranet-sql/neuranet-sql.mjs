@@ -26,14 +26,14 @@ async function convert(elementImg) {
 		dbfrom = conf.DB_BACKEND_ID_MAPPINGS[shadowRoot.querySelector("select#sourcedb").value], 
 		dbto = conf.DB_BACKEND_ID_MAPPINGS[shadowRoot.querySelector("select#targetdb").value],
 		validate = shadowRoot.querySelector("input#validatesql").checked,
-		userid = host.getAttribute("user");
+		userid = host.getAttribute("user"), org = host.getAttribute("org");
 	
 	if (requestSQL.trim() == "") {_showError(await i18n.get("NothingToConvert")); return;}
 	texteditorResponse.value = ""; elementImg.src = `${COMPONENT_PATH}/img/spinner.svg`; texteditorRequest.readOnly = true; 
 	const orgImgOnclick = elementImg.onclick; elementImg.onclick = _ => {};
 	const convertedResponse = dbfrom == dbto ? {sql: requestSQL, result: true} : await apiman.rest(
 		`${host.getAttribute("backendurl")}/${API_CONVERT}`, "POST", {request: requestSQL, dbfrom, dbto, id: userid, 
-			skipvalidation: !validate, use_simple_validator: conf.SIMPLE_VALIDATOR}, true, false, false, 
+			org, skipvalidation: !validate, use_simple_validator: conf.SIMPLE_VALIDATOR}, true, false, false, 
 			false, false, conf.GENSQL_API_TIMEOUT);
 	elementImg.src = `${COMPONENT_PATH}/img/bot.svg`; elementImg.onclick = orgImgOnclick; texteditorRequest.readOnly = false; 
 

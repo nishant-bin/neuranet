@@ -17,8 +17,8 @@ exports.initSync = _ => {
 
 exports.viewInjector = async function(result) {
     if (result.tokenflag) try { 
-        result.views = await dblayer.getViewsForDomain(result.domain); 
-        result.aifederationmode = await dblayer.getAIFederationModeForOrg(org);
+        result.views = await dblayer.getViewsForOrg(result.org); 
+        result.aifederationmode = await dblayer.getAIFederationModeForOrg(result.org);
         return true;
     } catch (err) {return false;}
 }

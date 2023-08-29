@@ -91,8 +91,10 @@ async function elementConnected(host) {
    const pathSplits = path.split("/"); for (const [i, pathElement] of pathSplits.entries()) if (pathElement.trim()) pathcrumbs.push(
       {action: `monkshu_env.components['file-manager'].changeToPath('${host.id}','${pathSplits.slice(0, i+1).join("/")}')`, name: pathElement});
 
+   const style = {fmFontSize: host.getAttribute("fontsize")||"normal", 
+      fmIconSize: host.getAttribute("iconsize")||"5em", fmPadding: host.getAttribute("padding")||"0em 1em 0.5em 1em"};
    const data = {operations: folder_ops, entries: resp.entries, hostID: host.id, COMPONENT_PATH, 
-      pathcrumbs: JSON.stringify(pathcrumbs)};
+      pathcrumbs: JSON.stringify(pathcrumbs), style};
 
    if (host.getAttribute("styleBody")) data.styleBody = `<style>${host.getAttribute("styleBody")}</style>`;
    shareDuration = host.getAttribute("defaultShareDuration") || DEFAULT_SHARE_EXPIRY; 

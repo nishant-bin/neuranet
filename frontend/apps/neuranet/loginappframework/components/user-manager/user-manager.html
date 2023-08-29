@@ -148,6 +148,17 @@ span#header > button {min-width: 7em;}
             <span>{{org}}</span>
             <span>{{orgdomain}}</span>
         </div>
+        <div id="org" class="user" title="{{i18n.APIKeys}}&#10;{{org}}" ontouchend='event.preventDefault(); event.stopPropagation();
+                    event.pageY = event.changedTouches[0].pageY; event.pageX = event.changedTouches[0].pageX; oncontextmenu(event)'
+                oncontextmenu='event.preventDefault(); event.stopPropagation(); monkshu_env.components["user-manager"].apikeysMenuClicked(
+                    event, this, "{{org}}");'
+                ondblclick='event.preventDefault(); event.stopPropagation();  monkshu_env.components["user-manager"].editAPIKeys(
+                    "{{org}}", this)'>
+            
+            <img src="{{COMPONENT_PATH}}/img/key.svg">
+            <span>{{i18n.APIKeys}}</span>
+            <span>{{org}}</span>
+        </div>
         {{#users}}
         <div id="{{id}}" class="user" title="{{name}}&#10;{{id}}" ontouchend='event.preventDefault(); event.stopPropagation();
                     event.pageY = event.changedTouches[0].pageY; event.pageX = event.changedTouches[0].pageX; oncontextmenu(event)'

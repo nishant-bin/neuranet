@@ -54,7 +54,7 @@ async function _realDoService(jsonReq, _servObject, _headers, _url, partialRespo
 
 	LOG.debug(`Got code conversion request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
-    if (!(await quota.checkQuota(jsonReq.id))) {
+    if (!(await quota.checkQuota(jsonReq.id, jsonReq.org))) {
 		LOG.error(`Disallowing the API call, as the user ${jsonReq.id} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
@@ -134,7 +134,7 @@ const _refreshLangFilesIfDebug = _ => {
     NEURANET_CONSTANTS.CONF = JSON.parse(confjson);
 }
  
-const validateRequest = jsonReq => (jsonReq && jsonReq.id && (jsonReq.requestid || 
+const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.org && (jsonReq.requestid || 
     (jsonReq.request && jsonReq.langfrom && 
         jsonReq.langto && Object.keys(SUPPORTED_LANGS).includes(jsonReq.langfrom) &&
         Object.keys(SUPPORTED_LANGS).includes(jsonReq.langto)) ) );

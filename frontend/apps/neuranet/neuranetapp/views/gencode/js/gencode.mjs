@@ -19,14 +19,14 @@ async function convert(elementImg) {
 		texteditorResponse = document.querySelector("text-editor#targetlang"), requestCode = texteditorRequest.value.trim(),
 		langfrom = conf.LANG_BACKEND_ID_MAPPINGS[document.querySelector("select#sourcelang").value], 
 		langto = conf.LANG_BACKEND_ID_MAPPINGS[document.querySelector("select#targetlang").value],
-		userid = session.get(APP_CONSTANTS.USERID);
+		userid = session.get(APP_CONSTANTS.USERID), org = session.get(APP_CONSTANTS.USERORG);
 	let isAGIChain = document.querySelector("input#agichain").checked;
 	if (!_checkValidAGIChain(requestCode)) isAGIChain = false;
 	
 	if (requestCode.trim() == "") {mainModule.showMessage(await i18n.get("NothingToConvert")); return;}
 	texteditorResponse.value = ""; elementImg.src = `${VIEW_PATH}/img/spinner.svg`; texteditorRequest.readOnly = true; 
 	const orgImgOnclick = elementImg.onclick; elementImg.onclick = _ => {};
-	const apirequest = {request: isAGIChain?_getRequestChain(requestCode):requestCode, langfrom, langto, id: userid}
+	const apirequest = {request: isAGIChain?_getRequestChain(requestCode):requestCode, langfrom, langto, id: userid, org}
 	let previousPartialResponse;
 	const convertedResponse = langfrom == langto ? {code: requestCode, result: true} : 
 		await _getPolledResponse(`${APP_CONSTANTS.API_PATH}/${isAGIChain?API_CONVERT_CHAIN:API_CONVERT}`, 
