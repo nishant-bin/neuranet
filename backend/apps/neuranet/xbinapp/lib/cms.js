@@ -9,6 +9,7 @@ const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
 const register = require(`${LOGINAPP_CONSTANTS.API_DIR}/register.js`);
 const updateuser = require(`${LOGINAPP_CONSTANTS.API_DIR}/updateuser.js`);
+const loginappAPIKeyChecker = require(`${LOGINAPP_CONSTANTS.LIB_DIR}/loginappAPIKeyChecker.js`);
 
 const DEFAULT_MAX_PATH_LENGTH = 50;
 
@@ -67,10 +68,10 @@ exports.getID = headersOrLoginIDAndOrg => headersOrLoginIDAndOrg.xbin_id || logi
 
 exports.getOrg = headersOrLoginIDAndOrg => headersOrLoginIDAndOrg.xbin_org || login.getOrg(headersOrLoginIDAndOrg);
 
-exports.isSecure = async (headersOrLoginIDAndOrg, path) => {	// add domain check here to ensure ID and org domains are ok
-	const isKeySecure = headersOrLoginIDAndOrg.xbin_org && headersOrLoginIDAndOrg.headers ? 
-		await login.isAPIKeySecure(headersOrLoginIDAndOrg.headers, headersOrLoginIDAndOrg.xbin_org) : true;
-	return isKeySecure && XBIN_CONSTANTS.isSubdirectory(path, await this.getCMSRoot(headersOrLoginIDAndOrg));
+exports.isSecure = async (headersOrHeadersAndOrg, path) => {	// add domain check here to ensure ID and org domains are ok
+	const isKeySecure = headersOrHeadersAndOrg.xbin_org && headersOrHeadersAndOrg.headers ? 
+		await loginappAPIKeyChecker.isAPIKeySecure(headersOrHeadersAndOrg.headers, headersOrHeadersAndOrg.xbin_org) : true;
+	return isKeySecure && XBIN_CONSTANTS.isSubdirectory(path, await this.getCMSRoot(headersOrHeadersAndOrg));
 }
 
 const _getPathForIDAndOrg = (id, org) => `${XBIN_CONSTANTS.CONF.CMS_ROOT}/${_convertToPathFriendlyString(org.toLowerCase())}/${_convertToPathFriendlyString(id.toLowerCase())}`;

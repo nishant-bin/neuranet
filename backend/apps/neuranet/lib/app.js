@@ -15,6 +15,8 @@ exports.initSync = appName => {
     require(`${APP_CONSTANTS.LIB_DIR}/userid.js`).initDB();   // inits the DB, will throw an error on failure
 
     require(`${APP_CONSTANTS.API_DIR}/login.js`).init();   // inits the login subsystem
+
+    require(`${APP_CONSTANTS.LIB_DIR}/loginappAPIKeyChecker.js`).initSync();   // inits the security checker
     
     require(`${APP_CONSTANTS.LIB_DIR}/deleteunverifiedaccounts.js`).init();    // init expired accounts cleanup service
 

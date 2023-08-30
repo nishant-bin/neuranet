@@ -89,12 +89,6 @@ exports.getOrg = headers => {
 
 exports.getKey = headers => APIREGISTRY.getExtension("apikeychecker").getIncomingAPIKey(headers);
 
-exports.isAPIKeySecure = async (headers, org) => {
-	const incomingKey = APIREGISTRY.getExtension("apikeychecker").getIncomingAPIKey(headers);
-	const orgKeys = await userid.getKeysForOrg(org);
-	return orgKeys.includes(incomingKey);
-}
-
 exports.getOrgKeys = async headersOrOrg => {
 	const orgIn = typeof headersOrOrg == "string" ? headersOrOrg : exports.getOrg(headersOrOrg);
 	return await await userid.getKeysForOrg(orgIn);

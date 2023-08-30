@@ -59,9 +59,9 @@ async function _testSearch(dbroot, query, lang="en") {
     return {tfidfScoredDocuments, metadatasForResponse, documents};
 }
 
-async function _getTFIDFDBForPath(dbpath, lang) {
-    const tfidfdb = await aitfidfdb.get_tfidf_db(`${dbpath}/tfidfdb`, NEURANET_CONSTANTS.NEURANET_DOCID, lang,
-        `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`);
+async function _getTFIDFDBForPath(dbpath) {
+    const tfidfdb = await aitfidfdb.get_tfidf_db(`${dbpath}/tfidfdb`, NEURANET_CONSTANTS.NEURANET_DOCID, 
+        NEURANET_CONSTANTS.NEURANET_LANGID, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`);
     return tfidfdb;
 }
 

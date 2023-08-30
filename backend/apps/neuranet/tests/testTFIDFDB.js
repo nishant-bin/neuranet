@@ -40,7 +40,7 @@ exports.runTestsAsync = async function(argv) {
 async function _testIngestion(pathIn, docindex) {
     LOG.console(`Test case for TF.IDF ingestion called to ingest file ${pathIn}.\n`);
 
-    const tfidfDB = await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG, "en");  
+    const tfidfDB = await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG);  
     const metadata = {id: TEST_ID, org: TEST_ORG, fullpath: pathIn, neuranet_docid: "testdoc"+docindex};  
     try {await tfidfDB.create(await fspromises.readFile(pathIn, "utf8"), metadata); return metadata;}
     catch (err) {
@@ -50,7 +50,7 @@ async function _testIngestion(pathIn, docindex) {
 }
 
 async function _testQuery(query) {
-    const tfidfDB = await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG, "en");  
+    const tfidfDB = await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG);  
     const queryResult = tfidfDB.query(query, 3, null, 0);
     if (!queryResult) return null;
     const logMsg = `Query result is ${JSON.stringify(queryResult, null, 2)}.\n`; LOG.info(logMsg); LOG.console(logMsg);
@@ -58,13 +58,14 @@ async function _testQuery(query) {
 }
 
 async function _testUpdate(metadataOld, metadataNew) {
-    const tfidfDB = await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG, "en");  
+    const tfidfDB = await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG);  
     return tfidfDB.update(metadataOld, metadataNew);
 }
 
-async function _getTFIDFDBForIDAndOrg(id, org, lang="en") {
+async function _getTFIDFDBForIDAndOrg(id, _getVectorDBForIDAndOrgForIngestion) {
     const tfidfDB_ID = `${id}_${org}`, 
         tfidfdb = await aitfidfdb.get_tfidf_db(`${__dirname}/tfidf_db/${tfidfDB_ID}`, 
-            NEURANET_CONSTANTS.NEURANET_DOCID, lang, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`);
+            NEURANET_CONSTANTS.NEURANET_DOCID, NEURANET_CONSTANTS.NEURANET_LANGID, 
+            `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`);
     return tfidfdb;
 }

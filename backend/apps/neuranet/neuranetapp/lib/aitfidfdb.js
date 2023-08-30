@@ -34,11 +34,12 @@ const natural = require("natural");
 const fspromises = require("fs").promises;
 const jpsegmenter = require(`${__dirname}/../3p/jpsegmenter.js`);
 const zhsegmenter = require(`${__dirname}/../3p/zhsegmenter.js`);
+const langdetector = require(`${__dirname}/../3p/langdetector.js`);
 const LOG = global.LOG || console;  // allow independent operation
 
 const EMPTY_DB = {tfidfDocStore: {}, wordDocCounts: {}, vocabulary: []}, INDEX_FILE = "index.json", 
     VOCABULARY_FILE = "vocabulary.json", METADATA_DOCID_KEY="aidb_docid", MIN_STOP_WORD_IDENTIFICATION_LENGTH = 5,
-    MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95, DEFAULT_MAX_COORD_BOOST = 0.10;
+    MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95, DEFAULT_MAX_COORD_BOOST = 0.10, METADATA_LANGID_KEY="aidb_langid";
 const IN_MEM_DBS = {};
 
 // international capable punctuation character regex from: https://stackoverflow.com/questions/7576945/javascript-regular-expression-for-punctuation-international
@@ -49,7 +50,7 @@ const SPLITTERS = new RegExp(/[\s,]+/), JP_SEGMENTER = jpsegmenter.getSegmenter(
  * Creates a new TF.IDF DB instance and returns it. Use this function preferably to get a new DB instance.
  * @param {string} dbPath The save path for the database
  * @param {string} metadata_docid_key The document ID key inside document metadata. Default is "aidb_docid"
- * @param {string} lang The language for the DB. Default is English.
+ * @param {string} metadata_langid_key The language ID key inside document metadata. Default is "aidb_langid"
  * @param {string} stopwords_path The path to the ISO stopwords file, if available. Format is {"iso_language_code":[array of stop words],...}
  *                                If set to null (not provided) then the DB will try to auto learn stop words.
  * @param {boolean} no_stemming Whether or not to stem the words. Default is to stem. If true stemming won't be used.
@@ -57,8 +58,9 @@ const SPLITTERS = new RegExp(/[\s,]+/), JP_SEGMENTER = jpsegmenter.getSegmenter(
  * @param {number} autosave_frequency The autosave frequency. Default is 500 ms. 
  * @return {object} The database object.
  */
-exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_KEY, lang="en", 
-        stopwords_path, no_stemming=false, autosave=true, autosave_frequency=500) {
+exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_KEY, 
+        metadata_langid_key=METADATA_LANGID_KEY, stopwords_path, no_stemming=false, 
+        autosave=true, autosave_frequency=500) {
     const normPath = path.resolve(dbPath); if (!IN_MEM_DBS[normPath]) {    // load the DB from the disk only if needed
         try { await fspromises.access(dbPath); } catch (err) {    // check the DB path exists or create it etc.
             if (err.code == "ENOENT") { 
@@ -69,21 +71,19 @@ exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_
         IN_MEM_DBS[normPath] = await exports.loadData(normPath);
     }
     const db = IN_MEM_DBS[normPath]; db.METADATA_DOCID_KEY = metadata_docid_key; db.no_stemming = no_stemming;
-    if (stopwords_path) db._stopwords = require(stopwords_path)[lang];
+    db.METADATA_LANGID_KEY = metadata_langid_key; if (stopwords_path) db._stopwords = require(stopwords_path);
 
     const _autosaveIfSelected = _ => {if (autosave) setTimeout(_=>exports.writeData(dbPath, db), autosave_frequency);}
 
     return {    // TODO: add stream ingestion
-        create: (document, metadata, dontRebuildDB, override_lang) => {
-            const result = exports.create(document, metadata, dontRebuildDB, override_lang||lang, db); 
+        create: (document, metadata, dontRebuildDB, lang) => {
+            const result = exports.create(document, metadata, dontRebuildDB, db, lang); 
             _autosaveIfSelected(); return result;
         },
-        update: (oldmetadata, newmetadata, override_lang) => {const result = exports.update(oldmetadata, newmetadata, 
-            override_lang||lang, db); _autosaveIfSelected(); return result;},
-        query: (query, topK, filter_function, cutoff_score, options, override_lang) => 
-            exports.query(query, topK, filter_function, override_lang||lang, cutoff_score, options, db),
-        delete: (metadata, override_lang) => {const result = exports.delete(metadata, override_lang||lang, db); 
-            _autosaveIfSelected(); return result;},
+        update: (oldmetadata, newmetadata) => {const result = exports.update(oldmetadata, newmetadata, db); _autosaveIfSelected(); return result;},
+        query: (query, topK, filter_function, cutoff_score, options, lang) => exports.query(query, topK, filter_function, 
+            cutoff_score, options, db, lang),
+        delete: metadata => {const result = exports.delete(metadata, db); _autosaveIfSelected(); return result;},
         defragment: db => {const result = exports.defragment(db); _autosaveIfSelected(); return result;},
         rebuild: _ => exports.rebuild(db),
         sortForTF: documents => documents.sort((doc1, doc2) => doc1.tf_score < doc2.tf_score ? 1 : 
@@ -117,16 +117,20 @@ exports.writeData = async (pathIn, db) => {
  * @param {object} document The document to ingest. Must be a text string.
  * @param {object} metadata The document's metadata. Must have document ID inside as a field - typically aidb_docid
  * @param {boolean} dontRecalculate If set to true DB won't be rebuilt, scores will be wrong. A manual rebuild must be done later.
- * @param {string} lang The language for the database, defaults to English "en". Use ISO 2 character codes.
  * @param {object} db The database to use
+ * @param {string} lang The language for the database. Defaults to autodetected language. Use ISO 2 character codes.
  * @return {object} metadata The document's metadata.
+ * @throws {Error} If the document's metadata is missing the document ID field. 
  */
-exports.ingest = exports.create = function(document, metadata, dontRecalculate=false, lang="en", db=EMPTY_DB) {
+exports.ingest = exports.create = function(document, metadata, dontRecalculate=false, db=EMPTY_DB, lang) {
     LOG.info(`Starting word extraction for ${JSON.stringify(metadata)}`);
-    const docHash = _getDocumentHashIndex(metadata, lang, db), docWords = _getLangNormalizedWords(document, lang, db),
+    if (!lang) {lang = langdetector.getISOLang(document); LOG.info(`Autodetected language ${lang} for ${JSON.stringify(metadata)}.`);}
+    if (!metadata[db[METADATA_DOCID_KEY]]) throw new Error("Missing document ID in metadata.");
+    if (!metadata[db[METADATA_LANGID_KEY]]) metadata[db[METADATA_LANGID_KEY]] = lang;
+    const docHash = _getDocumentHashIndex(metadata, db), docWords = _getLangNormalizedWords(document, lang, db),
         datenow = Date.now();
     LOG.info(`Deleting old document for ${JSON.stringify(metadata)}`);
-    exports.delete(metadata, lang, db);   // if adding the same document, delete the old one first.
+    exports.delete(metadata, db);   // if adding the same document, delete the old one first.
     const newDocument = {metadata: _deepclone(metadata), scores: {}, length: docWords.length, 
         date_created: datenow, date_modified: datenow}; db.tfidfDocStore[docHash] = newDocument;
     LOG.info(`Starting word counting for ${JSON.stringify(metadata)}`);
@@ -150,21 +154,21 @@ exports.rebuild = db => {
     LOG.info(`Ended recalculation of TFIDS.`);
 }
 
-exports.delete = function(metadata, lang="en", db=EMPTY_DB) {
-    const document = db.tfidfDocStore[_getDocumentHashIndex(metadata, lang, db)], wordCounts = _deepclone(db.wordDocCounts);
+exports.delete = function(metadata, db=EMPTY_DB) {
+    const document = db.tfidfDocStore[_getDocumentHashIndex(metadata, db)], wordCounts = _deepclone(db.wordDocCounts);
     if (document) {
         const allDocumentWordIndexes = Object.keys(document.scores);
         for (const wordIndex of allDocumentWordIndexes) {
             wordCounts[wordIndex] = wordCounts[wordIndex]-1;
             if (wordCounts[wordIndex] == 0) delete wordCounts[wordIndex];   // this makes the vocabulary a sparse index potentially but is needed otherwise word-index mapping will change breaking the entire DB
         }
-        delete db.tfidfDocStore[_getDocumentHashIndex(metadata, lang, db)];
+        delete db.tfidfDocStore[_getDocumentHashIndex(metadata, db)];
         db.wordDocCounts = wordCounts;
     }
 }
 
-exports.update = (oldmetadata, newmetadata, lang="en", db=EMPTY_DB) => {
-    const oldhash = _getDocumentHashIndex(oldmetadata, lang, db), newhash = _getDocumentHashIndex(newmetadata, lang, db),
+exports.update = (oldmetadata, newmetadata, db=EMPTY_DB) => {
+    const oldhash = _getDocumentHashIndex(oldmetadata, db), newhash = _getDocumentHashIndex(newmetadata, db),
         document = db.tfidfDocStore[oldhash];
     if (!document) return false;    // not found
     document.metadata = _deepclone(newmetadata); document.date_modified = Date.now();
@@ -179,7 +183,6 @@ exports.update = (oldmetadata, newmetadata, lang="en", db=EMPTY_DB) => {
  * @param {string} query The query
  * @param {number} topK TopK where K is the max top documents to return. 
  * @param {function} filter_function Filter function to filter the documents, runs pre-query
- * @param {string} lang The language, defaults to "en" or English. Use ISO language codes.
  * @param {number} cutoff_score The cutoff score relative to the top document. From 0 to 1.
  * @param {object} options An object with values below
  *                  {
@@ -189,10 +192,11 @@ exports.update = (oldmetadata, newmetadata, lang="en", db=EMPTY_DB) => {
  *                      max_coord_boost: Maximum boost from coord scores. Default is 10%.
  *                  }
  * @param {object} db The database to use
+ * @param {lang} lang The language for the query, if set to null it is auto-detected
  * @returns {Array} The resulting documents as an array of {metadata, plus other stats} objects.
  */
-exports.query = (query, topK, filter_function, lang="en", cutoff_score, options={}, db=EMPTY_DB) => {
-    const queryWords = _getLangNormalizedWords(query, lang, db), scoredDocs = []; let highestScore = 0; 
+exports.query = (query, topK, filter_function, cutoff_score, options={}, db=EMPTY_DB, lang) => {
+    const queryWords = _getLangNormalizedWords(query, lang||langdetector.getISOLang(query), db), scoredDocs = []; let highestScore = 0; 
     for (const document of Object.values(db.tfidfDocStore)) {
         if (filter_function && (!options.filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
         let scoreThisDoc = 0, tfScoreThisDoc = 0, queryWordsFoundInThisDoc = 0; if (query) for (const queryWord of queryWords) {
@@ -286,7 +290,7 @@ function _getLangNormalizedWords(document, lang, db, fastSplit = true) {
         }
         
         if (!db._stopwords) return false;   // nothing to do
-        const isStopWord = db._stopwords.includes(word); 
+        const isStopWord = db._stopwords[lang].includes(word); 
         return isStopWord;
     }
     for (const segmentThis of Array.from(segmenter.segment(document))) if (segmentThis.isWordLike) {
@@ -299,12 +303,15 @@ function _getLangNormalizedWords(document, lang, db, fastSplit = true) {
     return words;
 }
 
-const _getDocumentHashIndex = (metadata, lang="en", db) => {
-    if (metadata[db.METADATA_DOCID_KEY||METADATA_DOCID_KEY]) return metadata[db.METADATA_DOCID_KEY||METADATA_DOCID_KEY];
-    const lowerCaseObject = {}; for (const [key, keysValue] of Object.entries(metadata))
-        lowerCaseObject[key.toLocaleLowerCase?key.toLocaleLowerCase(lang):key] = 
-            keysValue.toLocaleLowerCase?keysValue.toLocaleLowerCase(lang):keysValue;
-    return crypto.createHash("md5").update(JSON.stringify(lowerCaseObject)).digest("hex");
+const _getDocumentHashIndex = (metadata, db) => {
+    const lang = metadata[db.METADATA_LANGID_KEY||METADATA_LANGID_KEY]||"en";
+    if (metadata[db.METADATA_DOCID_KEY||METADATA_DOCID_KEY]) return metadata[db.METADATA_DOCID_KEY||METADATA_DOCID_KEY]; 
+    else {  // hash the object otherwise
+        const lowerCaseObject = {}; for (const [key, keysValue] of Object.entries(metadata))
+            lowerCaseObject[key.toLocaleLowerCase?key.toLocaleLowerCase(lang):key] = 
+                keysValue.toLocaleLowerCase?keysValue.toLocaleLowerCase(lang):keysValue;
+        return crypto.createHash("md5").update(JSON.stringify(lowerCaseObject)).digest("hex");
+    }
 }
 
 const _getWordIndex = (word, db, create) => {

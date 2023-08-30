@@ -5,9 +5,6 @@
  * 	id - The user ID
  *  question - The user's question
  *  session_id - The session ID for a previous session if this is a continuation
- *  db - (optional) The vector DB corresponding to the knowledgebase to use for 
- *       this chat. Must specify if a non-default DB was used to setup the knowledgebase
- *       pertaining to the topic of this chat.
  * 
  * API Response
  *  result - true or false
@@ -68,14 +65,14 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 		questionToUseForSearch = standaloneQuestionResult;
 	} else questionToUseForSearch = jsonReq.question;
 	
-	const similarityResultsForPrompt = await search.find("docvectorsearch", id, org, questionToUseForSearch, 
-		aiModelToUseForChat, jsonReq.lang);
-	if ((!similarityResultsForPrompt) || (!similarityResultsForPrompt.length)) return {reason: REASONS.NOKNOWLEDGE, ...CONSTANTS.FALSE_RESULT};
-	const documents = [], metadatasForResponse = []; for (const [i,similarityResult] of similarityResultsForPrompt.entries()) {
-		documents.push({content: similarityResult.text, document_index: i+1}); metadatasForResponse.push(similarityResult.metadata) };
+	const documentResultsForPrompt = await search.find("docvectorsearch", id, org, questionToUseForSearch, 
+		aiModelToUseForChat);
+	if ((!documentResultsForPrompt) || (!documentResultsForPrompt.length)) return {reason: REASONS.NOKNOWLEDGE, ...CONSTANTS.FALSE_RESULT};
+	const documentsForPrompt = [], metadatasForResponse = []; for (const [i,documentResult] of documentResultsForPrompt.entries()) {
+		documentsForPrompt.push({content: documentResult.text, document_index: i+1}); metadatasForResponse.push(documentResult.metadata) };
 
 	const knowledgebasePromptTemplate = await aiutils.getPrompt(`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${PROMPT_FILE_KNOWLEDGEBASE}`);
-	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, {documents, question: jsonReq.question});
+	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, {documents: documentsForPrompt, question: jsonReq.question});
 
 	const jsonReqChat = { id, org, maintain_session: true, session_id: jsonReq.session_id,
 		session: [{"role": aiModelObjectForChat.user_role, "content": knowledegebaseWithQuestion}], model: aiModelToUseForChat };

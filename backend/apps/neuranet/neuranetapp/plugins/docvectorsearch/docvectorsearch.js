@@ -6,8 +6,10 @@
  * and the uses vectors only because the LLM prompt sizes are small. 
  * It also allows rejustments later to better train the LLMs.
  * 
- * @returns search returns array of {vector, similarity, metadata, text} 
- * 			objects matching the results.
+ * @returns search returns array of {metadata, text} objects matching the 
+ * 			resulting documents. The texts are shards of the document of
+ * 			context length specified in the embedding generation model which
+ * 			was used to ingest the documents.
  * 
  * (C) 2023 TekMonks. All rights reserved.
  */
@@ -19,10 +21,25 @@ const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 
 const SEARCH_MODEL_DEFAULT = "chat-knowledgebase-gpt35-turbo";
 
-exports.search = async function(id, org, query, aimodelToUse=SEARCH_MODEL_DEFAULT, lang="en") {
+/**
+ * Searches the AI DBs for the given query. Strategy is documents are searched
+ * first using keyword search, then for the top matching documents, vector shards
+ * are returned for the relevant portions of the document which can answer the
+ * query.
+ * @param {string} id The ID of the logged in user 
+ * @param {string} org The ID of the logged in user's org
+ * @param {string} query The query to search for
+ * @param {string} aimodelToUse The name of the Neuranet AI model to use, optional.
+ * 								Defaults to chat-knowledgebase-gpt35-turbo.
+ * @returns The search returns array of {metadata, text} objects matching the 
+ * 			resulting documents. The texts are shards of the document of
+ * 			context length specified in the embedding generation model which
+ * 			was used to ingest the documents.
+ */
+exports.search = async function(id, org, query, aimodelToUse=SEARCH_MODEL_DEFAULT) {
     const aiModelToUseForSearch = aimodelToUse, aiModelObjectForSearch = await aiutils.getAIModel(aiModelToUseForSearch);
 
-    const tfidfDBs = await aidbfs.getTFIDFDBsForIDAndOrg(id, org, lang);
+    const tfidfDBs = await aidbfs.getTFIDFDBsForIDAndOrg(id, org);
 	let tfidfScoredDocuments = []; 
 	for (const tfidfDB of tfidfDBs) tfidfScoredDocuments.push(
 		...tfidfDB.query(query, aiModelObjectForSearch.topK_tfidf, null, aiModelObjectForSearch.cutoff_score_tfidf));	
@@ -51,14 +68,17 @@ exports.search = async function(id, org, query, aimodelToUse=SEARCH_MODEL_DEFAUL
 		LOG.error(`Can't instantiate the vector DB for ID ${id}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
 	}
-	let vectorResultsForPrompt = [];
-	for (const vectordb of vectordbs) vectorResultsForPrompt.push(...await vectordb.query(
+	let vectorResults = [];
+	for (const vectordb of vectordbs) vectorResults.push(...await vectordb.query(
 		vectorForUserPrompts, aiModelObjectForSearch.topK_vectors, aiModelObjectForSearch.min_distance_vectors, 
 			metadata => documentsToUseDocIDs.includes(metadata[NEURANET_CONSTANTS.NEURANET_DOCID])));
-	if ((!vectorResultsForPrompt) || (!vectorResultsForPrompt.length)) return [];
+	if ((!vectorResults) || (!vectorResults.length)) return [];
 
 	// slice the vectors after resorting as we combined DBs
-	vectordbs[0].sort(vectorResultsForPrompt); vectorResultsForPrompt = vectorResultsForPrompt.slice(0, 
-		(aiModelObjectForSearch.topK_vectors < vectorResultsForPrompt.length ? aiModelObjectForSearch.topK_vectors : vectorResultsForPrompt.length))
-    return vectorResultsForPrompt;
+	vectordbs[0].sort(vectorResults); vectorResults = vectorResults.slice(0, 
+		(aiModelObjectForSearch.topK_vectors < vectorResults.length ? aiModelObjectForSearch.topK_vectors : vectorResults.length))
+	
+	const searchResults = []; for (const vectorResult of vectorResults) 
+		searchResults.push({text: vectorResult.text, metadata: vectorResult.metadata});
+    return searchResults;
 }
