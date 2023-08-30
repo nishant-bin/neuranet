@@ -21,6 +21,8 @@ exports.DBDIR = path.resolve(LOGINAPP_CONSTANTS.DB_DIR);
 exports.AIDBPATH = path.resolve(`${LOGINAPP_CONSTANTS.DB_DIR}/ai_db`);
 
 exports.NEURANET_DOCID = "aidb_docid";
+exports.NEURANET_LANGID = "aidb_langid";
+
 
 exports.getPlugin = name => serverutils.requireWithDebug(`${APPROOT}/plugins/${name}/${name}.js`, 
     LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS.CONF.debug_mode);

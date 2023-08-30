@@ -41,7 +41,8 @@ async function _testIngestion(pathIn, docindex) {
     LOG.console(`Test case for TF.IDF ingestion called to ingest file ${pathIn}.\n`);
 
     const tfidfDB = await _getTFIDFDBForIDAndOrg(TEST_ID, TEST_ORG);  
-    const metadata = {id: TEST_ID, org: TEST_ORG, fullpath: pathIn, neuranet_docid: "testdoc"+docindex};  
+    const metadata = {id: TEST_ID, org: TEST_ORG, fullpath: pathIn}; 
+    metadata[NEURANET_CONSTANTS.NEURANET_DOCID] = "testdoc"+docindex;  
     try {await tfidfDB.create(await fspromises.readFile(pathIn, "utf8"), metadata); return metadata;}
     catch (err) {
         LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${TEST_ID} and org ${TEST_ORG} with error ${err}.`); 
