@@ -33,6 +33,7 @@ const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT:
 /**
  * Ingests the given file into the AI DBs.
  * @param {string} pathIn The path to the file
+ * @param {string} referencelink The reference link for the document
  * @param {string} id The user ID
  * @param {string} org The user ORG
  * @param {string} lang The language to use to ingest. If omitted will be autodetected.
@@ -41,7 +42,7 @@ const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT:
  *                                 DBs must be manually rebuilt later.
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
  */
-async function ingestfile(pathIn, id, org, lang, streamGenerator, dontRebuildDBs) {
+async function ingestfile(pathIn, referencelink, id, org, lang, streamGenerator, dontRebuildDBs) {
     LOG.info(`AI DB FS ingestion of file ${pathIn} for ID ${id} and org ${org} started.`);
     if (!(await quota.checkQuota(id))) {
 		LOG.error(`Disallowing the ingest call for the path ${pathIn}, as the user ${id} of org ${org} is over their quota.`);
@@ -59,7 +60,7 @@ async function ingestfile(pathIn, id, org, lang, streamGenerator, dontRebuildDBs
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
-    const metadata = {id, date_created: Date.now(), fullpath: pathIn}; 
+    const metadata = {id, date_created: Date.now(), fullpath: pathIn, referencelink}; 
     metadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(pathIn);
 
     const _getExtractedTextStream = _ => _extractTextViaPluginsUsingStreams(streamGenerator ?

@@ -80,7 +80,7 @@ async function _ingestfile(pathIn, id, org, isxbin, lang) {
     const indexer = _getFileIndexer(pathIn, isxbin, id, org, lang, cmspath), filePluginResult = await _searchForFilePlugin(indexer);
     if (filePluginResult.plugin) return {result: await filePluginResult.plugin.ingest(indexer)};
     if (filePluginResult.error) return {result: false, cause: "Plugin validation failed."}
-    else return await aidbfs.ingestfile(pathIn, id, org, lang, isxbin?_=>downloadfile.getReadStream(pathIn):undefined);
+    else return await aidbfs.ingestfile(pathIn, cmspath,id, org, lang, isxbin?_=>downloadfile.getReadStream(pathIn):undefined);
 }
 
 async function _uningestfile(pathIn, id, org, lang) {
