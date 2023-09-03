@@ -123,8 +123,8 @@ div.user > img {
 }
 </style>
 {{{CONF.MOBILE_MEDIA_QUERY_START}}}
-span#header > input {margin-right: 0em; max-width: calc(100% - 9em);}
-span#header > button {min-width: 7em;}
+    span#header > input {margin-right: 0em; max-width: calc(100% - 9em);}
+    span#header > button {min-width: 7em;}
 {{{CONF.MOBILE_MEDIA_QUERY_END}}}
 
 
@@ -150,7 +150,7 @@ span#header > button {min-width: 7em;}
         </div>
         <div id="org" class="user" title="{{i18n.APIKeys}}&#10;{{org}}" ontouchend='event.preventDefault(); event.stopPropagation();
                     event.pageY = event.changedTouches[0].pageY; event.pageX = event.changedTouches[0].pageX; oncontextmenu(event)'
-                oncontextmenu='event.preventDefault(); event.stopPropagation(); monkshu_env.components["user-manager"].apikeysMenuClicked(
+                oncontextmenu='event.preventDefault(); event.stopPropagation(); monkshu_env.components["user-manager"].editAPIKeys(
                     event, this, "{{org}}");'
                 ondblclick='event.preventDefault(); event.stopPropagation();  monkshu_env.components["user-manager"].editAPIKeys(
                     "{{org}}", this)'>

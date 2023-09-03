@@ -60,7 +60,7 @@ async function ingestfile(pathIn, referencelink, id, org, lang, streamGenerator,
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
-    const metadata = {id, date_created: Date.now(), fullpath: pathIn, referencelink}; 
+    const metadata = {id, date_created: Date.now(), fullpath: pathIn, referencelink:referencelink||_getDocID(pathIn)}; 
     metadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(pathIn);
 
     const _getExtractedTextStream = _ => _extractTextViaPluginsUsingStreams(streamGenerator ?

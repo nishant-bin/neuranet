@@ -13,7 +13,7 @@ import {monkshu_component} from "/framework/js/monkshu_component.mjs";
 const CONTEXT_MENU_ID = "usermanagerContextMenu", API_GETORGUSERS = "getorgusers", API_DELETEUSER = "deleteuser",
 	API_APPROVEUSER = "approveuser", API_EDITUSER = "updateuserbyadmin", API_RESETUSER = "resetuser", 
 	API_ADDUSER = "adduserbyadmin", COMPONENT_PATH = util.getModulePath(import.meta), API_GETORG = "getorg",
-	API_UPDATE_ORG = "addorupdateorg";
+	API_UPDATE_ORG = "addorupdateorg", API_ORGKEYS = "orgkeys";
 
 let conf, mustache_instance;
 
@@ -175,6 +175,31 @@ async function editOrg(org, element) {
 	});
 }
 
+async function editAPIKeys(org, usermanagerContainedElement) {
+	const backendurl = user_manager.getHostElement(usermanagerContainedElement).getAttribute("backendurl");
+	let orgkeyResult = await apiman.rest(`${backendurl}/${API_ORGKEYS}`, "POST", {type: "get", org}, true);
+	if ((!orgkeyResult) || (!orgkeyResult.result) || (!orgkeyResult.keys?.length)) {
+		LOG.error(`Org ${org} has no keys set or failed to fetch. Will create new ones.`)
+		orgkeyResult = await apiman.rest(`${backendurl}/${API_ORGKEYS}`, "POST", {type: "set", org}, true);
+	}
+	if ((!orgkeyResult) || (!orgkeyResult.result) || (!orgkeyResult.keys?.length)) {	// set failed too, can't proceed
+		const err = await i18n.get(`OrgKeySetError`); LOG.error(err); 
+		_showError(err); return;
+	}
+	
+	monkshu_env.components['dialog-box'].showDialog(`${COMPONENT_PATH}/dialogs/editapikey.html`, true, false, 
+		{org, CONF:conf, COMPONENT_PATH, apikey: orgkeyResult.keys[0], backendurl}, "dialog");
+}
+
+async function newAPIKey(textareaKey, org, backendurl) {
+	const key = util.generateUUID(false)+util.generateUUID(false)+util.generateUUID(false);	// generate a random key
+	const orgkeyResult = await apiman.rest(`${backendurl}/${API_ORGKEYS}`, "POST", {type: "set", org, keys: [key]}, true);
+	if ((!orgkeyResult) || (!orgkeyResult.result)) {
+		const err = await i18n.get(`OrgKeySetError`); LOG.error(err); 
+		monkshu_env.components['dialog-box'].error("dialog", err); 
+	} else textareaKey.value = orgkeyResult.keys[0];
+}
+
 async function _deleteUser(name, id, element) {
 	const host = user_manager.getHostElement(element), logoutcommand = host.getAttribute("logoutcommand"), backendURL = host.getAttribute("backendurl");
 	_execOnConfirm(mustache_instance.render(await i18n.get("ConfirmUserDelete"), {name, id}), async _ =>{
@@ -243,5 +268,5 @@ const _execOnConfirm = (message, cb) => {
 }
 
 export const user_manager = {trueWebComponentMode: true, elementConnected, userMenuClicked, orgMenuClicked, addUser, 
-	editUser, editOrg, searchModified, elementRendered}
+	editUser, editOrg, searchModified, elementRendered, editAPIKeys, newAPIKey}
 monkshu_component.register("user-manager", `${COMPONENT_PATH}/user-manager.html`, user_manager);

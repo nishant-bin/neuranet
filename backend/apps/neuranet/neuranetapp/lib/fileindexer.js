@@ -1,5 +1,7 @@
 /**
  * Will index files including XBin documents in and out of the AI databases.
+ * This should be the only class used for ingestion, except direct file operations
+ * to XBin via XBin REST or JS APIs.
  * 
  * Bridge between drive documents including XBin and Neuranet knowledgebases.
  * 
@@ -18,6 +20,7 @@ const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`)
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
 const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
+const deletefile = require(`${XBIN_CONSTANTS.API_DIR}/deleteFile.js`);
 const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
 const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
 
@@ -57,46 +60,45 @@ async function _handleFileEvent(message) {
 
     if (_isNeuranetFileCreatedEvent(message) && (!message.isDirectory)) 
         awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.isxbin, message.lang), 
-            message.path, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.INGESTED, 
-            message.id, message.org);
+            message.path, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.INGESTED, message.id, message.org);
     else if (_isNeuranetFileDeletedEvent(message) && (!message.isDirectory)) 
-        awaitPromisePublishFileEvent(_uningestfile(path.resolve(message.path), message.id, message.org, message.lang), 
-            message.path, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.UNINGESTED,
-            message.id, message.org);
+        awaitPromisePublishFileEvent(_uningestfile(path.resolve(message.path), message.id, message.org), 
+            message.path, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.UNINGESTED, message.id, message.org);
     else if (_isNeuranetFileRenamedEvent(message) && (!message.isDirectory)) 
         awaitPromisePublishFileEvent(_renamefile(path.resolve(message.from), path.resolve(message.to), message.id, 
-            message.org, message.lang), message.to, 
-            NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.RENAMED, message.id, message.org);
+            message.org), message.to, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.RENAMED, message.id, 
+            message.org);
     else if (_isNeuranetFileModifiedEvent(message) && (!message.isDirectory)) {
-        await _uningestfile(path.resolve(message.path), message.id, message.org, message.lang);
+        await _uningestfile(path.resolve(message.path), message.id, message.org);
         awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.isxbin, message.lang), 
-            message.path, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.MODIFIED,
-            message.id, message.org);
+            message.path, NEURANET_CONSTANTS.VECTORDB_FILE_PROCESSED_EVENT_TYPES.MODIFIED, message.id, message.org);
     }
 }
 
 async function _ingestfile(pathIn, id, org, isxbin, lang) {
     const cmspath = isxbin ? await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn) : pathIn;
-    const indexer = _getFileIndexer(pathIn, isxbin, id, org, lang, cmspath), filePluginResult = await _searchForFilePlugin(indexer);
+    const indexer = _getFileIndexer(pathIn, isxbin, id, org, cmspath), filePluginResult = await _searchForFilePlugin(indexer);
     if (filePluginResult.plugin) return {result: await filePluginResult.plugin.ingest(indexer)};
     if (filePluginResult.error) return {result: false, cause: "Plugin validation failed."}
-    else return await aidbfs.ingestfile(pathIn, cmspath,id, org, lang, isxbin?_=>downloadfile.getReadStream(pathIn):undefined);
+    else return await indexer.addFile(null, cmspath, lang, null, false, true);
 }
 
-async function _uningestfile(pathIn, id, org, lang) {
+async function _uningestfile(pathIn, id, org) {
     const cmspath = isxbin ? await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn) : pathIn;
-    const indexer = _getFileIndexer(pathIn, undefined, id, org, lang, cmspath), filePluginResult = await _searchForFilePlugin(indexer);
+    const indexer = _getFileIndexer(pathIn, undefined, id, org, cmspath), filePluginResult = await _searchForFilePlugin(indexer);
     if (filePluginResult.plugin) return {result: await filePluginResult.plugin.uningest(indexer)};
     if (filePluginResult.error) return {result: false, cause: "Plugin validation failed."}
-    else return await aidbfs.uningestfile(pathIn, id, org, lang);
+    else return await indexer.removeFile(cmspath, false, true);
 }
 
-async function _renamefile(from, to, id, org, lang) {
-    const cmspath = isxbin ? await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn) : pathIn;
-    const indexer = _getFileIndexer(pathIn, isxbin, id, org, lang, cmspath), filePluginResult = await _searchForFilePlugin(indexer);
+async function _renamefile(from, to, id, org) {
+    const cmspathFrom = isxbin ? await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, from) : from;
+    const cmspathTo = isxbin ? await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, to) : to;
+    const indexer = _getFileIndexer(from, isxbin, id, org, cmspathFrom), filePluginResult = await _searchForFilePlugin(indexer);
+    indexer.filepathTo = to; indexer.cmspathTo = cmspathTo;
     if (filePluginResult.plugin) return {result: await filePluginResult.plugin.rename(indexer)};
     if (filePluginResult.error) return {result: false, cause: "Plugin validation failed."}
-    else return await aidbfs.renamefile(from, to, id, org, lang);
+    else return await indexer.renameFile(cmspathFrom, cmspathTo, false, true);
 }
 
 async function _initPluginsSync() {
@@ -121,23 +123,23 @@ async function _searchForFilePlugin(fileindexerForFile) {
     return {error: null, result: false};
 }
 
-function _getFileIndexer(pathIn, isxbin, id, org, lang, cmspath) {
+function _getFileIndexer(pathIn, isxbin, id, org, cmspath) {
     return {
         filepath: pathIn, id: id, org: org, minimum_success_percent: DEFAULT_MINIMIMUM_SUCCESS_PERCENT, cmspath,
         getContents: _ => neuranetutils.readFullFile(isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn)),
         getReadstream: _ => isxbin?downloadfile.getReadStream(pathIn):fs.createReadStream(pathIn),
         start: _ => {},
-        end: async _ => { try {await aidbfs.rebuild(id, org, lang); await aidbfs.flush(id, org, lang); return true;} catch (err) {
+        end: async _ => { try {await aidbfs.rebuild(id, org); await aidbfs.flush(id, org); return true;} catch (err) {
             LOG.error(`Error ending AI databases. The error is ${err}`); return false;} },
-        addFile: async (bufferOrStream, cmsPath, comment, runAsNewInstructions) => {
+        addFile: async (bufferOrStream, cmsPathFile, langFile, comment, runAsNewInstructions, noDiskOperation) => {
             try {
-                const pathToWriteTo = isxbin ? await cms.getFullPath({xbin_id: id, xbin_org: org}, cmsPath) : 
-                    await _getNonCMSDrivePath(cmsPath, id, org);
+                const fullPath = isxbin ? await cms.getFullPath({xbin_id: id, xbin_org: org}, cmsPathFile) : 
+                    await _getNonCMSDrivePath(cmsPathFile, id, org);
                 // write the file to the file system being used whether it is XBin or Neuranet's internal drive
-                if (isxbin) {
-                    if (!(await uploadfile.uploadFile(id, org, bufferOrStream, cmsPath, comment, true))?.result)
-                        throw new Error(`CMS upload failed for ${cmsPath}`);
-                } else await fs.promises.writeFile(pathToWriteTo, Buffer.isBuffer(bufferOrStream) ? 
+                if (isxbin && (!noDiskOperation)) {
+                    if (!(await uploadfile.uploadFile(id, org, bufferOrStream, cmsPathFile, comment, true))?.result)
+                        throw new Error(`CMS upload failed for ${cmsPathFile}`);
+                } else if (!noDiskOperation) await fs.promises.writeFile(fullPath, Buffer.isBuffer(bufferOrStream) ? 
                     bufferOrStream : neuranetutils.readFullFile(bufferOrStream));    // write to the disk
 
                 // if run as new instructions then publish a message which triggers file indexer to restart the 
@@ -146,14 +148,62 @@ function _getFileIndexer(pathIn, isxbin, id, org, lang, cmspath) {
                 // crawl bad data, so unless needed this should not be setup to true
                 if (runAsNewInstructions) {
                     blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, // ingest it into Neuranet
-                        {type: NEURANET_CONSTANTS.EVENTS.FILE_CREATED, path: pathToWriteTo, id, org, 
+                        {type: NEURANET_CONSTANTS.EVENTS.FILE_CREATED, path: fullPath, id, org, 
                             ip: serverutils.getLocalIPs()[0]});
                     return CONSTANTS.TRUE_RESULT;
-                } else if ((await aidbfs.ingestfile(pathToWriteTo, id, org, lang, 
-                    isxbin?_=>downloadfile.getReadStream(pathToWriteTo):undefined, true))?.result) return CONSTANTS.TRUE_RESULT;
+                } else if ((await aidbfs.ingestfile(fullPath, cmsPathFile, id, org, langFile, 
+                    isxbin?_=>downloadfile.getReadStream(fullPath):undefined, true))?.result) return CONSTANTS.TRUE_RESULT;
                 else return CONSTANTS.FALSE_RESULT;
             } catch (err) {
-                LOG.error(`Error writing file ${cmsPath} for ID ${id} and org ${org} due to ${err}.`);
+                LOG.error(`Error writing file ${cmsPathFile} for ID ${id} and org ${org} due to ${err}.`);
+                return CONSTANTS.FALSE_RESULT;
+            }
+        },
+        removeFile: async(cmsPathFile, runAsNewInstructions, noDiskOperation) => {
+            try {
+                const fullPath = isxbin ? await cms.getFullPath({xbin_id: id, xbin_org: org}, cmsPathFile) : 
+                    await _getNonCMSDrivePath(cmsPathFile, id, org);
+
+                // delete the file from the file system being used whether it is XBin or Neuranet's internal drive
+                if (isxbin && (!noDiskOperation)) {
+                    if (!(await deletefile.deleteFile({xbin_id: id, xbin_org: org}, cmsPathFile, true))?.result)
+                        throw new Error(`CMS delete failed for ${cmsPathFile}`);
+                } else if (!noDiskOperation) await fs.promises.unlink(fullPath);    // delete from the disk
+
+                if (runAsNewInstructions) {
+                    blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, // remove it from the Neuranet
+                        {type: NEURANET_CONSTANTS.EVENTS.FILE_DELETED, path: fullPath, id, org, 
+                            ip: serverutils.getLocalIPs()[0]});
+                    return CONSTANTS.TRUE_RESULT;
+                } else if ((await aidbfs.uningestfile(fullPath, id, org)?.result)) return CONSTANTS.TRUE_RESULT;
+                else return CONSTANTS.FALSE_RESULT;
+            } catch (err) {
+                LOG.error(`Error deleting file ${cmsPathFile} for ID ${id} and org ${org} due to ${err}.`);
+                return CONSTANTS.FALSE_RESULT;
+            }
+        },
+        renameFile: async(cmsPathFrom, cmsPathTo, runAsNewInstructions, noDiskOperation) => {
+            try {
+                const fullPathFrom = isxbin ? await cms.getFullPath({xbin_id: id, xbin_org: org}, cmsPathFrom) : 
+                    await _getNonCMSDrivePath(cmsPathFrom, id, org);
+                const fullPathTo = isxbin ? await cms.getFullPath({xbin_id: id, xbin_org: org}, cmsPathTo) : 
+                    await _getNonCMSDrivePath(cmsPathTo, id, org);
+
+                // rename the file from the file system being used whether it is XBin or Neuranet's internal drive
+                if (isxbin && (!noDiskOperation)) {
+                    if (!(await renamefile.renameFile({xbin_id: id, xbin_org: org}, cmsPathFrom, cmsPathTo, true))?.result)
+                        throw new Error(`CMS rename failed for ${cmsPathFrom}`);
+                } else if (!noDiskOperation) await fs.promises.rename(fullPathFrom, fullPathTo);    // rename on the disk
+
+                if (runAsNewInstructions) {
+                    blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, // remove it from the Neuranet
+                        {type: NEURANET_CONSTANTS.EVENTS.FILE_RENAMED, from: fullPathFrom, to: fullPathTo, id, org, 
+                            ip: serverutils.getLocalIPs()[0]});
+                    return CONSTANTS.TRUE_RESULT;
+                } else if ((await aidbfs.renamefile(fullPathFrom, fullPathTo, id, org)?.result)) return CONSTANTS.TRUE_RESULT;
+                else return CONSTANTS.FALSE_RESULT;
+            } catch (err) {
+                LOG.error(`Error renaming file ${cmsPathFrom} for ID ${id} and org ${org} due to ${err}.`);
                 return CONSTANTS.FALSE_RESULT;
             }
         }

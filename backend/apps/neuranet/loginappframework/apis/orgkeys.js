@@ -17,9 +17,10 @@ exports.doService = async jsonReq => {
 
     LOG.debug(`Got API keys request for org ${jsonReq.org}. The request is ${JSON.stringify(jsonReq)}.`);
 
-    const orgKeys = jsonReq.type?.toLowerCase() == "set" ? _setOrgKeys(jsonReq.org, jsonReq.keys) : _getOrgKeys(jsonReq.org);
+    const orgKeys = jsonReq.type?.toLowerCase() == "set" ? await _setOrgKeys(jsonReq.org, jsonReq.keys) : 
+        await _getOrgKeys(jsonReq.org);
 
-    return {keys: orgKeys, ...CONSTANTS.TRUE_RESULT};
+    return {keys: orgKeys?orgKeys:undefined, ...(orgKeys?CONSTANTS.TRUE_RESULT:CONSTANTS.FALSE_RESULT)};
 }
 
 async function _getOrgKeys(org) {

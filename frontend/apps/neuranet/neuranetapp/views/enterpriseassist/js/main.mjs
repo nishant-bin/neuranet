@@ -54,7 +54,10 @@ async function processAssistantResponse(result, _chatboxid) {
 
     if (!result.result) return {error: await i18n.get("ChatAIError"), ok: false};
 
-    return {ok: true, response: result.response};
+    const resultFinal = (await router.getMustache()).render(await i18n.get("EnterpriseAssist_ResponseTemplate"), 
+        {response: result.response, metadatas: result.metadatas});
+
+    return {ok: true, response: resultFinal};
 }
 
 const getAssistantRequest = (question, _chatboxid) => {

@@ -91,7 +91,7 @@ exports.getKey = headers => APIREGISTRY.getExtension("apikeychecker").getIncomin
 
 exports.getOrgKeys = async headersOrOrg => {
 	const orgIn = typeof headersOrOrg == "string" ? headersOrOrg : exports.getOrg(headersOrOrg);
-	return await await userid.getKeysForOrg(orgIn);
+	return await userid.getKeysForOrg(orgIn);
 }
 
 exports.setOrgKeys = async (headersOrOrg, keys) => {

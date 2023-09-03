@@ -11,6 +11,8 @@
  *  reason - set to one of the reasons if result is false
  *  response - the AI response, as a plain text
  *  session_id - the session ID which can be used to ask backend to maintain sessions
+ *  metadatas - the response document metadatas. typically metadata.referencelink points
+ * 				to the exact document
  * 
  * (C) 2023 TekMonks. All rights reserved.
  */
@@ -78,7 +80,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 		session: [{"role": aiModelObjectForChat.user_role, "content": knowledegebaseWithQuestion}], model: aiModelToUseForChat };
 	const response = await chatAPI.doService(jsonReqChat);
 
-	return {...response, metadatas_for_response: metadatasForResponse};
+	return {...response, metadatas: metadatasForResponse};
 }
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.question && jsonReq.org);

@@ -308,12 +308,12 @@ exports.getKeysForOrg = async org => {
 
 exports.setKeysForOrg = async (org, keys) => {
 	if (!keys) keys = [serverutils.generateUUID(false)];
-	const keysIn = []; if (!Array.isArray(keys)) keysIn[0] = keys; else keysIn = [...keys];
-	for (const key of keysIn) {
-		if (!await db.runCmd("DELETE FROM keys WHERE org = ? COLLATE NOCASE", [org])) return false;	// drop all current keys
-		if (!await db.runCmd("INSERT INTO KEYS (key, org) VALUES (?, ?)", [key, org])) return false;
-	}
-	return keysIn;
+	const keysIn = (!Array.isArray(keys)) ? [keys] : [...keys];
+
+	const commandsToUpdate = [{cmd: "DELETE FROM keys WHERE org = ? COLLATE NOCASE", params: [org]}];	// drop all current keys
+	for (const key of keysIn) commandsToUpdate.push({cmd:"INSERT INTO KEYS (key, org) VALUES (?, ?)", params: [key, org]});
+	const updateResult = await db.runTransaction(commandsToUpdate);
+	if (!updateResult) return false; else return keysIn;
 }
 
 exports.addDomain = async (domain, org) => {
