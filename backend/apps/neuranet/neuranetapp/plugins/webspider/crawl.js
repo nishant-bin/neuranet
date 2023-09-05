@@ -139,7 +139,7 @@ async function crawl(url, output_folder_streamer_function, accepted_mimes=DEFAUL
         LOG.info(`Crawled URL: ${url}, new links found: ${links.length?links.join("\n"):"none"}.\n\n`);
         
         // Now crawl each link recursively and clear function stack to preserve memory (setImmediate does that)
-        for (const link of links) {
+        for (const link of links) if (current_page_dispersal_depth+1 <= max_page_dispersal_depth) {
             memory.crawls_waiting++; 
             queueExecutor.add(_=>crawl(link, output_folder_streamer_function, accepted_mimes, timegap, 
                 max_host_dispersal_depth, max_page_dispersal_depth, restrict_to_hostname, 
@@ -157,14 +157,15 @@ if (require.main === module) {
     const args = process.argv.slice(2);
 
     if (args.length < 1) {
-        console.log("Usage: crawl.js <website> [time gap between requests in milliseconds - default is 0 which will result in bans usually] [acceptable mimes, default is text/html] [maximum depth - default is 0] [output folder - default is skip saving]");
+        console.log("Usage: crawl.js <crawl file>");
         process.exit(1);
     } else {
         let done = false;
         (async _=>{
-            const result = await crawl(args[0], args[4], args[2]?JSON.parse(args[2]):DEFAULT_MIMES,
-                args[1] ? parseInt(args[1]) != NaN ? parseInt(args[1]) : undefined : undefined, 
-                args[3] ? parseInt(args[3]) != NaN ? parseInt(args[3]) : undefined : undefined);
+            const crawlFile = JSON.parse(await fspromises.readFile(args[0], "utf8"));
+            const result = await crawl(crawlFile.url, crawlFile.outfolder, crawlFile.accepted_mimes, 
+                crawlFile.timegap||100, crawlFile.host_dispersal_depth, crawlFile.page_dispersal_depth, 
+                crawlFile.restrict_host);
             if (result) console.log(`Crawl ended.`); else console.error(`Crawl ended with errors.`);
             done = true;
         })();
