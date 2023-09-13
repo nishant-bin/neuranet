@@ -96,7 +96,7 @@ exports.getOrgKeys = async headersOrOrg => {
 
 exports.setOrgKeys = async (headersOrOrg, keys) => {
 	const orgIn = typeof headersOrOrg == "string" ? headersOrOrg : exports.getOrg(headersOrOrg);
-	return await userid.setKeysForOrg(orgIn, keys);
+	return await userid.setKeysForOrg(keys, orgIn);
 }
 
 exports.getRole = headers => {

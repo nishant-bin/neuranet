@@ -5,6 +5,8 @@
  * (C) 2023 Tekmonks 
  */
 
+const {detect} = require("tinyld");
+
 exports.getISOLang = function(text) {
-    return "en";
+    return detect(text);
 }

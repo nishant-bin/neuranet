@@ -9,10 +9,11 @@ const rest = require(`${CONSTANTS.LIBDIR}/rest.js`);
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
+const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/../3p/langdetector.js`);
 
 const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}", SAMPLE_MODULE_PREFIX = "module(", DEFAULT_GPT_CHARS_PER_TOKEN = 4,
-    INTERNAL_TOKENIZER = "internal", DEFAULT_GPT_TOKENIZER = "gpt-tokenizer", DEFAULT_TOKEN_UPLIFT = 1.05,
-    DEFAULT_503_RETRIES = 3;
+    DEFAULT_GPT_TOKENS_PER_WORD = 1.25, INTERNAL_TOKENIZER = "internal", DEFAULT_GPT_TOKENIZER = "gpt-tokenizer", 
+    DEFAULT_TOKEN_UPLIFT = 1.05, DEFAULT_503_RETRIES = 3;
 
 exports.process = async function(data, promptOrPromptFile, apiKey, model, dontInflatePrompt) {
     const prompt = dontInflatePrompt ? promptOrPromptFile : mustache.render(await aiutils.getPrompt(promptOrPromptFile), data).replace(/\r\n/gm,"\n");   // create the prompt
@@ -90,7 +91,11 @@ exports.countTokens = async function(string, rawAIModelName, uplift=DEFAULT_TOKE
     } else {
         if (encoderLib) LOG.warn(`${rawAIModelName} is not supported using encoder, using the approximate estimation method to calculate tokens.`);
         if (!encoderLib) LOG.info(`Using the approximate estimation method to calculate tokens. The tokenizer specified is ${tokenizer}.`)
-        count = (string.length/DEFAULT_GPT_CHARS_PER_TOKEN); 
+        const _countWordsUsingIntl = (text, lang) => [...(new Intl.Segmenter(lang, { granularity: "word" }).segment(
+            text))].reduce((wordCount, { isWordLike }) => wordCount + Number(isWordLike), 0);
+        const langDetected = langdetector.getISOLang(string);
+        count = ((langDetected != "ja") && (langDetected != "zh")) ? string.length/DEFAULT_GPT_CHARS_PER_TOKEN :
+            (_=>{const wordcount = _countWordsUsingIntl(string, langDetected); return wordcount*DEFAULT_GPT_TOKENS_PER_WORD;})()
     }
     const tokenCount = Math.ceil(count*uplift);
     LOG.info(`Token count is ${tokenCount}. Tokenizer used is ${encoderLib?tokenizer||DEFAULT_GPT_TOKENIZER:INTERNAL_TOKENIZER}.`);

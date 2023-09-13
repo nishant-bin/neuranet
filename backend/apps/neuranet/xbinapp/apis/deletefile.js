@@ -49,12 +49,12 @@ exports.deleteFile = async (headersOrIDAndOrg, cmsPath, noevent) => {
 	return CONSTANTS.TRUE_RESULT;
 }
 
-exports.getFullPath = uploadfile.getFullPath;
-
 async function rmrf(path, id, org, ip, noevent) {
 	const _deleteFile = async path => {
 		await unlinkFileAndRemoveFromDB(path); 
-		if (!noevent) blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_DELETED, path, id, org, ip, isxbin: true});
+		const cmspath = await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path);
+		if (!noevent) blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_DELETED, 
+			path, id, org, ip, cmspath, isxbin: true});
 	}
 
 	if ((await fspromises.stat(path)).isFile()) { await _deleteFile(path); return; }

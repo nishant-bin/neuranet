@@ -16,6 +16,7 @@
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const stream = require("stream");
 const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 
@@ -26,6 +27,7 @@ const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
 const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
 const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
+const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/../3p/langdetector.js`);
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
 	MODEL_DEFAULT = "embedding-openai-ada002", DEFAULT_ID = "unknownid", DEFAULT_ORG = "unknownorg", MASTER_DB = "masterdbid";
@@ -60,19 +62,20 @@ async function ingestfile(pathIn, referencelink, id, org, lang, streamGenerator,
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
-    const metadata = {id, date_created: Date.now(), fullpath: pathIn, referencelink:referencelink||_getDocID(pathIn)}; 
+    const metadata = {id, date_created: Date.now(), fullpath: pathIn, referencelink:encodeURI(referencelink||_getDocID(pathIn))}; 
     metadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(pathIn);
 
     const _getExtractedTextStream = _ => _extractTextViaPluginsUsingStreams(streamGenerator ?
         streamGenerator() : fs.createReadStream(pathIn), aiModelObjectForEmbeddings, pathIn);
 
     // ingest into the TF.IDF DB
-    const tfidfDB = await _getTFIDFDBForIDAndOrgForIngestion(id, org); 
+    const tfidfDB = await _getTFIDFDBForIDAndOrgForIngestion(id, org); let fileContents; 
     try {
         LOG.info(`Starting text extraction of file ${pathIn}.`);
-        const fileContents = await neuranetutils.readFullFile(await _getExtractedTextStream(), "utf8");
+        fileContents = await neuranetutils.readFullFile(await _getExtractedTextStream(), "utf8");
         LOG.info(`Ended text extraction, starting TFIDF ingestion of file ${pathIn}.`);
-        tfidfDB.create(fileContents, metadata, dontRebuildDBs, lang);
+        if (!lang) {lang = langdetector.getISOLang(fileContents); LOG.info(`Autodetected language ${lang} for file ${pathIn}.`);}
+        metadata.lang = lang; tfidfDB.create(fileContents, metadata, dontRebuildDBs, lang);
     } catch (err) {
         LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
         return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
@@ -82,11 +85,12 @@ async function ingestfile(pathIn, referencelink, id, org, lang, streamGenerator,
     // ingest into the vector DB
     LOG.info(`Starting Vector DB ingestion of file ${pathIn}.`);
 	try { 
-        await vectordb.ingeststream(metadata, await _getExtractedTextStream(), 
-            aiModelObjectForEmbeddings.encoding, aiModelObjectForEmbeddings.chunk_size, 
-            aiModelObjectForEmbeddings.split_separators, aiModelObjectForEmbeddings.overlap);
+        const chunkSize = aiModelObjectForEmbeddings.chunk_size[lang] || aiModelObjectForEmbeddings.chunk_size.en;
+        await vectordb.ingeststream(metadata, fileContents ? stream.Readable.from(fileContents) : 
+            await _getExtractedTextStream(), aiModelObjectForEmbeddings.encoding, chunkSize, 
+                aiModelObjectForEmbeddings.split_separators, aiModelObjectForEmbeddings.overlap);
     } catch (err) { 
-        //tfidfDB.delete(metadata);   // delete the file from tf.idf DB too to keep them in sync
+        tfidfDB.delete(metadata);   // delete the file from tf.idf DB too to keep them in sync
         LOG.error(`Vector ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
         return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
     }
@@ -116,7 +120,8 @@ async function rebuild(id, org) {
 async function flush(id, org) {
     const tfidfDB = await _getTFIDFDBForIDAndOrgForIngestion(id, org); 
     const vectordb = await _getVectorDBForIDAndOrgForIngestion(id, org, null);
-    await tfidfDB.flush(); await vectordb.flush_db();
+    await tfidfDB.flush(); 
+    await vectordb.flush_db();
 }
 
 /**

@@ -148,7 +148,7 @@
             "text_extraction_plugins": ["tika"],
             "split_separators": ["\n\n","\n"," "],
             "overlap": 0,
-            "chunk_size": 4400,
+            "chunk_size": {"en":4400, "zh":880, "ja":1000},
             "default_vector_db": "default_db",
             "response_contentpath": "data.data[0].embedding",
             "response_cost_of_query_path": "data.usage.total_tokens",

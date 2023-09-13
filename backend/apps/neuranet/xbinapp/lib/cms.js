@@ -44,9 +44,9 @@ exports.getCMSRoot = async function(headersOrLoginIDAndOrg) {
 	return cmsRootToReturn;
 }
 
-exports.getCMSRootRelativePath = async function(headersOrLoginIDAndOrg, fullpath) {
+exports.getCMSRootRelativePath = async function(headersOrLoginIDAndOrg, fullpath, dontencode) {
 	const cmsroot = await exports.getCMSRoot(headersOrLoginIDAndOrg);
-	const relativePath = encodeURI(path.relative(cmsroot, fullpath).replaceAll("\\", "/"));
+	const relativePath = path.relative(cmsroot, fullpath).replaceAll("\\", "/");
 	return relativePath;
 }
 

@@ -19,12 +19,12 @@ exports.getPrompt = async function(promptFile) {
     if (DEBUG_RUN) {
         const lastModTimeForPrompt = (await fspromises.stat(pathToFile)).mtimeMs;
         if (lastModTimeForPrompt == modified_times[pathToFile]) return PROMPT_CACHE[pathToFile];
-        modified_times[pathToFile] = lastModTimeForPrompt;
         PROMPT_CACHE[pathToFile] = await fspromises.readFile(promptFile, "utf-8");
+        modified_times[pathToFile] = lastModTimeForPrompt;
     }
 
     if (!PROMPT_CACHE[pathToFile]) PROMPT_CACHE[pathToFile] = await fspromises.readFile(pathToFile, "utf-8");
-    return  PROMPT_CACHE[pathToFile];
+    return PROMPT_CACHE[pathToFile];
 }
 
 exports.getAIModel = async function(model) {

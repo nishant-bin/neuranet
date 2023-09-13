@@ -62,7 +62,7 @@ const cpucores = os.cpus().length*2;    // assume 2 cpu-threads per core (hypert
 const maxthreads_for_search = cpucores - 1; // leave 1 thread for the main program
 const worker_threads = require("worker_threads");
 
-const dbs = {}, DB_INDEX_NAME = "dbindex.json", DB_INDEX_OBJECT_TEMPLATE = {index:{}, dirty: false},
+const dbs = {}, DB_INDEX_NAME = "dbindex.json", DB_INDEX_OBJECT_TEMPLATE = {index:{}, texthashes:[], dirty: false},
     workers = [];
 
 let dbs_worker, workers_initialized = false;
@@ -94,29 +94,27 @@ exports.initAsync = async (db_path_in, multithreaded) => {
     }
 
     try {
-        const db = JSON.parse(await fspromises.readFile(_get_db_index_file(db_path_in), "utf8"));
-        dbs[_get_db_index(db_path_in)] = db;
-        await _update_db_for_worker_threads();
+        if (!dbs[_get_db_index(db_path_in)]) {  // read DB from disk only if not currently loaded
+            dbs[_get_db_index(db_path_in)] = JSON.parse(await fspromises.readFile(_get_db_index_file(db_path_in), "utf8"));
+            await _update_db_for_worker_threads();
+        }
     } catch (err) {
         _log_error("Vector DB index does not exist, or read error. Initializing to an empty DB", db_path_in, err); 
     }
 }
 
-exports.save_db = async db_path_out => {
+exports.save_db = async (db_path_out, force) => {
     const db_to_save = dbs[_get_db_index(db_path_out)]; if (!db_to_save) {
         _log_error("Nothing to save in save_db call", db_path_out, "No database found");
         return;
     }
 
-    if (!db_to_save.dirty) return;  // no need
+    if ((!db_to_save.dirty) && (!force)) return;  // no need
 
     try {
-        db_to_save.dirty = false;    
         await fspromises.writeFile(_get_db_index_file(db_path_out), JSON.stringify(db_to_save));
-    } catch (err) {
-        db_to_save.dirty = true;    // save failed
-        _log_error("Error saving the database index in save_db call", db_path_out, err);
-    }
+        db_to_save.dirty = false;    
+    } catch (err) {_log_error("Error saving the database index in save_db call", db_path_out, err);}
 }
 
 exports.create = exports.add = async (vector, metadata, text, embedding_generator, db_path) => {
@@ -130,19 +128,21 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
     }
 
     const dbToUse = dbs[_get_db_index(db_path)];
-    const hash = _get_vector_hash(vector); if (!dbToUse.index[hash]) {  // only add the vector if we already don't have it
-        dbToUse.index[hash] = {vector, hash, metadata, length: _getVectorLength(vector)};
-        
+    const vectorHash = _get_vector_hash(vector), texthash = _get_text_hash(text); 
+    if ((!dbToUse.texthashes.includes(texthash)) && (!dbToUse.index[vectorHash])) {  // only add the vector if we already don't have it
+        dbToUse.index[vectorHash] = {vector, hash: vectorHash, metadata, length: _getVectorLength(vector), texthash}; 
+        dbToUse.texthashes.push(texthash);
         
         try {await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");}
         catch (err) {
-            delete dbToUse.index[hash]; 
+            delete dbToUse.index[vectorHash]; 
             _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be saved`, db_path, err);
             return false;
         }
+        dbToUse.dirty = true; if (dbToUse.multithreaded) await _update_db_for_worker_threads();
     }
     
-    dbToUse.dirty = true; if (dbToUse.multithreaded) await _update_db_for_worker_threads();
+    LOG.debug(`Added vector ${vector} with hash ${vectorHash} to DB at index ${_get_db_index(db_path)}.`);
     return vector;
 }
 
@@ -164,15 +164,8 @@ exports.read = async (vector, notext, db_path) => {
 exports.update = async (vector, metadata, text, embedding_generator, db_path) => {
     if (!vector) {_log_error("Update called without a proper index vector", db_path, "Vector to update not provided"); return false;}
     
-    const hash = _get_vector_hash(vector), oldEntry = dbs[_get_db_index(db_path)].index[hash]; 
-    if (!text) try {text = await fspromises.readFile(_get_db_index_text_file(vector, db_path), "utf8");} catch (err) {
-        _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} not found or error reading`, db_path, err); 
-        return false;
-    }
-    if (!exports.add(vector, metadata, text, embedding_generator, db_path)) {   // re-adding actually overwrites everything, so it is an update
-        dbs[_get_db_index(db_path)].index[hash] = oldEntry; // un-update
-        return false;
-    } else return vector;
+    await exports.delete(vector, db_path);  // delete or try to delete first
+    return await exports.create(vector, metadata, text, embedding_generator, db_path);  // add it back
 }
 
 exports.delete = async (vector, db_path) => {
@@ -183,7 +176,7 @@ exports.delete = async (vector, db_path) => {
     }
 
     try {
-        delete dbToUse.index[hash];
+        dbToUse.texthashes.splice(dbToUse.texthashes.indexOf(dbToUse.index[hash].texthash),1); delete dbToUse.index[hash];
         dbToUse.dirty = true; if (dbToUse.multithreaded) await _update_db_for_worker_threads();
         await fspromises.unlink(_get_db_index_text_file(vector, db_path));
         return true;
@@ -242,7 +235,8 @@ exports.ingest = async function(metadata, document, chunk_size, split_separators
     const _find_split_separator = (split_start, raw_split_point) => {
         const rawChunk = document.substring(split_start, raw_split_point);
         let split_separator_to_use; for (const split_separator of Array.isArray(split_separators) ? split_separators : [split_separators])
-            if (rawChunk.indexOf(split_separator) != -1) {split_separator_to_use = split_separator; break}
+            if ((rawChunk.indexOf(split_separator) != -1) && (rawChunk.lastIndexOf(split_separator) != 0)) {
+                split_separator_to_use = split_separator; break }
         if (!split_separator_to_use) return raw_split_point;    // seperator not found -- so go with it all as is
         const split_point = split_start+rawChunk.lastIndexOf(split_separator_to_use);
         return split_point;
@@ -278,18 +272,33 @@ exports.ingeststream = async function(metadata, stream, encoding="utf8", chunk_s
         db_path) {
     
     return new Promise((resolve, reject) => {
-        let chunk_to_ingest = "", vectors_ingested = []; 
-        stream.on("data", async chunk => {
-            stream.pause(); // read more only after we ingest this first
-            chunk_to_ingest += chunk.toString(encoding).replace(/\s*\n\s*/g, "\n").replace(/[ \t]+/g, " ");   // remove extra whitespaces. #1 they destroy the semantics, #2 at least openai can choke on them for embeddings
-            if (chunk_to_ingest.length >= chunk_size) {
-                const ingestionResult = await exports.ingest(metadata, chunk_to_ingest, chunk_size, split_separators, overlap, embedding_generator, db_path, true);
+        let chunk_to_add = "", stream_ended = false; 
+
+        const vectors_ingested = [], _chunkIngestionFunction = async (chunk, ingestLeftOver) => {
+            if (chunk) chunk_to_add += chunk.toString(encoding).replace(/\s*\n\s*/g, "\n").replace(/[ \t]+/g, " ");   // remove extra whitespaces. #1 they destroy the semantics, #2 at least openai can choke on them for embeddings
+            if ((chunk && (chunk_to_add.length >= chunk_size)) || (ingestLeftOver && chunk_to_add.length)) {
+                const ingestionResult = await exports.ingest(metadata, chunk_to_add, chunk_size, split_separators, 
+                    overlap, embedding_generator, db_path, true);
                 if ((!ingestionResult) || (!ingestionResult.vectors_ingested)) {
                     _deleteAllCreatedVectors(vectors_ingested, db_path); stream.destroy("VectorDB ingestion failed."); return; }
-                chunk_to_ingest = ingestionResult.tail_chunk||""; // whatever was left - start there next time
+                chunk_to_add = ingestionResult.tail_chunk||""; // whatever was left - start there next time
                 vectors_ingested.push(...ingestionResult.vectors_ingested);
             }
-            stream.resume();
+        }
+
+        const executionQueue = [], _executionQueueFunction = async chunk => {
+            await _chunkIngestionFunction(chunk); executionQueue.pop(); // remove this function from the queue
+            if (executionQueue.length) await (executionQueue[executionQueue.length-1])(); 
+            _processStreamEnding();
+        };
+
+        let _endingProcessed = false; const _processStreamEnding = async _ => {
+            if (stream_ended && (executionQueue.length == 0) && (!_endingProcessed)) {
+                _endingProcessed = true; await _chunkIngestionFunction(null, true); resolve(vectors_ingested); } }
+
+        stream.on("data", async chunk => {
+            executionQueue.unshift(async _=> await _executionQueueFunction(chunk));
+            if (executionQueue.length == 1) (executionQueue[executionQueue.length-1])(); // start the queue if not running
         });
 
         stream.on("error", err => {
@@ -297,16 +306,7 @@ exports.ingeststream = async function(metadata, stream, encoding="utf8", chunk_s
             reject(err);
         });
 
-        stream.on("end", async _ => {   
-            if (chunk_to_ingest.trim() != "") { // ingest the remaining document tail which we read but didn't ingest before
-                const ingestionResult_ending = await exports.ingest(metadata, chunk_to_ingest, chunk_size, 
-                    split_separators, overlap, embedding_generator, db_path);
-                if (!ingestionResult_ending) { _deleteAllCreatedVectors(vectors_ingested, db_path); 
-                    stream.destroy("VectorDB ingestion failed."); reject("VectorDB ingestion failed."); return; }
-                else vectors_ingested.push(...ingestionResult_ending.vectors_ingested);
-            }
-            resolve(vectors_ingested);
-        });
+        stream.on("end", _=>{stream_ended = true; _processStreamEnding();});
     });
 } 
 
@@ -331,7 +331,7 @@ exports.get_vectordb = async function(path, embedding_generator, isMultithreaded
                 benchmarkIterations) => exports.query(
             vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, path, filter_metadata_last, 
             benchmarkIterations),
-        flush_db: async _ => exports.save_db(path),
+        flush_db: async _ => exports.save_db(path, true),
         get_path: _ => path, get_embedding_generator: _ => embedding_generator,
 	    sort: vectorResults => vectorResults.sort((a,b) => b.similarity - a.similarity),
         unload: async _ => {if (save_timer) clearInterval(save_timer); await exports.free(path);}
@@ -428,6 +428,11 @@ const _deleteAllCreatedVectors = async (vectors, db_path) => {for (const vector 
 
 function _get_vector_hash(vector) {
     const hashAlgo = crypto.createHash("md5"); hashAlgo.update(vector.toString());
+    const hash = hashAlgo.digest("hex"); return hash;
+}
+
+function _get_text_hash(text) {
+    const hashAlgo = crypto.createHash("md5"); hashAlgo.update(text.toString().toLowerCase());
     const hash = hashAlgo.digest("hex"); return hash;
 }
 

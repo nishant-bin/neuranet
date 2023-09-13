@@ -66,7 +66,8 @@ exports.uploadFile = async function(xbin_id, xbin_org, readstreamOrContents, cms
 
 	if (Buffer.isBuffer(readstreamOrContents)) {
 		if (await utils.promiseExceptionToBoolean(exports.writeChunk({xbin_id, xbin_org}, transferID, 
-			fullpath, readstreamOrContents, true, true, comment, noevent))) return CONSTANTS.TRUE_RESULT; else return CONSTANTS.FALSE_RESULT;
+			fullpath, readstreamOrContents, true, true, comment, noevent))) 
+		return CONSTANTS.TRUE_RESULT; else return CONSTANTS.FALSE_RESULT;
 	} else if (readstreamOrContents instanceof stream.Readable) return new Promise(resolve => {
 		let startOfFile = true, ignoreEvents = false;
 		readstreamOrContents.on("data", async chunk => {
@@ -85,7 +86,8 @@ exports.uploadFile = async function(xbin_id, xbin_org, readstreamOrContents, cms
 
 exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath, chunk, startOfFile, 
 		endOfFile, comment, noevent) {
-	const temppath = path.resolve(`${fullpath}${transferid}${XBIN_CONSTANTS.XBIN_TEMP_FILE_SUFFIX}`)
+	const temppath = path.resolve(`${fullpath}${transferid}${XBIN_CONSTANTS.XBIN_TEMP_FILE_SUFFIX}`);
+	const cmspath = await cms.getCMSRootRelativePath(headersOrLoginIDAndOrg, fullpath, true);
 
 	if (startOfFile) {	// delete the old files if they exist
 		try {await fspromises.access(fullpath); await fspromises.unlink(fullpath);} catch (err) {};
@@ -97,11 +99,11 @@ exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath
 	if (endOfFile) {
 		await fspromises.rename(temppath, fullpath);
 		LOG.info(`Finished uploading file ${fullpath} successfully.`);
-		if (!noevent) blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: fullpath, 
-			ip: utils.getLocalIPs()[0], id: cms.getID(headersOrLoginIDAndOrg), org: cms.getOrg(headersOrLoginIDAndOrg), isxbin: true});
+		if (!noevent) blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, 
+			path: fullpath, cmspath, ip: utils.getLocalIPs()[0], id: cms.getID(headersOrLoginIDAndOrg), 
+			org: cms.getOrg(headersOrLoginIDAndOrg), isxbin: true});
 	}
 
-	const cmspath = await cms.getCMSRootRelativePath(headersOrLoginIDAndOrg, fullpath)
 	await exports.updateFileStats(fullpath, cmspath, chunk.length, endOfFile, XBIN_CONSTANTS.XBIN_FILE, comment);
 
 	return true;
@@ -133,11 +135,11 @@ exports.updateFileStats = async function (fullpathOrRequestHeaders, remotepath, 
 	const isWriteOpToAUploadAndNotFinished = dataLengthWritten && (!transferFinished);
 
 	if (!clusterMemory.files_stats) clusterMemory.files_stats = {};
-	if (!clusterMemory.files_stats[fullpath]) {
+	if (!clusterMemory.	files_stats[fullpath]) {
 		if (!isWriteOpToAUploadAndNotFinished) {
 			try {
 				await fspromises.access(metaPath, fs.constants.W_OK & fs.constants.R_OK);
-				clusterMemory.files_stats[fullpath] = await fspromises.readFile(metaPath, "utf8"); 
+				clusterMemory.files_stats[fullpath] = JSON.parse(await fspromises.readFile(metaPath, "utf8")); 
 			} catch (err) {
 				let stats; try {stats = await fspromises.stat(fullpath);} catch (err) {stats = {}};
 				clusterMemory.files_stats[fullpath] = { ...stats, remotepath: exports.normalizeRemotePath(remotepath), size: 0, 
@@ -157,8 +159,8 @@ exports.updateFileStats = async function (fullpathOrRequestHeaders, remotepath, 
 
 	if (transferFinished) {
 		if (!clusterMemory.files_stats[fullpath].birthtimeMs) {	// refresh stats if empty
-			const stats = await fspromises.stat(fullpath);
-			clusterMemory.files_stats[fullpath] = {...stats, ...clusterMemory.files_stats[fullpath], disk_size: stats.size};	
+			const stats = await fspromises.stat(fullpath), oldstats = clusterMemory.files_stats[fullpath];
+			clusterMemory.files_stats[fullpath] = {...stats, ...oldstats, disk_size: stats.size};	
 		}
 		await fspromises.writeFile(metaPath, JSON.stringify(clusterMemory.files_stats[fullpath]));
 		if (dataLengthWritten) clusterMemory.files_stats[fullpath].byteswritten = 0; 	// we updated due to a write and have finished uploading

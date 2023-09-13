@@ -124,9 +124,9 @@ exports.writeData = async (pathIn, db) => {
  */
 exports.ingest = exports.create = function(document, metadata, dontRecalculate=false, db=EMPTY_DB, lang) {
     LOG.info(`Starting word extraction for ${JSON.stringify(metadata)}`);
-    if (!lang) {lang = langdetector.getISOLang(document); LOG.info(`Autodetected language ${lang} for ${JSON.stringify(metadata)}.`);}
-    if (!metadata[db[METADATA_DOCID_KEY]]) throw new Error("Missing document ID in metadata.");
-    if (!metadata[db[METADATA_LANGID_KEY]]) metadata[db[METADATA_LANGID_KEY]] = lang;
+    if (!lang) {lang = langdetector.getISOLang(document.substring(0, 100)); LOG.info(`Autodetected language ${lang} for ${JSON.stringify(metadata)}.`);}
+    if (!metadata[db.METADATA_DOCID_KEY]) throw new Error("Missing document ID in metadata.");
+    if (!metadata[db.METADATA_LANGID_KEY]) metadata[db.METADATA_LANGID_KEY] = lang;
     const docHash = _getDocumentHashIndex(metadata, db), docWords = _getLangNormalizedWords(document, lang, db),
         datenow = Date.now();
     LOG.info(`Deleting old document for ${JSON.stringify(metadata)}`);
@@ -260,8 +260,8 @@ function _getLangNormalizedWords(document, lang, db, fastSplit = true) {
     LOG.info(`Starting getting normalized words for the document.`); 
     const words = [], segmenter = fastSplit ? {
         segment: documentIn => {
-            const list = lang == "jp" ? JP_SEGMENTER.segment(documentIn) : "zh" ? ZH_SEGMENTER.segment(documentIn, true) : 
-                documentIn.split(SPLITTERS);
+            const list = lang == "ja" ? JP_SEGMENTER.segment(documentIn) : lang == "zh" ? 
+                ZH_SEGMENTER.segment(documentIn, true) : documentIn.split(SPLITTERS);
             const retList = [];
             for (const word of list) {let norm = word.trim(); if (norm != "") retList.push({segment: norm, isWordLike: true});}
             return retList;
@@ -273,7 +273,7 @@ function _getLangNormalizedWords(document, lang, db, fastSplit = true) {
         switch (lang) {
             case "en": return natural.PorterStemmer; 
             case "es": return natural.PorterStemmerEs;
-            case "jp": return natural.StemmerJa;
+            case "ja": return natural.StemmerJa;
             case "ru": return natural.PorterStemmerRu;
             case "fr": return natural.PorterStemmerFr;
             case "de": return natural.PorterStemmerDe;
@@ -282,6 +282,7 @@ function _getLangNormalizedWords(document, lang, db, fastSplit = true) {
         }
     }
     const _isStopWord = word => {   // can auto learn stop words if needed, language agnostic
+        if (word.trim() == "") return true; // emptry words are useless
         const dbDocCount = Object.keys(db.tfidfDocStore).length;
         if ((!db._stopwords) && (dbDocCount > MIN_STOP_WORD_IDENTIFICATION_LENGTH)) {   // auto learn stop words if possible
             db._stopwords = []; for (const [thisWordIndex, thisWordDocCount] of Object.entries(db.wordDocCounts)) 

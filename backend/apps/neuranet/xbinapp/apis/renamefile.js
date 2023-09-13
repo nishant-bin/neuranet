@@ -47,16 +47,19 @@ exports.renameFile = async function(headersOrIDAndOrg, cmsOldPath, cmsNewPath, n
 				if (XBIN_CONSTANTS.XBIN_IGNORE_PATH_SUFFIXES.includes(path.extname(fullpath))) return;
 				const remotePathNew = cmsNewPath+"/"+relativePath, oldfullpath = path.resolve(oldPath+"/"+relativePath);
 				await uploadfile.updateDiskFileMetadataRemotePaths(fullpath, remotePathNew);
-				if (!noevent) _broadcastFileRenamed(oldfullpath, fullpath, ip, id, org);
+				if (!noevent) _broadcastFileRenamed(oldfullpath, fullpath, 
+					cms.getCMSRootRelativePath(headersOrIDAndOrg, oldfullpath), 
+					cms.getCMSRootRelativePath(headersOrIDAndOrg, fullpath), ip, id, org);
 				await db.runCmd("UPDATE shares SET fullpath = ? WHERE fullpath = ?", [fullpath, oldfullpath]);	// update shares
 			}, true);
-		} else if (!noevent) _broadcastFileRenamed(oldPath, newPath, ip, id, org);
+		} else if (!noevent) _broadcastFileRenamed(oldPath, newPath, cmsOldPath, cmsNewPath, ip, id, org);
 
         return CONSTANTS.TRUE_RESULT;
 	} catch (err) {LOG.error(`Error renaming  path: ${oldPath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}
 }
 
-const _broadcastFileRenamed = (from, to, ip, id, org) => 
-	blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_RENAMED, from, to, ip, id, org, isxbin: true});
+const _broadcastFileRenamed = (from, to, fromCMSPath, toCMSPath, ip, id, org) => 
+	blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_RENAMED, from, to, ip, id, org, 
+		fromCMSPath, toCMSPath, isxbin: true});
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.old && jsonReq.new);

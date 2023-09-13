@@ -8,7 +8,6 @@ const path = require("path");
 const testuser_org = "Tekmonks";
 const testuser_id = "websitecrawltest@tekmonks.com";
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 
@@ -37,7 +36,7 @@ async function _testIngestion(pathIn) {
         if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && (!message.result) &&
             path.resolve((message.path)) == path.resolve(pathIn)) resolve(false);
     }));
-    blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: pathIn, 
+    blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.FILE_CREATED, path: pathIn, 
         ip: utils.getLocalIPs()[0], id: testuser_id, org: testuser_org});
     const result = await fileProcessedPromise, outputMessage = `Test for ingestion ${result?"succeeded":"failed"}.`;
     log(outputMessage);
@@ -53,7 +52,7 @@ async function _testUningestion(pathIn) {
         if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && (!message.result) &&
             path.resolve((message.path)) == path.resolve(pathIn)) resolve(false);
     }));
-    blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_DELETED, path: pathIn, 
+    blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.FILE_DELETED, path: pathIn, 
         ip: utils.getLocalIPs()[0], id: testuser_id, org: testuser_org});
     const result = await fileProcessedPromise, outputMessage = `Test for uningestion ${result?"succeeded":"failed"}.`;
     log(outputMessage); 

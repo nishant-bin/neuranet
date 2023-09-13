@@ -9,7 +9,6 @@ const testuser_org = "Tekmonks";
 const fspromises = require("fs").promises;
 const testuser_id = "vectordbtest@tekmonks.com";
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 
@@ -43,7 +42,7 @@ async function _testIngestion(path) {
         if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && message.result) resolve(true);
         if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && (!message.result)) resolve(false);
     }));
-    blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path, 
+    blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.FILE_CREATED, path, 
         ip: utils.getLocalIPs()[0], id: testuser_id, org: testuser_org, return_vectors: true});
     const result = await fileProcessedPromise, outputMessage = `Test for ingestion ${result?"succeeded":"failed"}.`;
     LOG.info(outputMessage); LOG.console(outputMessage+"\n");
@@ -57,7 +56,7 @@ async function _testUningestion(path) {
         if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && message.result) resolve(true);
         if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && (!message.result)) resolve(false);
     }));
-    blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_DELETED, path, 
+    blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.FILE_DELETED, path, 
         ip: utils.getLocalIPs()[0], id: testuser_id, org: testuser_org, return_vectors: true});
     const result = await fileProcessedPromise, outputMessage = `Test for uningestion ${result?"succeeded":"failed"}.`;
     LOG.info(outputMessage); LOG.console(outputMessage+"\n");
@@ -71,7 +70,7 @@ async function _testRename(path, newpath) {
         if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && message.result) resolve(true);
         if (message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED && (!message.result)) resolve(false);
     }));
-    blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_RENAMED, from: path, to: newpath,
+    blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.FILE_RENAMED, from: path, to: newpath,
         ip: utils.getLocalIPs()[0], id: testuser_id, org: testuser_org, return_vectors: true});
     const result = await fileProcessedPromise, outputMessage = `Test for rename ${result?"succeeded":"failed"}.`;
     LOG.info(outputMessage); LOG.console(outputMessage+"\n");

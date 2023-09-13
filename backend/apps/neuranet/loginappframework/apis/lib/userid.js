@@ -294,7 +294,7 @@ exports.deleteSuborg = async (suborg, migrateUsersToMainOrg, mainOrg) => {
 }
 
 exports.addKey = async (key, org) => {
-	return {result: await db.runCmd("INSERT OR IGNORE INTO keys (key, org) VALUES (?,?)", [key, org]), domain, org};
+	return {result: await db.runCmd("INSERT OR IGNORE INTO keys (key, org) VALUES (?,?)", [key, org]), key, org};
 }
 
 exports.deleteKey = async key => {
@@ -306,7 +306,7 @@ exports.getKeysForOrg = async org => {
 	if (keys && keys.length) return _flattenArray(keys, "key"); else return null;
 }
 
-exports.setKeysForOrg = async (org, keys) => {
+exports.setKeysForOrg = async (keys, org) => {
 	if (!keys) keys = [serverutils.generateUUID(false)];
 	const keysIn = (!Array.isArray(keys)) ? [keys] : [...keys];
 

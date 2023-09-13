@@ -28,12 +28,8 @@ exports.getPlugin = name => serverutils.requireWithDebug(`${APPROOT}/plugins/${n
     LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS.CONF.debug_mode);
 
 exports.NEURANETEVENT = "__org_monkshu_neuranet_event";
-exports.EVENTS = Object.freeze({VECTORDB_FILE_PROCESSING: "vectordb_file_processing", 
-    VECTORDB_FILE_PROCESSED: "vectordb_file_processed", FILE_CREATED: "filecreated",
+exports.EVENTS = Object.freeze({AIDB_FILE_PROCESSING: "aidb_file_processing", 
+    AIDB_FILE_PROCESSED: "aidb_file_processed", FILE_CREATED: "filecreated",
     FILE_DELETED: "filedeleted", FILE_RENAMED: "filerenamed", FILE_MODIFIED: "filemodified"});
-exports.VECTORDB_FILE_PROCESSED_EVENT_TYPES = Object.freeze({
-    INGESTED: "vectordb_file_processed_ingested",
-    UNINGESTED: "vectordb_file_processed_uningested",
-    RENAMED: "vectordb_file_processed_renamed",
-    MODIFIED: "vectordb_file_processed_modified"
-});
+exports.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES = Object.freeze({INGESTED: "ingest_process",
+    UNINGESTED: "uningest_process", RENAMED: "rename_process", MODIFIED: "modified_process"});

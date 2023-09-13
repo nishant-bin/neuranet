@@ -5,7 +5,10 @@
  * a new UTF8 text file at <cms_root_for_the_user>/dynamic.
  * 
  * API Request
- *  document - the document to ingest
+ *  filename - the document to ingest's filename
+ *  data - the document to ingest's data
+ *  encoding - the document to ingest's encoding - can be any valid nodejs Buffer 
+ * 			   encoding, if not given then UTF-8 is assumed.
  *  id - the user's ID or the AI DB id
  *  org - the user's org
  * 
@@ -16,8 +19,10 @@
  * (C) 2023 TekMonks. All rights reserved.
  */
 
-const path = require("path");
+const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
+const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
 const uploadfile = require(`${LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"};
@@ -29,12 +34,15 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 
 	LOG.debug(`Got index document request from ID ${jsonReq.id}. Incoming filename is ${jsonReq.filename}.`);
 
-	const cmsPath = `${DYNAMIC_FILES_FOLDER}/${jsonReq.filename}`, fullpath = deleteFile.getFullPath(cmsPath);
+	const _areCMSPathsSame = (cmspath1, cmspath2) => 
+		(utils.convertToUnixPathEndings("/"+cmspath1, true) == utils.convertToUnixPathEndings("/"+cmspath2, true));
+	const cmsPath = `${DYNAMIC_FILES_FOLDER}/${jsonReq.filename}`;
 	try {
 		const aidbFileProcessedPromise = new Promise(resolve => blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, 
 			message => { if (message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED && 
-				path.resolve(message.path) == path.resolve(fullpath)) resolve(message); }));
-		if (!(await uploadfile.uploadFile(jsonReq.id, jsonReq.org, jsonReq.data, cmsPath, jsonReq.comment)).result) {
+				_areCMSPathsSame(message.cmspath, cmsPath)) resolve(message); }));
+		if (!(await uploadfile.uploadFile(jsonReq.id, jsonReq.org, 
+				Buffer.from(jsonReq.data, jsonReq.encoding||"utf8"), cmsPath, jsonReq.comment)).result) {
 			LOG.error(`CMS error uploading document for request ${JSON.stringify(jsonReq)}`); 
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 		}
@@ -42,7 +50,10 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 		if (!aidbIngestionResult.result) {
 			LOG.error(`AI library error indexing document for request ${JSON.stringify(jsonReq)}`); 
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
-		} else return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
+		} else {
+			if (jsonReq.__forceDBFlush) await aidbfs.flush(jsonReq.id, jsonReq.org);
+			return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
+		}
 	} catch (err) {
 		LOG.error(`Unable to save the corresponding dynamic file into the CMS. Failure error is ${err}.`);
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
