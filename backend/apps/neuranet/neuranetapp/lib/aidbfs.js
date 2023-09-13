@@ -207,7 +207,8 @@ async function renamefile(from, to, id, org) {
 }
 
 /**
- * Returns the TF.IDF DB instances for the given ID, ORG. Useful for searching.
+ * Returns the TF.IDF DB instances for the given ID, ORG. Useful for searching only. Ingestion
+ * should be done via a CMS operation which auto-triggers this module.
  * @param {string} id The user ID
  * @param {string} org The user ORG
  * @returns The TF.IDF DB instances, throws an exception on error.
@@ -221,24 +222,33 @@ async function getTFIDFDBsForIDAndOrg(id, org) {
         else return [await _getPrivateTFIDFDBForIDAndOrg(id, org), tfidfdbMaster];
     }
 
+    LOG.error(`Unsupported federation mode ${aifederationmode} for id ${id} and ord ${org}. Returning private TF.IDF DB only.`);
+    return await _getPrivateTFIDFDBForIDAndOrg(id, org);
+
     // todo: add mapped DBs logic here
 }
 
 /**
- * Returns the Vector DB instances for the given ID, ORG and embeddings generator. Useful for searching.
+ * Returns the Vector DB instances for the given ID, ORG and embeddings generator. 
+ * Useful for searching only. Ingestion should be done via a CMS operation which 
+ * auto-triggers this module.
  * @param {string} id The user ID
  * @param {string} org The user ORG
  * @param {function} embeddingsGenerator The vector embeddings generator to use. Function that takes text and returns a vector of floats.
+ * @param {boolean} multithreaded Should the vector DB run multithreaded
  * @returns The Vector DB instances, throws an exception on error.
  */
-async function getVectorDBsForIDAndOrg(id, org, embeddingsGenerator) {
+async function getVectorDBsForIDAndOrg(id, org, embeddingsGenerator, multithreaded) {
     const aifederationmode = await dblayer.getAIFederationModeForOrg(org);
-    if (aifederationmode == "only_private") return await _getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator);
+    if (aifederationmode == "only_private") return await _getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator, multithreaded);
     if (aifederationmode == "only_master" || "master_and_private") {
-        const vectordbMaster = await _getMasterVectorDBForOrg(org, embeddingsGenerator);
+        const vectordbMaster = await _getMasterVectorDBForOrg(org, embeddingsGenerator, multithreaded);
         if (aifederationmode == "only_master" || (await login.isIDAdminForOrg(id, org))) return [vectordbMaster];  // admins control the master DB
-        else return [await _getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator), vectordbMaster];
-    }
+        else return [await _getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator, multithreaded), vectordbMaster];
+    } 
+
+    LOG.error(`Unsupported federation mode ${aifederationmode} for id ${id} and ord ${org}. Returning private Vector DB only.`);
+    return await _getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator, multithreaded);
 
     // todo: add mapped DBs logic here
 }
@@ -253,9 +263,9 @@ async function getAIModelForFiles(modelName) {
     return aiModelObjectForEmbeddings;
 }
 
-async function _getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator) {
+async function _getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator, multithreaded) {
     const vectordb = await aivectordb.get_vectordb(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org)}/vectordb`, 
-        embeddingsGenerator);
+        embeddingsGenerator, multithreaded);
     return vectordb;
 }
 
@@ -265,8 +275,8 @@ async function _getPrivateTFIDFDBForIDAndOrg(id, org) {
     return tfidfdb;
 }
 
-const _getMasterVectorDBForOrg = async (org, embeddingsGenerator) => await aivectordb.get_vectordb(
-    `${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(MASTER_DB, org)}/vectordb`, embeddingsGenerator);
+const _getMasterVectorDBForOrg = async (org, embeddingsGenerator, multithreaded) => await aivectordb.get_vectordb(
+    `${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(MASTER_DB, org)}/vectordb`, embeddingsGenerator, multithreaded);
 
 const _getMasterTFIDFDBForOrg = async org => await aitfidfdb.get_tfidf_db(
     `${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(MASTER_DB, org)}/tfidfdb`, NEURANET_CONSTANTS.NEURANET_DOCID, 

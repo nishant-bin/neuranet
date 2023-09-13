@@ -75,8 +75,6 @@ if (!worker_threads.isMainThread) worker_threads.parentPort.on("message", async 
 });
 
 exports.initAsync = async (db_path_in, multithreaded) => {
-    dbs[_get_db_index(db_path_in)] = {...DB_INDEX_OBJECT_TEMPLATE, multithreaded}; // init to an empty db
-    
     if (multithreaded && (!workers_initialized)) {  // create worker threads if we are multithreaded
         workers_initialized = true;
         const workersOnlinePromises = [];
@@ -90,6 +88,7 @@ exports.initAsync = async (db_path_in, multithreaded) => {
     try {await fspromises.access(db_path_in, fs.constants.R_OK)} catch (err) {
         _log_error("Vector DB path folder does not exist. Initializing to an empty DB", db_path_in, err); 
         await fspromises.mkdir(db_path_in, {recursive:true});
+        dbs[_get_db_index(db_path_in)] = {...DB_INDEX_OBJECT_TEMPLATE, multithreaded}; // init to an empty db
         return;
     }
 
@@ -100,6 +99,7 @@ exports.initAsync = async (db_path_in, multithreaded) => {
         }
     } catch (err) {
         _log_error("Vector DB index does not exist, or read error. Initializing to an empty DB", db_path_in, err); 
+        dbs[_get_db_index(db_path_in)] = {...DB_INDEX_OBJECT_TEMPLATE, multithreaded}; // init to an empty db
     }
 }
 

@@ -64,7 +64,8 @@ exports.search = async function(id, org, query, aimodelToUse=SEARCH_MODEL_DEFAUL
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 	}
 
-	let vectordbs; try { vectordbs = await aidbfs.getVectorDBsForIDAndOrg(id, org, embeddingsGenerator) } catch(err) { 
+	let vectordbs; try { vectordbs = await aidbfs.getVectorDBsForIDAndOrg(id, org, embeddingsGenerator, 
+			NEURANET_CONSTANTS.CONF.multithreaded) } catch(err) { 
 		LOG.error(`Can't instantiate the vector DB for ID ${id}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
 	}
