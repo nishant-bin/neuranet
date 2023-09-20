@@ -1,10 +1,8 @@
 /**
  * This strategy is to first find matching documents using TF.IDF and 
- * then use only their vectors for a sematic search to build the final 
- * answer. This is a much superior search and memory strategy to little 
- * embeddings vector search as it firsts finds the most relevant documents 
- * and the uses vectors only because the LLM prompt sizes are small. 
- * It also allows rejustments later to better train the LLMs.
+ * then use only their vectors for another TF search to build the final 
+ * answer. This strategy works good for non-English languages, specially
+ * Japanese and Chinese.
  * 
  * @returns search returns array of {metadata, text} objects matching the 
  * 			resulting documents. The texts are shards of the document of
@@ -17,9 +15,10 @@
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
-const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
+const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
 
-const SEARCH_MODEL_DEFAULT = "chat-knowledgebase-gpt35-turbo", REASONS = {INTERNAL: "internal"};
+const SEARCH_MODEL_DEFAULT = "chat-knowledgebase-gpt35-turbo", REASONS = {INTERNAL: "internal"},
+	TEMP_MEM_TFIDF_ID = "_com_tekmonks_neuranet_tempmem_tfidfdb_id_";
 
 /**
  * Searches the AI DBs for the given query. Strategy is documents are searched
@@ -52,34 +51,30 @@ exports.search = async function(id, org, query, aimodelToUse=SEARCH_MODEL_DEFAUL
 	const documentsToUseDocIDs = []; for (const tfidfScoredDoc of tfidfScoredDocuments) 
 		documentsToUseDocIDs.push(tfidfScoredDoc.metadata[NEURANET_CONSTANTS.NEURANET_DOCID]);
 	
-	const aiModelToUseForEmbeddings = aiModelObjectForSearch.embeddings_model;
-	const embeddingsGenerator = async text => {
-		const response = await embedding.createEmbeddingVector(id, text, aiModelToUseForEmbeddings); 
-		if (response.reason != embedding.REASONS.OK) return null;
-		else return response.embedding;
-	}
-	const vectorForUserPrompts = await embeddingsGenerator(query);
-	if (!vectorForUserPrompts) {
-		LOG.error(`Embedding vector generation failed for ${query}. Can't continue.`);
-		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
-	}
-
-	let vectordbs; try { vectordbs = await aidbfs.getVectorDBsForIDAndOrg(id, org, embeddingsGenerator, 
+	let vectordbs; try { vectordbs = await aidbfs.getVectorDBsForIDAndOrg(id, org, undefined, 
 			NEURANET_CONSTANTS.CONF.multithreaded) } catch(err) { 
 		LOG.error(`Can't instantiate the vector DB for ID ${id}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
 	}
 	let vectorResults = [];
-	for (const vectordb of vectordbs) vectorResults.push(...await vectordb.query(
-		vectorForUserPrompts, aiModelObjectForSearch.topK_vectors, aiModelObjectForSearch.min_distance_vectors, 
-			metadata => documentsToUseDocIDs.includes(metadata[NEURANET_CONSTANTS.NEURANET_DOCID])));
+	for (const vectordb of vectordbs) vectorResults.push(...await vectordb.query(	// just get all the vectors for these documents
+		undefined, undefined, undefined, metadata => documentsToUseDocIDs.includes(
+			metadata[NEURANET_CONSTANTS.NEURANET_DOCID])));
 	if ((!vectorResults) || (!vectorResults.length)) return [];
 
-	// slice the vectors after resorting as we combined DBs
-	vectordbs[0].sort(vectorResults); vectorResults = vectorResults.slice(0, 
-		(aiModelObjectForSearch.topK_vectors < vectorResults.length ? aiModelObjectForSearch.topK_vectors : vectorResults.length))
-	
-	const searchResults = []; for (const vectorResult of vectorResults) 
-		searchResults.push({text: vectorResult.text, metadata: vectorResult.metadata});
-    return searchResults;
+	// create an in-memory temporary TF.IDF DB to search for relevant vectors
+	const tfidfDBInMem = await aitfidfdb.get_tfidf_db(TEMP_MEM_TFIDF_ID+Date.now(), NEURANET_CONSTANTS.NEURANET_DOCID, 
+		NEURANET_CONSTANTS.NEURANET_LANGID, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`, undefined, undefined, 
+		undefined, true);
+	for (const vectorResult of vectorResults) {
+		vectorResult.metadata.__uniqueid = Date.now() + Math.random();
+		vectorResult.metadata[NEURANET_CONSTANTS.NEURANET_DOCID] = vectorResult.metadata.__uniqueid;	// ensure these are all treated as seeprate documents
+		tfidfDBInMem.create(vectorResult.text, vectorResult.metadata, true); } tfidfDBInMem.rebuild(); 
+	const tfidfVectors = tfidfDBInMem.query(query), searchResultsAll = tfidfDBInMem.sortForTF(tfidfVectors), 
+		tfidfSearchResultsTopK = searchResultsAll.slice(0, aiModelObjectForSearch.topK_vectors);
+	tfidfDBInMem.free_memory();
+
+	const searchResultsTopK = []; for (const tfidfSearchResultTopKThis of tfidfSearchResultsTopK) 
+		searchResultsTopK.push(...(vectorResults.filter(vectorResult => vectorResult.metadata.__uniqueid == tfidfSearchResultTopKThis.metadata.__uniqueid)));
+    return searchResultsTopK;
 }

@@ -48,7 +48,7 @@ const SPLITTERS = new RegExp(/[\s,]+/), JP_SEGMENTER = jpsegmenter.getSegmenter(
 
 /**
  * Creates a new TF.IDF DB instance and returns it. Use this function preferably to get a new DB instance.
- * @param {string} dbPath The save path for the database
+ * @param {string} dbPathOrMemID The save path for the database, or memory ID if in memory DB only
  * @param {string} metadata_docid_key The document ID key inside document metadata. Default is "aidb_docid"
  * @param {string} metadata_langid_key The language ID key inside document metadata. Default is "aidb_langid"
  * @param {string} stopwords_path The path to the ISO stopwords file, if available. Format is {"iso_language_code":[array of stop words],...}
@@ -56,24 +56,29 @@ const SPLITTERS = new RegExp(/[\s,]+/), JP_SEGMENTER = jpsegmenter.getSegmenter(
  * @param {boolean} no_stemming Whether or not to stem the words. Default is to stem. If true stemming won't be used.
  * @param {boolean} autosave Autosave the DB or not. Default is true.
  * @param {number} autosave_frequency The autosave frequency. Default is 500 ms. 
+ * @param {boolean} mem_only If true, then the DB is in memory only. Default is false.
  * @return {object} The database object.
  */
-exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_KEY, 
+exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY, 
         metadata_langid_key=METADATA_LANGID_KEY, stopwords_path, no_stemming=false, 
-        autosave=true, autosave_frequency=500) {
-    const normPath = path.resolve(dbPath); if (!IN_MEM_DBS[normPath]) {    // load the DB from the disk only if needed
-        try { await fspromises.access(dbPath); } catch (err) {    // check the DB path exists or create it etc.
-            if (err.code == "ENOENT") { 
-                LOG.warn(`Unable to access the TF.IDF DB store at path ${path}. Creating a new one.`); 
-                await fspromises.mkdir(dbPath, {recursive: true});
-            } else throw err;   // not an issue with the DB folder, something else so throw it
+        autosave=true, autosave_frequency=500, mem_only=false) {
+    
+    let dbmemid = dbPathOrMemID; if (!mem_only) {
+        dbmemid = path.resolve(dbPathOrMemID); if (!IN_MEM_DBS[dbmemid]) {    // load the DB from the disk only if needed
+            try { await fspromises.access(dbPathOrMemID); } catch (err) {    // check the DB path exists or create it etc.
+                if (err.code == "ENOENT") { 
+                    LOG.warn(`Unable to access the TF.IDF DB store at path ${path}. Creating a new one.`); 
+                    await fspromises.mkdir(dbPathOrMemID, {recursive: true});
+                } else throw err;   // not an issue with the DB folder, something else so throw it
+            }
+            IN_MEM_DBS[dbmemid] = await exports.loadData(path.resolve(dbPathOrMemID));
         }
-        IN_MEM_DBS[normPath] = await exports.loadData(normPath);
-    }
-    const db = IN_MEM_DBS[normPath]; db.METADATA_DOCID_KEY = metadata_docid_key; db.no_stemming = no_stemming;
+    } else if (!IN_MEM_DBS[dbmemid]) IN_MEM_DBS[dbmemid] = _deepclone(EMPTY_DB);
+    
+    const db = IN_MEM_DBS[dbmemid]; db.METADATA_DOCID_KEY = metadata_docid_key; db.no_stemming = no_stemming;
     db.METADATA_LANGID_KEY = metadata_langid_key; if (stopwords_path) db._stopwords = require(stopwords_path);
 
-    const _autosaveIfSelected = _ => {if (autosave) setTimeout(_=>exports.writeData(dbPath, db), autosave_frequency);}
+    const _autosaveIfSelected = _ => {if (autosave && (!mem_only)) setTimeout(_=>exports.writeData(dbPathOrMemID, db), autosave_frequency);}
 
     return {    // TODO: add stream ingestion
         create: (document, metadata, dontRebuildDB, lang) => {
@@ -88,7 +93,8 @@ exports.get_tfidf_db = async function(dbPath, metadata_docid_key=METADATA_DOCID_
         rebuild: _ => exports.rebuild(db),
         sortForTF: documents => documents.sort((doc1, doc2) => doc1.tf_score < doc2.tf_score ? 1 : 
             doc1.tf_score > doc2.tf_score ? -1 : 0),
-        flush: _ => exports.writeData(dbPath, db)   // writeData is async so the caller can await for the flush to complete
+        flush: _ => exports.writeData(dbPathOrMemID, db),      // writeData is async so the caller can await for the flush to complete
+        free_memory: _ => delete IN_MEM_DBS[dbmemid]
     }
 }
 
@@ -122,9 +128,10 @@ exports.writeData = async (pathIn, db) => {
  * @return {object} metadata The document's metadata.
  * @throws {Error} If the document's metadata is missing the document ID field. 
  */
-exports.ingest = exports.create = function(document, metadata, dontRecalculate=false, db=EMPTY_DB, lang) {
+exports.ingest = exports.create = function(document, metadata, dontRecalculate=false, db=_deepclone(EMPTY_DB), lang) {
     LOG.info(`Starting word extraction for ${JSON.stringify(metadata)}`);
-    if (!lang) {lang = langdetector.getISOLang(document.substring(0, 100)); LOG.info(`Autodetected language ${lang} for ${JSON.stringify(metadata)}.`);}
+    if ((!lang) && metadata[db.METADATA_LANGID_KEY]) lang = metadata[db.METADATA_LANGID_KEY];
+    if (!lang) {lang = langdetector.getISOLang(document); LOG.info(`Autodetected language ${lang} for ${JSON.stringify(metadata)}.`);}
     if (!metadata[db.METADATA_DOCID_KEY]) throw new Error("Missing document ID in metadata.");
     if (!metadata[db.METADATA_LANGID_KEY]) metadata[db.METADATA_LANGID_KEY] = lang;
     const docHash = _getDocumentHashIndex(metadata, db), docWords = _getLangNormalizedWords(document, lang, db),
@@ -154,7 +161,7 @@ exports.rebuild = db => {
     LOG.info(`Ended recalculation of TFIDS.`);
 }
 
-exports.delete = function(metadata, db=EMPTY_DB) {
+exports.delete = function(metadata, db=_deepclone(EMPTY_DB)) {
     const document = db.tfidfDocStore[_getDocumentHashIndex(metadata, db)], wordCounts = _deepclone(db.wordDocCounts);
     if (document) {
         const allDocumentWordIndexes = Object.keys(document.scores);
@@ -167,7 +174,7 @@ exports.delete = function(metadata, db=EMPTY_DB) {
     }
 }
 
-exports.update = (oldmetadata, newmetadata, db=EMPTY_DB) => {
+exports.update = (oldmetadata, newmetadata, db=_deepclone(EMPTY_DB)) => {
     const oldhash = _getDocumentHashIndex(oldmetadata, db), newhash = _getDocumentHashIndex(newmetadata, db),
         document = db.tfidfDocStore[oldhash];
     if (!document) return false;    // not found
@@ -195,7 +202,7 @@ exports.update = (oldmetadata, newmetadata, db=EMPTY_DB) => {
  * @param {lang} lang The language for the query, if set to null it is auto-detected
  * @returns {Array} The resulting documents as an array of {metadata, plus other stats} objects.
  */
-exports.query = (query, topK, filter_function, cutoff_score, options={}, db=EMPTY_DB, lang) => {
+exports.query = (query, topK, filter_function, cutoff_score, options={}, db=_deepclone(EMPTY_DB), lang) => {
     const queryWords = _getLangNormalizedWords(query, lang||langdetector.getISOLang(query), db), scoredDocs = []; let highestScore = 0; 
     for (const document of Object.values(db.tfidfDocStore)) {
         if (filter_function && (!options.filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter

@@ -5,6 +5,7 @@
     "debug_mode": true,
     "quota_default_org": "_default_",
     "multithreaded": false,
+    "tdidf_search_langs": ["ja", "zh"],
 
     "ai_models": {
         "sql-code-gen35": {
