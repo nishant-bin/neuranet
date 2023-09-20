@@ -67,9 +67,9 @@ exports.search = async function(id, org, query, aimodelToUse=SEARCH_MODEL_DEFAUL
 		NEURANET_CONSTANTS.NEURANET_LANGID, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`, undefined, undefined, 
 		undefined, true);
 	for (const vectorResult of vectorResults) {
-		vectorResult.metadata.__uniqueid = Date.now() + Math.random();
-		vectorResult.metadata[NEURANET_CONSTANTS.NEURANET_DOCID] = vectorResult.metadata.__uniqueid;	// ensure these are all treated as seeprate documents
-		tfidfDBInMem.create(vectorResult.text, vectorResult.metadata, true); } tfidfDBInMem.rebuild(); 
+		const uniqueID = Date.now() + Math.random(); vectorResult.metadata.__uniqueid = uniqueID;
+		const temporaryMetadata = {...(vectorResult.metadata)}; temporaryMetadata[NEURANET_CONSTANTS.NEURANET_DOCID]  = uniqueID;
+		tfidfDBInMem.create(vectorResult.text, temporaryMetadata, true); } tfidfDBInMem.rebuild(); 
 	const tfidfVectors = tfidfDBInMem.query(query), searchResultsAll = tfidfDBInMem.sortForTF(tfidfVectors), 
 		tfidfSearchResultsTopK = searchResultsAll.slice(0, aiModelObjectForSearch.topK_vectors);
 	tfidfDBInMem.free_memory();
