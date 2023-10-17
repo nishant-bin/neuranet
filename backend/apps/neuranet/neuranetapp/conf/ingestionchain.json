@@ -1,0 +1,13 @@
+{
+    "chain": [
+        {
+            "_rephrase": "document_rephrase.txt"
+        },
+        {
+            "_summary": "document_summary.txt"
+        },
+        {
+            "_advisory": "document_advisory.txt"
+        }
+    ]
+}

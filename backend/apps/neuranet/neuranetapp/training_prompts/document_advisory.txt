@@ -1,0 +1,4 @@
+Rephrase this document into an advisory document with multiple sub categories based on the below instructions
+--- group this document information into different departments within an organisation so that the information is specific to that certain role.
+
+{{{content}}}

@@ -28,6 +28,9 @@ const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
 const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
 const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/../3p/langdetector.js`);
+const simplellm = require(`${NEURANET_CONSTANTS.LIBDIR}/simplellm.js`);
+const indexdoc = require(`${NEURANET_CONSTANTS.APIDIR}/indexdoc.js`);
+const ingestion_chain = require(`${NEURANET_CONSTANTS.CONFDIR}/ingestionchain.json`);
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
 	MODEL_DEFAULT = "embedding-openai-ada002", DEFAULT_ID = "unknownid", DEFAULT_ORG = "unknownorg", MASTER_DB = "masterdbid";
@@ -73,6 +76,17 @@ async function ingestfile(pathIn, referencelink, id, org, lang, streamGenerator,
     try {
         LOG.info(`Starting text extraction of file ${pathIn}.`);
         fileContents = await neuranetutils.readFullFile(await _getExtractedTextStream(), "utf8");
+        ingestion_chain.chain.forEach( async (each)=>{
+            if (ingestion_chain.chain && !ingestion_chain.chain.some((obj)=> pathIn.includes(Object.keys(obj)[0]))){
+            const chunk_size = aiModelObjectForEmbeddings.chunk_size[langdetector.getISOLang(fileContents)] || aiModelObjectForEmbeddings.chunk_size.en;
+            const rephrasedDocArr = await spillter_function(fileContents, chunk_size, aiModelObjectForEmbeddings.split_separator, aiModelObjectForEmbeddings.overlap, Object.values(each)[0], id, org, null)
+            const rephrasedDoc = rephrasedDocArr && rephrasedDocArr.length ? rephrasedDocArr.join() : null;
+            const jsonReq = {filename: `${pathIn.split("/")[pathIn.split("/").length - 1].split(".")[0]}${Object.keys(each)[0]}.txt`, 
+                data: rephrasedDoc ? rephrasedDoc.toString("utf8") : rephrasedDoc,
+                id: id, org: org, encoding: "utf8", __forceDBFlush: false}
+            await indexdoc.doService(jsonReq);
+            }
+        })
         LOG.info(`Ended text extraction, starting TFIDF ingestion of file ${pathIn}.`);
         if (!lang) {lang = langdetector.getISOLang(fileContents); LOG.info(`Autodetected language ${lang} for file ${pathIn}.`);}
         metadata.lang = lang; tfidfDB.create(fileContents, metadata, dontRebuildDBs, lang);
@@ -304,6 +318,44 @@ async function _extractTextViaPluginsUsingStreams(inputstream, aiModelObject, fi
 }
 
 const _getDocID = pathIn => crypto.createHash("md5").update(path.resolve(pathIn)).digest("hex");
+
+const spillter_function = async function(document, chunk_size, split_separators, overlap, PROMPT_FILENAME, id, org, return_tail_do_not_ingest) {
+const _find_split_separator = (split_start, raw_split_point) => {
+    const rawChunk = document.substring(split_start, raw_split_point);
+    let split_separator_to_use; for (const split_separator of Array.isArray(split_separators) ? split_separators : [split_separators])
+        if ((rawChunk.indexOf(split_separator) != -1) && (rawChunk.lastIndexOf(split_separator) != 0)) {
+            split_separator_to_use = split_separator; break }
+    if (!split_separator_to_use) return raw_split_point;    // seperator not found -- so go with it all as is
+    const split_point = split_start+rawChunk.lastIndexOf(split_separator_to_use);
+    return split_point;
+}
+
+let split_start = 0, split_end = (split_start+chunk_size) < document.length ? 
+    _find_split_separator(split_start, split_start+chunk_size) : document.length;
+
+const rephrasedDocsToReturn = []; let tailChunkRemains = false;
+while (split_end <= document.length && (split_start != split_end)) {
+    const split = document.substring(split_start, split_end).trim(), skipSegement = (split == ""); 
+    
+    if (!skipSegement) {    // blank space has no meaning
+        const rephrasedDocs = await simplellm.prompt_answer(
+            `${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${PROMPT_FILENAME}`, id, org, 
+                {content: split});
+        if (!rephrasedDocs) {
+            _log_error("Unable to rephrase, failed");
+            return false;
+        } else rephrasedDocsToReturn.push(rephrasedDocs);
+    }
+
+    if (split_end-overlap+chunk_size > document.length && return_tail_do_not_ingest) {tailChunkRemains = true; break;}
+    split_start = split_end - overlap; split_end = (split_start+chunk_size) < document.length ? 
+        _find_split_separator(split_start, split_start+chunk_size) : document.length;
+}
+
+return rephrasedDocsToReturn;
+}
+
+const _log_error = (message, error) => (global.LOG||console).error(`${message}.`);
 
 module.exports = {ingestfile, uningestfile, renamefile, getAIModelForFiles, rebuild, flush, 
     getVectorDBsForIDAndOrg, getTFIDFDBsForIDAndOrg, REASONS, MODEL_DEFAULT, DEFAULT_ID, DEFAULT_ORG};
