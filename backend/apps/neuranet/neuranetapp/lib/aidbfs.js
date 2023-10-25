@@ -46,7 +46,7 @@ const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT:
  */
 async function ingestfile(pathIn, referencelink, id, org, lang, streamGenerator, dontRebuildDBs) {
     LOG.info(`AI DB FS ingestion of file ${pathIn} for ID ${id} and org ${org} started.`);
-    if (!(await quota.checkQuota(id,org))) {
+    if (!(await quota.checkQuota(id, org))) {
 		LOG.error(`Disallowing the ingest call for the path ${pathIn}, as the user ${id} of org ${org} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
@@ -286,9 +286,9 @@ const _getMasterTFIDFDBForOrg = async org => await aitfidfdb.get_tfidf_db(
  * Admins always ingest into master. Other IDs always ingest into their private DBs. Regardless
  * of the AI federation modes. This also implies a single unified master DB for all admins. 
  */
-const _getTFIDFDBForIDAndOrgForIngestion = async (id, org) => await login.isIDAdminForOrg(id,org) ? 
+const _getTFIDFDBForIDAndOrgForIngestion = async (id, org) => await login.isIDAdminForOrg(id, org) ? 
     await _getMasterTFIDFDBForOrg(org): await _getPrivateTFIDFDBForIDAndOrg(id, org);
-const _getVectorDBForIDAndOrgForIngestion = async (id, org, embeddingsGenerator) => await login.isIDAdminForOrg(id,org) ?
+const _getVectorDBForIDAndOrgForIngestion = async (id, org, embeddingsGenerator) => await login.isIDAdminForOrg(id, org) ?
     await _getMasterVectorDBForOrg(org, embeddingsGenerator) : await _getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator);
 
 const _getDBID = (id, org) => `${(id||DEFAULT_ID).toLowerCase()}_${(org||DEFAULT_ORG).toLowerCase()}`;
