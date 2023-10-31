@@ -61,6 +61,7 @@ const crypto = require("crypto");
 const cpucores = os.cpus().length*2;    // assume 2 cpu-threads per core (hyperthreaded cores)
 const maxthreads_for_search = cpucores - 1; // leave 1 thread for the main program
 const worker_threads = require("worker_threads");
+const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 
 const dbs = {}, DB_INDEX_NAME = "dbindex.json", DB_INDEX_OBJECT_TEMPLATE = {index:{}, texthashes:[], dirty: false},
     workers = [];
@@ -88,7 +89,7 @@ exports.initAsync = async (db_path_in, multithreaded) => {
     try {await fspromises.access(db_path_in, fs.constants.R_OK)} catch (err) {
         _log_error("Vector DB path folder does not exist. Initializing to an empty DB", db_path_in, err); 
         await fspromises.mkdir(db_path_in, {recursive:true});
-        dbs[_get_db_index(db_path_in)] = {...DB_INDEX_OBJECT_TEMPLATE, multithreaded}; // init to an empty db
+        dbs[_get_db_index(db_path_in)] = {...(serverutils.clone(DB_INDEX_OBJECT_TEMPLATE)), multithreaded}; // init to an empty db
         return;
     }
 
@@ -99,7 +100,7 @@ exports.initAsync = async (db_path_in, multithreaded) => {
         }
     } catch (err) {
         _log_error("Vector DB index does not exist, or read error. Initializing to an empty DB", db_path_in, err); 
-        dbs[_get_db_index(db_path_in)] = {...DB_INDEX_OBJECT_TEMPLATE, multithreaded}; // init to an empty db
+        dbs[_get_db_index(db_path_in)] = {...(serverutils.clone(DB_INDEX_OBJECT_TEMPLATE)), multithreaded}; // init to an empty db
     }
 }
 

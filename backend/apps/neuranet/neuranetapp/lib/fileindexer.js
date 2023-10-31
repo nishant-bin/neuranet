@@ -20,7 +20,7 @@ const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`)
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
 const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
-const deletefile = require(`${XBIN_CONSTANTS.API_DIR}/deleteFile.js`);
+const deletefile = require(`${XBIN_CONSTANTS.API_DIR}/deletefile.js`);
 const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
 const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
 
