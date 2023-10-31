@@ -16,7 +16,7 @@ exports.initSync = _ => blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, m
 
     const usermemory = _getUserMemory(message.id, message.org)
     usermemory[message.cmspath] = {...message, path: message.cmspath,   // overwrite full path as we don't want top send this out
-        done:  message.type == NEURANET_CONSTANTS.EVENTS.VECTORDB_FILE_PROCESSED, result: message.result};
+        done:  message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED, result: message.result};
     _setUserMemory(message.id, message.org, usermemory);
 });
 
