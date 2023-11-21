@@ -268,7 +268,7 @@ function _getLangNormalizedWords(document, lang, db, fastSplit = true) {
     const words = [], segmenter = fastSplit ? {
         segment: documentIn => {
             const list = lang == "ja" ? JP_SEGMENTER.segment(documentIn) : lang == "zh" ? 
-                ZH_SEGMENTER.segment(documentIn, true) : documentIn.split(SPLITTERS);
+                ZH_SEGMENTER.segment(documentIn, true) : documentIn ? documentIn.split(SPLITTERS) : "";
             const retList = [];
             for (const word of list) {let norm = word.trim(); if (norm != "") retList.push({segment: norm, isWordLike: true});}
             return retList;
