@@ -30,8 +30,8 @@ exports.prompt_answer = async function(promptFileOrPrompt, id, org, data, model=
 		return null;    // quota issue
 	}
 
-	const aiKey = crypt.decrypt(NEURANET_CONSTANTS.CONF.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
-        aiModelToUse = model || DEFAULT_SIMPLE_QA_MODEL, aiModelObject = await aiutils.getAIModel(aiModelToUse),
+    const aiModelToUse = jsonReq.model || MODEL_DEFAULT, aiModelObject = await aiutils.getAIModel(aiModelToUse),
+        aiKey = crypt.decrypt(aiModelObject.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
         aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObject.driver.module}`;
 
     let aiLibrary; try{aiLibrary = utils.requireWithDebug(aiModuleToUse, DEBUG_MODE);} catch (err) {
