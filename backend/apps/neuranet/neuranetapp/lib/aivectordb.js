@@ -326,7 +326,7 @@ exports.get_vectordb = async function(path, embedding_generator, isMultithreaded
                 embedding_generator, path),
         read: async (vector, notext) => exports.read(vector, notext, path),
         update: async (vector, metadata, text) => exports.update(vector, metadata, text, embedding_generator, path),
-        delete: async vector =>  exports.delete(vector, path),
+        delete: async (vector, path) =>  exports.delete(vector, path),
         uningest: async vectors => exports.uningest(vectors, db_path),
         query: async (vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, filter_metadata_last, 
                 benchmarkIterations) => exports.query(

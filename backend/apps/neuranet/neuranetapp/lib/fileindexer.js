@@ -62,14 +62,14 @@ async function _handleFileEvent(message) {
         awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.isxbin, message.lang), 
             message.path, NEURANET_CONSTANTS.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES.INGESTED, message.id, message.org);
     else if (_isNeuranetFileDeletedEvent(message) && (!message.isDirectory)) 
-        awaitPromisePublishFileEvent(_uningestfile(path.resolve(message.path), message.id, message.org), 
+        awaitPromisePublishFileEvent(_uningestfile(path.resolve(message.path), message.id, message.org, message.isxbin), 
             message.path, NEURANET_CONSTANTS.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES.UNINGESTED, message.id, message.org);
     else if (_isNeuranetFileRenamedEvent(message) && (!message.isDirectory)) 
         awaitPromisePublishFileEvent(_renamefile(path.resolve(message.from), path.resolve(message.to), message.id, 
             message.org), message.to, NEURANET_CONSTANTS.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES.RENAMED, message.id, 
             message.org);
     else if (_isNeuranetFileModifiedEvent(message) && (!message.isDirectory)) {
-        await _uningestfile(path.resolve(message.path), message.id, message.org);
+        await _uningestfile(path.resolve(message.path), message.id, message.org, message.isxbin);
         awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.isxbin, message.lang), 
             message.path, NEURANET_CONSTANTS.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES.MODIFIED, message.id, message.org);
     }
@@ -83,9 +83,9 @@ async function _ingestfile(pathIn, id, org, isxbin, lang) {
     else {const result = await indexer.addFile(null, cmspath, lang, null, false, true); await indexer.end(); return result;}
 }
 
-async function _uningestfile(pathIn, id, org) {
+async function _uningestfile(pathIn, id, org, isxbin) {
     const cmspath = isxbin ? await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn) : pathIn;
-    const indexer = _getFileIndexer(pathIn, undefined, id, org, cmspath), filePluginResult = await _searchForFilePlugin(indexer);
+    const indexer = _getFileIndexer(pathIn, isxbin, id, org, cmspath), filePluginResult = await _searchForFilePlugin(indexer);
     if (filePluginResult.plugin) return {result: await filePluginResult.plugin.uningest(indexer)};
     if (filePluginResult.error) return {result: false, cause: "Plugin validation failed."}
     else {const result = await indexer.removeFile(cmspath, false, true); await indexer.end(); return result;}

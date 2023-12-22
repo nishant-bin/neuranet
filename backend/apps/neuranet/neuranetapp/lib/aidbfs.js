@@ -132,7 +132,7 @@ async function flush(id, org) {
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
  */
 async function uningestfile(pathIn, id, org) {
-    let vectordb; try { vectordb = await _getVectorDBForIDAndOrgForIngestion(id, org) } catch(err) { 
+    let vectordb, dbPath; try { vectordb = await _getVectorDBForIDAndOrgForIngestion(id, org); dbPath = await vectordb.get_path(); } catch(err) { 
         LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
@@ -150,7 +150,7 @@ async function uningestfile(pathIn, id, org) {
     const queryResults = await vectordb.query(undefined, -1, undefined, 
         metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID, true);
     if (queryResults) for (const result of queryResults) {
-        try {await vectordb.delete(result.vector);} catch (err) {
+        try {await vectordb.delete(result.vector, dbPath);} catch (err) {
             LOG.error(`Error dropping vector for file ${pathIn} for ID ${id} and org ${org} failed. Some vectors were dropped. Database needs recovery for this file.`);
             LOG.debug(`The vector which failed was ${result.vector}.`);
             return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
