@@ -12,6 +12,8 @@ const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const LANG_MAPPINGS_FILE = `${NEURANET_CONSTANTS.CONFDIR}/langmappings.json`; 
 const codevalidator = utils.requireWithDebug(`${NEURANET_CONSTANTS.LIBDIR}/codevalidator.js`, NEURANET_CONSTANTS.CONF.debug_mode);
+const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
+
 
 const DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
@@ -36,8 +38,8 @@ exports.doService = async jsonReq => {
 	if (!codeInputValidationResult.isOK) return {reason: REASONS.BAD_INPUT_CODE, 
 		parser_error: codeInputValidationResult.errors, ...CONSTANTS.FALSE_RESULT};
 
-	const aiKey = crypt.decrypt(NEURANET_CONSTANTS.CONF.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
-		aiModelToUse = jsonReq.model || MODEL_DEFAULT,
+	const aiModelToUse = jsonReq.model || MODEL_DEFAULT, aiModelObject = await aiutils.getAIModel(aiModelToUse),
+        aiKey = crypt.decrypt(aiModelObject.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
 		aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${NEURANET_CONSTANTS.CONF.ai_models[aiModelToUse].driver.module}`;
 	let aiLibrary; try{aiLibrary = utils.requireWithDebug(aiModuleToUse, DEBUG_MODE);} catch (err) {
 		LOG.error(`Bad AI Library or model - ${aiModuleToUse}. The error is ${err}`); 
