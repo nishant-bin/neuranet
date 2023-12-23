@@ -12,7 +12,26 @@
   <parsers>
     <parser class="org.apache.tika.parser.DefaultParser"/>
     <parser class="org.apache.tika.parser.ocr.TesseractOCRParser">
-        <params><param name="tesseractPath" type="string">C:\Users\rvkapoor\AppData\Local\Programs\Tesseract-OCR</param></params>
+      <params>
+        <!-- Path to the Tesseract OCR engine executable -->
+        <param name="tesseractPath" type="string">/usr/bin/</param>
+
+        <!-- Specify the language for OCR (Chinese Simplified in this case) -->
+        <param name="language" type="string">chi_sim</param>
+
+        <!-- Provide the path to the tessdata directory for Tesseract data -->
+        <param name="tessdataPath" type="string">/usr/share/tesseract-ocr/4.00/tessdata/</param>
+        
+        <!-- Set the source resolution for processing (300 DPI in this example) -->
+        <param name="sourceResolution" type="string">300</param>
+        
+        <!-- Specify the Page Segmentation Mode (PSM) for OCR (13 in this example) -->
+        <param name="psm" type="int">13</param>
+        
+        <!-- Specify the OCR Engine Mode (OEM) for Tesseract (3 in this example) -->
+        <param name="oem" type="int">3</param>
+      </params>
+
     </parser>
   </parsers>
 </properties>

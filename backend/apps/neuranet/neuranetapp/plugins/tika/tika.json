@@ -1,5 +1,5 @@
 {
-    "classpath": ["{{{__dirname}}}/tika-app-2.8.0.jar"],
+    "classpath": ["{{{__dirname}}}/tika-app-2.9.1.jar"],
     "max_content_length": 1262485504,
     "tika_config": "{{{__dirname}}}/tikaconfig.xml",
     "supported_types": [".apxl", ".asp", ".aspx", ".c", ".cc", ".cpp", ".cxx", ".doc", ".docm", ".docx", ".dotm", ".dotx", 
