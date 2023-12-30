@@ -11,11 +11,11 @@ const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
-const CONF = require(`${XBIN_CONSTANTS.CONF_DIR}/xbin.json`);
 const quotas = require(`${XBIN_CONSTANTS.LIB_DIR}/quotas.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
+const getfiles = require(`${XBIN_CONSTANTS.API_DIR}/getfiles.js`);
 const addablereadstream = require(`${XBIN_CONSTANTS.LIB_DIR}/addablereadstream.js`)
-const ADDABLE_STREAM_TIMEOUT = CONF.UPLOAD_STREAM_MAX_WAIT||120000;	// 2 minutes to receive new data else we timeout
+const ADDABLE_STREAM_TIMEOUT = XBIN_CONSTANTS.CONF.UPLOAD_STREAM_MAX_WAIT||120000;	// 2 minutes to receive new data else we timeout
 
 const UTF8CONTENTTYPE_MATCHER = /^\s*?text.*?;\s*charset\s*=\s*utf-?8\s*$/;
 const _existing_streams = [];	// holds existing streams for files under upload progress
@@ -26,7 +26,8 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 	LOG.debug("Got uploadfile request for path: " + jsonReq.path);
 	const headersOrLoginIDAndOrg = jsonReq.id && jsonReq.org ? 
 		{xbin_id: jsonReq.id, xbin_org: jsonReq.org, headers} : headers;
-	const transferID = jsonReq.transfer_id || Date.now(), fullpath = path.resolve(`${await cms.getCMSRoot(headersOrLoginIDAndOrg)}/${jsonReq.path}`);
+	const transferID = jsonReq.transfer_id || Date.now(), 
+		fullpath = await cms.getFullPath(headersOrLoginIDAndOrg, jsonReq.path, jsonReq.extraInfo);
 	if (!await cms.isSecure(headersOrLoginIDAndOrg, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 	
 	LOG.debug(`Resolved full path for upload file: ${fullpath}. Transfer ID is ${transferID}`);
@@ -41,11 +42,11 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 			}
 			bufferToWrite = Buffer.from(matches[1], "base64");
 		} else bufferToWrite = Buffer.from(jsonReq.data, "utf8");
-		if (!(await quotas.checkQuota(headersOrLoginIDAndOrg, bufferToWrite.length, jsonReq.xbin_id)).result) 
+		if (!(await quotas.checkQuota(headersOrLoginIDAndOrg, bufferToWrite.length)).result) 
 			{LOG.error(`Quota is full write failed for path ${fullpath}.`); return {...CONSTANTS.TRUE_RESULT, error: "Quota is full."};}
         
 		await exports.writeChunk(headersOrLoginIDAndOrg, transferID, fullpath, bufferToWrite, 
-			jsonReq.startOfFile, jsonReq.endOfFile, jsonReq.comment);
+			jsonReq.startOfFile, jsonReq.endOfFile, jsonReq.comment, jsonReq.extraInfo);
 
 		return {...CONSTANTS.TRUE_RESULT, transfer_id: transferID};
 	} catch (err) {
@@ -55,39 +56,39 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 	}
 }
 
-exports.uploadFile = async function(xbin_id, xbin_org, readstreamOrContents, cmsPath, comment, noevent) {
+exports.uploadFile = async function(xbin_id, xbin_org, readstreamOrContents, cmsPath, comment, extraInfo, noevent) {
 	LOG.debug("Got uploadfile request for cms path: " + cmsPath + " for ID: " + xbin_id + " and org: " + xbin_org);
 
-	const transferID = Date.now(), fullpath = path.resolve(`${await cms.getCMSRoot({xbin_id, xbin_org})}/${cmsPath}`);
+	const transferID = Date.now(), fullpath = await cms.getFullPath({xbin_id, xbin_org}, cmsPath, extraInfo);
 	if (!await cms.isSecure({xbin_id, xbin_org}, fullpath)) {LOG.error(`Path security validation failure: ${fullpath}`); return CONSTANTS.FALSE_RESULT;}
-	const cmsHostingFolder = await cms.getCMSRootRelativePath({xbin_id, xbin_org}, path.dirname(fullpath)); 
-	try { await exports.createFolder({xbin_id, xbin_org}, cmsHostingFolder); }	// create the hosting folder if needed.
+	const cmsHostingFolder = await cms.getCMSRootRelativePath({xbin_id, xbin_org}, path.dirname(fullpath), extraInfo); 
+	try { await exports.createFolder({xbin_id, xbin_org}, cmsHostingFolder, extraInfo); }	// create the hosting folder if needed.
 	catch (err) {LOG.error(`Error uploading file ${fullpath}, parent folder creation failed. Error is ${err}`); return CONSTANTS.FALSE_RESULT;}
 
 	if (Buffer.isBuffer(readstreamOrContents)) {
 		if (await utils.promiseExceptionToBoolean(exports.writeChunk({xbin_id, xbin_org}, transferID, 
-			fullpath, readstreamOrContents, true, true, comment, noevent))) 
+			fullpath, readstreamOrContents, true, true, comment, extraInfo, noevent))) 
 		return CONSTANTS.TRUE_RESULT; else return CONSTANTS.FALSE_RESULT;
 	} else if (readstreamOrContents instanceof stream.Readable) return new Promise(resolve => {
 		let startOfFile = true, ignoreEvents = false;
 		readstreamOrContents.on("data", async chunk => {
 			if (ignoreEvents) return;	// failed already
 			if (!(await utils.promiseExceptionToBoolean(exports.writeChunk({xbin_id, xbin_org}, transferID, 
-				fullpath, chunk, startOfFile, false, comment, noevent)))) { resolve(CONSTANTS.FALSE_RESULT); ignoreEvents = true }; 
+				fullpath, chunk, startOfFile, false, comment, extraInfo, noevent)))) { resolve(CONSTANTS.FALSE_RESULT); ignoreEvents = true }; 
 			startOfFile = false; 
 		});
 		readstreamOrContents.on("end", async _ => {
 			if (ignoreEvents) return;	// failed already
-			if (await utils.promiseExceptionToBoolean(exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, Buffer.from([]), false, 
-				true, comment, noevent))) resolve(CONSTANTS.TRUE_RESULT); else resolve(CONSTANTS.FALSE_RESULT);
+			if (await utils.promiseExceptionToBoolean(exports.writeChunk({xbin_id, xbin_org}, transferID, fullpath, 
+				Buffer.from([]), false, true, comment, extraInfo, noevent))) resolve(CONSTANTS.TRUE_RESULT); else resolve(CONSTANTS.FALSE_RESULT);
 		});
 	}); else return CONSTANTS.FALSE_RESULT;	// neither a buffer, nor a stream - we can't deal with it
 }
 
 exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath, chunk, startOfFile, 
-		endOfFile, comment, noevent) {
+		endOfFile, comment, extraInfo, noevent) {
 	const temppath = path.resolve(`${fullpath}${transferid}${XBIN_CONSTANTS.XBIN_TEMP_FILE_SUFFIX}`);
-	const cmspath = await cms.getCMSRootRelativePath(headersOrLoginIDAndOrg, fullpath, true);
+	const cmspath = await cms.getCMSRootRelativePath(headersOrLoginIDAndOrg, fullpath, extraInfo);
 
 	if (startOfFile) {	// delete the old files if they exist
 		try {await fspromises.access(fullpath); await fspromises.unlink(fullpath);} catch (err) {};
@@ -101,20 +102,20 @@ exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath
 		LOG.info(`Finished uploading file ${fullpath} successfully.`);
 		if (!noevent) blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, 
 			path: fullpath, cmspath, ip: utils.getLocalIPs()[0], id: cms.getID(headersOrLoginIDAndOrg), 
-			org: cms.getOrg(headersOrLoginIDAndOrg), isxbin: true});
+			org: cms.getOrg(headersOrLoginIDAndOrg), isxbin: true, extraInfo});
 	}
 
-	await exports.updateFileStats(fullpath, cmspath, chunk.length, endOfFile, XBIN_CONSTANTS.XBIN_FILE, comment);
+	await exports.updateFileStats(fullpath, cmspath, chunk.length, endOfFile, XBIN_CONSTANTS.XBIN_FILE, comment, extraInfo);
 
 	return true;
 }
 
-exports.writeUTF8File = async function (headersOrLoginIDAndOrg, inpath, data, noevent) {
-	const fullpath = path.resolve(`${await cms.getCMSRoot(headersOrLoginIDAndOrg)}/${inpath}`);
+exports.writeUTF8File = async function (headersOrLoginIDAndOrg, inpath, data, extraInfo, noevent) {
+	const fullpath = await cms.getFullPath(headersOrLoginIDAndOrg, inpath, extraInfo);
 	if (!await cms.isSecure(headersOrLoginIDAndOrg, fullpath)) throw `Path security validation failure: ${fullpath}`;
 
-	const cmsHostingFolder = await cms.getCMSRootRelativePath(headersOrLoginIDAndOrg, path.dirname(fullpath)); 
-	try { await exports.createFolder(headersOrLoginIDAndOrg, cmsHostingFolder); }	// create the hosting folder if needed.
+	const cmsHostingFolder = await cms.getCMSRootRelativePath(headersOrLoginIDAndOrg, path.dirname(fullpath), extraInfo); 
+	try { await exports.createFolder(headersOrLoginIDAndOrg, cmsHostingFolder, extraInfo); }	// create the hosting folder if needed.
 	catch (err) {LOG.error(`Error uploading file ${fullpath}, parent folder creation failed. Error is ${err}`); return CONSTANTS.FALSE_RESULT;}
 
 	let additionalBytesToWrite = data.length; 
@@ -123,14 +124,18 @@ exports.writeUTF8File = async function (headersOrLoginIDAndOrg, inpath, data, no
 
 	await _appendOrWrite(fullpath, data, true, true, exports.isZippable(fullpath));
 
-	exports.updateFileStats(fullpath, inpath, data.length, true, XBIN_CONSTANTS.XBIN_FILE);	
+	exports.updateFileStats(fullpath, inpath, data.length, true, XBIN_CONSTANTS.XBIN_FILE, undefined, extraInfo);	
 
 	if (!noevent) blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: fullpath, 
-		ip: utils.getLocalIPs()[0], id: cms.getID(headersOrLoginIDAndOrg), org: cms.getOrg(headersOrLoginIDAndOrg), isxbin: true});
+		ip: utils.getLocalIPs()[0], id: cms.getID(headersOrLoginIDAndOrg), org: cms.getOrg(headersOrLoginIDAndOrg), 
+		isxbin: true, extraInfo});
 }
 
-exports.updateFileStats = async function (fullpathOrRequestHeaders, remotepath, dataLengthWritten, transferFinished, type, commentin) {
-	const fullpath = typeof fullpathOrRequestHeaders !== 'string' ? (await _getSecureFullPath(fullpathOrRequestHeaders, remotepath)) : fullpathOrRequestHeaders;
+exports.updateFileStats = async function (fullpathOrRequestHeaders, remotepath, dataLengthWritten, transferFinished, 
+		type, commentin, extraInfo) {
+
+	const fullpath = typeof fullpathOrRequestHeaders !== 'string' ? 
+		(await _getSecureFullPath(fullpathOrRequestHeaders, remotepath, extraInfo)) : fullpathOrRequestHeaders;
 	const metaPath = fullpath+XBIN_CONSTANTS.STATS_EXTENSION, clusterMemory = CLUSTER_MEMORY.get(XBIN_CONSTANTS.MEM_KEY_UPLOADFILE, {});
 	const isWriteOpToAUploadAndNotFinished = dataLengthWritten && (!transferFinished);
 
@@ -185,29 +190,29 @@ exports.getFileStats = async fullpath => {	// cache and return to avoid repeated
 exports.getFolderSize = async fullpath => {
 	let size = 0; 
 	await utils.walkFolder(fullpath, async (fullEntryPath, stats) => { if (stats.isFile()) 
-		try { if (!XBIN_CONSTANTS.XBIN_IGNORE_PATH_SUFFIXES.includes(path.extname(fullEntryPath))) size += 
-			JSON.parse(await fspromises.readFile( fullEntryPath+XBIN_CONSTANTS.STATS_EXTENSION, "utf8")).size; 
-		} catch (err) {LOG.warn(`Can't find correct metadata for path ${fullpath} during uploadfile.getFolderSize().`)}
+		try { if (!getfiles.ignoreFile(fullEntryPath)) size += (await exports.getFileStats(fullEntryPath)).size; } 
+		catch (err) {LOG.warn(`Can't find correct metadata for path ${fullpath} during uploadfile.getFolderSize().`) }
 	}, true);
 	return size;
 }
 
-exports.createFolder = async function(headersOrLoginIDAndOrg, cmsRelativePathIn) {
-	const cmsRoot = await cms.getCMSRoot(headersOrLoginIDAndOrg), 
-		cmsRelativePathUnix = utils.convertToUnixPathEndings(cmsRelativePathIn);
-	if (!await cms.isSecure(headersOrLoginIDAndOrg, `${cmsRoot}/${cmsRelativePathUnix}`)) throw (`Path security validation failure: ${cmsRelativePathUnix}`);
+exports.createFolder = async function(headersOrLoginIDAndOrg, cmsRelativePathIn, extraInfo) {
+	const cmsRelativePathUnix = utils.convertToUnixPathEndings(cmsRelativePathIn), 
+		checkFullPath = await cms.getFullPath(headersOrLoginIDAndOrg, cmsRelativePathUnix, extraInfo);
+	if (!await cms.isSecure(headersOrLoginIDAndOrg, checkFullPath)) throw (`Path security validation failure: ${cmsRelativePathUnix}`);
 
 	let cmsPathSoFar = ""; for (const thisPathSegment of cmsRelativePathUnix.split("/")) {
 		cmsPathSoFar += `/${thisPathSegment}`;
-		const fullpath = path.resolve(`${cmsRoot}/${cmsPathSoFar}`);
+		const fullpath = await cms.getFullPath(headersOrLoginIDAndOrg, cmsPathSoFar, extraInfo);
 		if (!(await utils.exists(fullpath))) {
 			await fs.promises.mkdir(fullpath);
-			await exports.updateFileStats(fullpath, cmsPathSoFar, undefined, true, XBIN_CONSTANTS.XBIN_FOLDER);
+			await exports.updateFileStats(fullpath, cmsPathSoFar, undefined, true, XBIN_CONSTANTS.XBIN_FOLDER, 
+				undefined, extraInfo);
 		}
 	}
 }
 
-exports.isZippable = fullpath => !((CONF.DONT_GZIP_EXTENSIONS||[]).includes(path.extname(fullpath)));
+exports.isZippable = fullpath => !((XBIN_CONSTANTS.CONF.DONT_GZIP_EXTENSIONS||[]).includes(path.extname(fullpath)));
 
 exports.deleteDiskFileMetadata = async function(fullpath) {
 	await fspromises.unlink(fullpath+XBIN_CONSTANTS.STATS_EXTENSION);
@@ -266,10 +271,10 @@ exports.isFileConsistentOnDisk = async fullpath => {
 
 exports.normalizeRemotePath = pathIn => pathIn.replace(/\\+/g, "/").replace(/\/+/g, "/");
 
-exports.getFullPath = async (headersOrIDAndOrg, cmsPath) => path.resolve(`${await cms.getCMSRoot(headersOrIDAndOrg)}/${cmsPath}`);
+exports.getFullPath = cms.getFullPath;
 
-async function _getSecureFullPath(headers, inpath) {
-	const fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${inpath}`);
+async function _getSecureFullPath(headers, inpath, extraInfo) {
+	const fullpath = await cms.getFullPath(headers, inpath, extraInfo);
 	if (!await cms.isSecure(headers, fullpath)) {LOG.error(`Path security validation failure: ${inpath}`); throw `Path security validation failure: ${inpath}`;}
 	return fullpath;
 }
@@ -283,7 +288,7 @@ function _appendOrWrite(inpath, buffer, startOfFile, endOfFile, isZippable) {
 		LOG.debug(`Created readable stream with ID ${_existing_streams[path].addablestream.getID()} for path ${path}.`);
 		let readableStream = _existing_streams[path].addablestream;
 		if (isZippable) readableStream = readableStream.pipe(zlib.createGzip());	// gzip to save disk space and download bandwidth for downloads
-		if (CONF.DISK_SECURED) readableStream = readableStream.pipe(crypt.getCipher(CONF.SECURED_KEY));
+		if (XBIN_CONSTANTS.CONF.DISK_SECURED) readableStream = readableStream.pipe(crypt.getCipher(XBIN_CONSTANTS.CONF.SECURED_KEY));
 		_existing_streams[path].writestream = fs.createWriteStream(path, {"flags":"w"}); 
 		_existing_streams[path].writestream.__org_xbin_writestream_id = Date.now();
 		_existing_streams[path].closeWriteStream = true;

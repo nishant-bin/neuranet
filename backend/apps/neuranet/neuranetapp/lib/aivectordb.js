@@ -273,15 +273,18 @@ exports.ingeststream = async function(metadata, stream, encoding="utf8", chunk_s
         db_path) {
     
     return new Promise((resolve, reject) => {
-        let chunk_to_add = "", stream_ended = false; 
+        let chunk_to_add = "", stream_ended = false, ingestion_error = false; 
 
         const vectors_ingested = [], _chunkIngestionFunction = async (chunk, ingestLeftOver) => {
+            if (ingestion_error) return;    // something failed previously in this stream, stop ingestion
             if (chunk) chunk_to_add += chunk.toString(encoding).replace(/\s*\n\s*/g, "\n").replace(/[ \t]+/g, " ");   // remove extra whitespaces. #1 they destroy the semantics, #2 at least openai can choke on them for embeddings
             if ((chunk && (chunk_to_add.length >= chunk_size)) || (ingestLeftOver && chunk_to_add.length)) {
                 const ingestionResult = await exports.ingest(metadata, chunk_to_add, chunk_size, split_separators, 
                     overlap, embedding_generator, db_path, true);
                 if ((!ingestionResult) || (!ingestionResult.vectors_ingested)) {
-                    _deleteAllCreatedVectors(vectors_ingested, db_path); stream.destroy("VectorDB ingestion failed."); return; }
+                    LOG.error(`Ingestion error in chunk. Related metadata was ${JSON.stringify(metadata)}`)
+                    ingestion_error = true; _deleteAllCreatedVectors(vectors_ingested, db_path); 
+                    stream.destroy("VectorDB ingestion failed."); return; }
                 chunk_to_add = ingestionResult.tail_chunk||""; // whatever was left - start there next time
                 vectors_ingested.push(...ingestionResult.vectors_ingested);
             }
@@ -295,7 +298,8 @@ exports.ingeststream = async function(metadata, stream, encoding="utf8", chunk_s
 
         let _endingProcessed = false; const _processStreamEnding = async _ => {
             if (stream_ended && (executionQueue.length == 0) && (!_endingProcessed)) {
-                _endingProcessed = true; await _chunkIngestionFunction(null, true); resolve(vectors_ingested); } }
+                _endingProcessed = true; if (!ingestion_error) await _chunkIngestionFunction(null, true); 
+                if (!ingestion_error) resolve(vectors_ingested); else reject("Ingestion error in chunk ingestion stream."); } }
 
         stream.on("data", async chunk => {
             executionQueue.unshift(async _=> await _executionQueueFunction(chunk));

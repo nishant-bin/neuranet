@@ -2,7 +2,6 @@
  * Deletes the given file. 
  * (C) 2020 TekMonks. All rights reserved.
  */
-const path = require("path");
 const fspromises = require("fs").promises;
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
@@ -18,7 +17,7 @@ exports.doService = async (jsonReq, _, headers) => {
 	const headersOrLoginIDAndOrg = jsonReq.id && jsonReq.org ? 
 		{xbin_id: jsonReq.id, xbin_org: jsonReq.org, headers} : headers;
 
-	const fullpath = path.resolve(`${await cms.getCMSRoot(headersOrLoginIDAndOrg)}/${jsonReq.path}`);
+	const fullpath = await cms.getFullPath(headersOrLoginIDAndOrg, jsonReq.path, jsonReq.extraInfo);
 	if (!await cms.isSecure(headersOrLoginIDAndOrg, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 
 	try {await fspromises.access(fullpath)} catch (err) { 
@@ -31,30 +30,30 @@ exports.doService = async (jsonReq, _, headers) => {
 	const ip = utils.getLocalIPs()[0], id = cms.getID(headersOrLoginIDAndOrg), org = cms.getOrg(headersOrLoginIDAndOrg);
 
 	try {
-		await rmrf(fullpath, id, org, ip); 
+		await rmrf(fullpath, id, org, ip, jsonReq.extraInfo); 
 		return CONSTANTS.TRUE_RESULT;
 	} catch (err) {LOG.error(`Error deleting  path: ${fullpath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}
 }
 
-exports.deleteFile = async (headersOrIDAndOrg, cmsPath, noevent) => {
+exports.deleteFile = async (headersOrIDAndOrg, cmsPath, extraInfo, noevent) => {
 	const ip = utils.getLocalIPs()[0], id = headersOrIDAndOrg.xbin_id||cms.getID(headersOrIDAndOrg), 
 		org = headersOrIDAndOrg.xbin_org||cms.getOrg(headersOrIDAndOrg);
 
 	LOG.debug("Got delete file request for cms path: " + cmsPath + " for ID: " + id + " and org: " + org);
 
-	const fullpath = path.resolve(`${await cms.getCMSRoot(headersOrIDAndOrg)}/${cmsPath}`);
+	const fullpath = await cms.getFullPath(headersOrIDAndOrg, cmsPath, extraInfo);
 	if (!await cms.isSecure(headersOrIDAndOrg, fullpath)) {LOG.error(`Path security validation failure: ${fullpath}`); return CONSTANTS.FALSE_RESULT;}
 
-	await rmrf(fullpath, id, org, ip, noevent);
+	await rmrf(fullpath, id, org, ip, extraInfo, noevent);
 	return CONSTANTS.TRUE_RESULT;
 }
 
-async function rmrf(path, id, org, ip, noevent) {
+async function rmrf(path, id, org, ip, extraInfo, noevent) {
 	const _deleteFile = async path => {
 		await unlinkFileAndRemoveFromDB(path); 
-		const cmspath = await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path);
+		const cmspath = await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, path, extraInfo);
 		if (!noevent) blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_DELETED, 
-			path, id, org, ip, cmspath, isxbin: true});
+			path, id, org, ip, cmspath, isxbin: true, extraInfo});
 	}
 
 	if ((await fspromises.stat(path)).isFile()) { await _deleteFile(path); return; }

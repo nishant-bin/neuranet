@@ -12,21 +12,21 @@ const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
-const CONF = require(`${XBIN_CONSTANTS.CONF_DIR}/xbin.json`);
+const getfiles = require(`${XBIN_CONSTANTS.API_DIR}/getfiles.js`);
 const securid = require(`${XBIN_CONSTANTS.API_DIR}/getsecurid.js`);
 const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
 
 const DEFAULT_READ_BUFFER_SIZE = 10485760;
 
-exports.handleRawRequest = async function(jsonObj, servObject, headers, url) {
-	if (!validateRequest(jsonObj)) {LOG.error("Validation failure."); _sendError(servObject); return;}
-	if (!securid.check(jsonObj.securid)) {LOG.error("SecurID validation failure."); _sendError(servObject, true); return;}
+exports.handleRawRequest = async function(jsonReq, servObject, headers, url) {
+	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); _sendError(servObject); return;}
+	if (!securid.check(jsonReq.securid)) {LOG.error("SecurID validation failure."); _sendError(servObject, true); return;}
 
-	const headersMod = {...headers, "authorization": `Bearer ${jsonObj.auth}`};
-	jsonObj.fullpath = path.resolve(`${await cms.getCMSRoot(headersMod)}/${jsonObj.path}`);
-	if (!await cms.isSecure(headersMod, jsonObj.fullpath)) {LOG.error(`Path security validation failure: ${jsonObj.path}`); _sendError(servObject); return;}
+	const headersMod = {...headers, "authorization": `Bearer ${jsonReq.auth}`};
+	jsonReq.fullpath = await cms.getFullPath(headersMod, jsonReq.path, jsonReq.extraInfo);
+	if (!await cms.isSecure(headersMod, jsonReq.fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); _sendError(servObject); return;}
 
-	await this.downloadFile(jsonObj, servObject, headers, url);
+	await this.downloadFile(jsonReq, servObject, headers, url);
 }
 
 exports.downloadFile = async (fileReq, servObject, headers, url) => {
@@ -58,29 +58,29 @@ exports.downloadFile = async (fileReq, servObject, headers, url) => {
 	} catch (err) { _handleDownloadError(err); _sendError(servObject); }
 }
 
-exports.readUTF8File = async function (headers, inpath) {
-	const fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${inpath}`);
+exports.readUTF8File = async function (headers, inpath, extraInfo) {
+	const fullpath = await cms.getFullPath(headers, inpath, extraInfo);
 	if (!await cms.isSecure(headers, fullpath)) throw `Path security validation failure: ${fullpath}`;
 	const zippable = uploadfile.isZippable(fullpath);
 
 	let dataRead = await fspromises.readFile(fullpath); 
-	if (CONF.DISK_SECURED) dataRead = await _readEncryptedUTF8Data(dataRead, zippable);
+	if (XBIN_CONSTANTS.CONF.DISK_SECURED) dataRead = await _readEncryptedUTF8Data(dataRead, zippable);
 	else dataRead = dataRead.toString("utf8");
 	return dataRead;
 }
 
 exports.getReadStream = function(fullpath, pathIsATemporarilyZippedFolderForDownloading) {
 	const zippable = pathIsATemporarilyZippedFolderForDownloading?false:uploadfile.isZippable(fullpath);
-	let readStream = fs.createReadStream(fullpath, {highWaterMark: CONF.DOWNLOAD_READ_BUFFER_SIZE||DEFAULT_READ_BUFFER_SIZE, 
+	let readStream = fs.createReadStream(fullpath, {highWaterMark: XBIN_CONSTANTS.CONF.DOWNLOAD_READ_BUFFER_SIZE||DEFAULT_READ_BUFFER_SIZE, 
 		flags:"r", autoClose:true});
-	if (CONF.DISK_SECURED && (!pathIsATemporarilyZippedFolderForDownloading)) readStream = readStream.pipe(crypt.getDecipher(CONF.SECURED_KEY)); // decrypt the file before sending if it is encrypted
+	if (XBIN_CONSTANTS.CONF.DISK_SECURED && (!pathIsATemporarilyZippedFolderForDownloading)) readStream = readStream.pipe(crypt.getDecipher(XBIN_CONSTANTS.CONF.SECURED_KEY)); // decrypt the file before sending if it is encrypted
 	if (zippable) readStream = readStream.pipe(zlib.createGunzip());	// gunzip if zipped
 	return readStream;
 }
 
 function _readEncryptedUTF8Data(buffer, zippable) {
 	return new Promise((resolve, reject) => {
-		const buffersRead = []; let readStream = stream.Readable.from(buffer).pipe(crypt.getDecipher(CONF.SECURED_KEY));
+		const buffersRead = []; let readStream = stream.Readable.from(buffer).pipe(crypt.getDecipher(XBIN_CONSTANTS.CONF.SECURED_KEY));
 		if (zippable) readStream = readStream.pipe(zlib.createGunzip()); 
 		readStream.on("data", chunk => buffersRead.push(chunk));
 		readStream.on("finish", _ => resolve(Buffer.concat(buffersRead).toString("utf8")));
@@ -106,14 +106,13 @@ async function _zipDirectory(pathIn) {	// unencrypt, ungzip etc before packing t
 		archive.on("progress", event => LOG.info(`ZIP progress of ${pathIn} at temp file ${tempFilePath}, the entries written are ${event.entries.total} and entries processed are ${event.entries.processed} and the bytes written are ${event.fs.totalBytes} and processed are ${event.fs.processed}.`));
 		
 		try {
-			const _ignoreFile = fullpathOrFilename => XBIN_CONSTANTS.XBIN_IGNORE_PATH_SUFFIXES.includes(path.extname(fullpathOrFilename));
 			await utils.walkFolder(pathIn, (fullPath, stats, relativePath) =>  {
 				if (stats.isDirectory()) {archive.append(null, {name: relativePath+"/"}); return;}
-				if ((!stats.isFile()) || _ignoreFile(fullPath)) return;	// nothing to do, only real files beyond this
+				if ((!stats.isFile()) || getfiles.ignoreFile(fullPath)) return;	// nothing to do, only real files beyond this
 				
 				const zippable = uploadfile.isZippable(fullPath); 
 				let readstreamEntry = fs.createReadStream(fullPath); 
-				if (CONF.DISK_SECURED) readstreamEntry = readstreamEntry.pipe(crypt.getDecipher(CONF.SECURED_KEY));
+				if (XBIN_CONSTANTS.CONF.DISK_SECURED) readstreamEntry = readstreamEntry.pipe(crypt.getDecipher(XBIN_CONSTANTS.CONF.SECURED_KEY));
 				if (zippable) readstreamEntry = readstreamEntry.pipe(zlib.createGunzip());	
 				archive.append(readstreamEntry, {name: relativePath});
 			}, false, _=>archive.finalize());

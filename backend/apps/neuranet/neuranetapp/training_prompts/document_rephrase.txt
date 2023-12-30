@@ -1,4 +1,0 @@
-rephrase the content based on the below instructions 
----infer the contents and rephrase it in a more generic context that most people without expertise or knowledge can understand 
-
-{{{content}}}

@@ -38,7 +38,9 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 		const aidbFileProcessedPromise = new Promise(resolve => blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, 
 			message => { if (message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED && 
 				_areCMSPathsSame(message.cmspath, cmsPath)) resolve(message); }));
-		if (!(await deleteFile.deleteFile({xbin_id: jsonReq.id, xbin_org: jsonReq.org}, cmsPath)).result) {
+		if (!(await deleteFile.deleteFile({xbin_id: jsonReq.id, xbin_org: jsonReq.org}, cmsPath, 
+				{activeBrainID: jsonReq.activeBrainID})).result) {
+
 			LOG.error(`CMS error deleting document for request ${JSON.stringify(jsonReq)}`); 
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 		}
@@ -56,4 +58,4 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 	}
 }
 
-const validateRequest = jsonReq => (jsonReq && jsonReq.filename && jsonReq.id && jsonReq.org);
+const validateRequest = jsonReq => (jsonReq && jsonReq.filename && jsonReq.id && jsonReq.org && jsonReq.activeBrainID);

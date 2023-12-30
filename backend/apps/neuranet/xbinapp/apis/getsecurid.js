@@ -4,7 +4,6 @@
 
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
-const CONF = require(`${XBIN_CONSTANTS.CONF_DIR}/xbin.json`);
 
 exports.doService = async jsonReq => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return CONSTANTS.FALSE_RESULT;}
@@ -21,7 +20,7 @@ exports.getSecurID = jsonReq => {
     setTimeout(_=>{ // expire it quickly
         const securids = CLUSTER_MEMORY.get("__org_xbin_securids");
         securids.splice(securids.indexOf(token),1); CLUSTER_MEMORY.set("__org_xbin_securids", securids);
-    }, CONF.SECURID_EXPIRY||2000);
+    }, XBIN_CONSTANTS.CONF.SECURID_EXPIRY||2000);
     return token;
 }
 

@@ -21,16 +21,16 @@ const DEFAULT_SIMPLE_QA_MODEL = "simplellm-gpt35-turbo", DEBUG_MODE = NEURANET_C
  * @param {string} promptFileOrPrompt Path to a prompt file or the full prompt itself if no data is provided to inflate the prompt.
  * @param {string} id The user ID on behalf of whom we are processing this request. If not given then LLM costs can't be updated.
  * @param {object} data The prompt template data. If null then it is assume the promptFileOrPrompt is a full prompt.
- * @param {string} model The LLM model name to use. If not provided then a default is used.
+ * @param {string} modelNameOrModelObject The LLM model name to use or object itseelf. If not provided then a default is used.
  * @returns The LLM response, unparsed.
  */
-exports.prompt_answer = async function(promptFileOrPrompt, id, org, data, model=DEFAULT_SIMPLE_QA_MODEL) {
+exports.prompt_answer = async function(promptFileOrPrompt, id, org, data, modelNameOrModelObject=DEFAULT_SIMPLE_QA_MODEL) {
     if (id && !(await quota.checkQuota(id, org))) {  // check quota if the ID was provided
 		LOG.error(`SimpleLLM: Disallowing the LLM call, as the user ${id} is over their quota.`);
 		return null;    // quota issue
 	}
 
-    const aiModelToUse = jsonReq.model || MODEL_DEFAULT, aiModelObject = await aiutils.getAIModel(aiModelToUse),
+    const aiModelObject = typeof modelNameOrModelObject === "string" ? await aiutils.getAIModel(modelNameOrModelObject) : modelNameOrModelObject,
         aiKey = crypt.decrypt(aiModelObject.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
         aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObject.driver.module}`;
 

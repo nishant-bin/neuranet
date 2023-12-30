@@ -15,11 +15,11 @@
     "INSERT INTO views (org, view) VALUES ('tekmonks', 'chat')",
 
 
+    "CREATE TABLE orgsettings(org varchar not null, settings varchar not null)",
+    "INSERT INTO orgsettings (org, settings) VALUES ('tekmonks', '{\"pregen\": true, \"aifederationmode\": \"only_master\"}')",
+
+
     "CREATE TABLE usage(timestamp TIMESTAMP DEFAULT (strftime('%s', 'now')), id varchar not null, usage integer not null, model varchar not null)",
-
-
-    "CREATE TABLE aifederationmodes(org varchar not null, aifederationmode) --can be mapped_and_private, master_and_private, only_master, only_private, only_mapped",
-    "INSERT INTO aifederationmodes (org, aifederationmode) VALUES ('tekmonks', 'only_master')",
 
 
     "COMMIT TRANSACTION"

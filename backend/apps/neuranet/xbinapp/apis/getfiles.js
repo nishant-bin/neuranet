@@ -13,16 +13,14 @@ exports.doService = async (jsonReq, _, headers) => {
 	
 	LOG.debug("Got getfiles request for path: " + jsonReq.path);
 
-	const fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${jsonReq.path}`);
+	const fullpath = await cms.getFullPath(headers, jsonReq.path, jsonReq.extraInfo);
 	if (!await cms.isSecure(headers, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
-
-	const _ignoreFile = fullpathOrFilename => XBIN_CONSTANTS.XBIN_IGNORE_PATH_SUFFIXES.includes(path.extname(fullpathOrFilename));
 
 	try {
 		let retObj = {entries:[], result: true};
 		const entries = await fspromises.readdir(fullpath);
 		for (const entry of entries) {	
-			const entryPath = path.resolve(`${fullpath}/${entry}`); if (_ignoreFile(entryPath)) continue;	// ignore our own working files
+			const entryPath = path.resolve(`${fullpath}/${entry}`); if (exports.ignoreFile(entryPath)) continue;	// ignore our own working files
 			if (!(await uploadfile.isFileConsistentOnDisk(entryPath))) {
 				LOG.error(`Error reading file entry ${fullpath}/${entry}. Skipping from listing. Error is inconsistent file.`); continue; }
 			let stats; try {stats = await uploadfile.getFileStats(entryPath);} catch (err) {
@@ -34,6 +32,11 @@ exports.doService = async (jsonReq, _, headers) => {
 		}
 		return retObj;
 	} catch (err) {LOG.error(`Error reading path: ${fullpath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}
+}
+
+exports.ignoreFile = fullpathOrFilename => {
+	const ignorableExtensions = [...XBIN_CONSTANTS.XBIN_IGNORE_PATH_SUFFIXES, ...XBIN_CONSTANTS.CONF.IGNORE_FILE_EXTENSIONS];
+	return ignorableExtensions.includes(path.extname(fullpathOrFilename));
 }
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.path);

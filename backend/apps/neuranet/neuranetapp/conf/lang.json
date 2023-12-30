@@ -1,0 +1,14 @@
+{
+    "*": {
+        "split_separators": ["\n", ".", " ", ",", ";"]
+    },
+    "en": {
+        "split_separators": ["\n", ".", " ", ",", ";"]
+    },
+    "zh": {
+        "split_separators": ["\n", "。", " ", ",", ";"]
+    },
+    "ja": {
+        "split_separators": ["\n", "。", " ", ",", ";"]
+    }
+}

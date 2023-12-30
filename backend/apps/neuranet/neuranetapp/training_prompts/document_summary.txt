@@ -1,4 +1,0 @@
-Summarize the content based on the below instructions 
----Infer the contents and Summarize it based on keywords
-
-{{{content}}}

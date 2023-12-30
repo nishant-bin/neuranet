@@ -1,0 +1,28 @@
+---
+
+- command: rephrasedoc
+  prompt: |
+    Summarize the document below in simple langauge in no more than {{{words}}} words.
+    {{{fragment}}}
+    The summary is
+  model: chat-gpt35-turbo
+  words: 700
+  pathid: summary
+
+
+- command: rephrasedoc
+  prompt: |
+    Rephrase the content based on the below instructions 
+    ---infer the contents and rephrase it in a more generic context that most people without expertise or knowledge can understand 
+    {{{fragment}}}
+  model: chat-gpt35-turbo
+  pathid: reworded
+
+
+- command: rephrasedoc
+  prompt: |
+    Rephrase this document into an advisory document with multiple sub categories based on the below instructions 
+    --- group this document information into different departments within an organisation so that the information is specific to that certain role. 
+    {{{fragment}}}
+  model: chat-gpt35-turbo
+  pathid: advisory

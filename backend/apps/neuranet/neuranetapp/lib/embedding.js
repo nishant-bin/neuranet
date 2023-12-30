@@ -23,7 +23,7 @@ async function createEmbeddingVector(id, org, text, model) {
 		return {reason: REASONS.LIMIT, error: "User is over quota limit."};
 	}
 
-    const aiModelToUse = jsonReq.model || MODEL_DEFAULT, aiModelObject = await aiutils.getAIModel(aiModelToUse),
+    const aiModelToUse = model || MODEL_DEFAULT, aiModelObject = await aiutils.getAIModel(aiModelToUse),
         aiKey = crypt.decrypt(aiModelObject.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
 		aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${NEURANET_CONSTANTS.CONF.ai_models[aiModelToUse].driver.module}`;
 	let aiLibrary; try{aiLibrary = require(aiModuleToUse);} catch (err) {

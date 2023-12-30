@@ -14,8 +14,8 @@ exports.doService = async (jsonReq, _, headers) => {
 	
 	LOG.debug(`Got copyfile request from: ${jsonReq.from}, to: ${jsonReq.to}`);
 
-	const fromPath = path.resolve(`${await cms.getCMSRoot(headers)}/${jsonReq.from}`); 
-	const toPath = path.resolve(`${await cms.getCMSRoot(headers)}/${jsonReq.to}`);
+	const fromPath = await cms.getFullPath(headers, jsonReq.from, jsonReq.extraInfo); 
+	const toPath = await cms.getFullPath(headers, jsonReq.to, jsonReq.extraInfo);
 
 	const _logCopy = (message, level="info") => LOG[level](`${message} Copy from is ${fromPath} and to is ${toPath}.`)
 
@@ -33,7 +33,7 @@ exports.doService = async (jsonReq, _, headers) => {
 			if (!uploadfile.isMetaDataFile(to)) {	// not a metadata file
 				blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, 
 					path: toPath, ip: utils.getLocalIPs()[0], isDirectory: stats.xbintype == XBIN_CONSTANTS.XBIN_FOLDER, 
-					id: cms.getID(headers), org: cms.getOrg(headers)});
+					id: cms.getID(headers), org: cms.getOrg(headers), extraInfo: jsonReq.extraInfo});
 				return;
 			}
 			const newRemotePath = uploadfile.normalizeRemotePath(jsonReq.to+"/"+relativePath), 

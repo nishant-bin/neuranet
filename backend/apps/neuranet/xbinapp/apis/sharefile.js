@@ -18,7 +18,7 @@ exports.doService = async (jsonReq, _, headers) => {
 		if (jsonReq.path) {	// create initial share
 			LOG.debug("Got share file request for path: " + jsonReq.path);
 
-			const fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${jsonReq.path}`);
+			const fullpath = await cms.getFullPath(headers, jsonReq.path, jsonReq.extraInfo);
 			if (!await cms.isSecure(headers, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 			if (!await uploadfile.isFileConsistentOnDisk(fullpath)) {LOG.error(`Path is not consistent on the disk ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 

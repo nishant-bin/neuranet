@@ -55,11 +55,16 @@ exports.getQuota = async (id, org) => {
 }
 
 exports.getAIFederationModeForOrg = async function(org) {
-	const federationModes = await db.getQuery("SELECT aifederationmode from aifederationmodes where org=? COLLATE NOCASE", [org]);
-	if ((!federationModes) || (!federationModes.length)) {
-		LOG.warn(`No AI federation mode found for org ${org}.`);
-		return null;
-	} else return _flattenArray(federationModes, "aifederationmode")[0];
+	const settings = await getOrgSettings(org);
+	return settings.aifederationmode;
+}
+
+exports.getOrgSettings = async function(org) {
+	const orgSettings = await db.getQuery("SELECT settings from orgsettings where org=? COLLATE NOCASE", [org]);
+	if ((!orgSettings) || (!orgSettings.length)) {
+		LOG.warn(`No org settings found for org ${org}.`);
+		return {};
+	} else return JSON.parse(orgSettings[0]);
 }
 
 function _flattenArray(results, columnName, functionToCall) { 

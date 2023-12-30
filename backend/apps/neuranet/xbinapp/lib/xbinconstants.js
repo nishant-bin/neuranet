@@ -20,6 +20,8 @@ exports.XBIN_FOLDER = "directory";
 exports.XBIN_IGNORE_PATH_SUFFIXES = [exports.XBIN_TEMP_FILE_SUFFIX, exports.STATS_EXTENSION];
 exports.MEM_KEY_WRITE_STATUS = "__org_xbin_file_writer_req_statuses";
 
+exports.ROLES = Object.freeze({ADMIN: "admin", USER: "user", GUEST: "guest"});
+
 exports.XBINEVENT = "__org_monkshu_xbin_event";
 exports.EVENTS = Object.freeze({FILE_CREATED: "file_created", FILE_DELETED: "file_deleted", 
     FILE_MODIFIED: "file_modified", FILE_RENAMED: "file_renamed"});

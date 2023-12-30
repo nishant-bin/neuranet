@@ -19,15 +19,15 @@ exports.doService = async (jsonReq, _, headers) => {
 	LOG.debug("Got operatefile request for path: " + jsonReq.path);
 
 	try {
-		const result = {...CONSTANTS.TRUE_RESULT}, fullpath = path.resolve(`${await cms.getCMSRoot(headers)}/${jsonReq.path}`);
-		if (jsonReq.op == "read") result.data = await downloadfile.readUTF8File(headers, jsonReq.path);	// it is a read operation
+		const result = {...CONSTANTS.TRUE_RESULT}, fullpath = await cms.getFullPath(headers, jsonReq.path, jsonReq.extraInfo);
+		if (jsonReq.op == "read") result.data = await downloadfile.readUTF8File(headers, jsonReq.path, jsonReq.extraInfo);	// it is a read operation
 		else if (jsonReq.op == "write") {
 			await uploadfile.writeUTF8File(headers, jsonReq.path, Buffer.isBuffer(jsonReq.data) ? 
-				jsonReq.data : Buffer.from(jsonReq.data, "utf8"));	// it is a write operation
+				jsonReq.data : Buffer.from(jsonReq.data, "utf8"), jsonReq.extraInfo);	// it is a write operation
 			blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_MODIFIED, path: fullpath, 
-				ip: utils.getLocalIPs()[0], id: cms.getID(headers), org: cms.getOrg(headers), isxbin: true});
+				ip: utils.getLocalIPs()[0], id: cms.getID(headers), org: cms.getOrg(headers), isxbin: true, extraInfo: jsonReq.extraInfo});
 		} else if (jsonReq.op == "updatecomment") await uploadfile.updateFileStats(	// update file comment
-			headers, jsonReq.path, undefined, true, undefined, jsonReq.comment);
+			headers, jsonReq.path, undefined, true, undefined, jsonReq.comment, jsonReq.extraInfo);
 		return result;
 	} catch (err) { LOG.error(`Error operating file: ${jsonReq.path}, error is: ${err}.`); return CONSTANTS.FALSE_RESULT; }
 }

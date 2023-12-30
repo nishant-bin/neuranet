@@ -9,7 +9,7 @@ const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
 exports.doService = async (jsonReq, _servObject, headers, _url) => {
     if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return CONSTANTS.FALSE_RESULT;}
     
-    const id = login.getRole(headers) == "admin" ? (jsonReq.id || login.getID(headers)) : login.getID(headers); 
+    const id = login.getRole(headers) == XBIN_CONSTANTS.ROLES.ADMIN ? (jsonReq.id || login.getID(headers)) : login.getID(headers); 
     if (!id) {LOG.error("Bad ID given to check quota "+id); return CONSTANTS.FALSE_RESULT;}
 
     LOG.debug("Got check quota request for ID: " + id + ", check for bytes to write " + jsonReq.bytestowrite);
