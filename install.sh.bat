@@ -10,3 +10,4 @@ npm install undici
 npm install htmlparser2
 npm install novel-segment
 npm install tinyld
+npm install yaml
