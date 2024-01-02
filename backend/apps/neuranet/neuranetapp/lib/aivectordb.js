@@ -330,14 +330,15 @@ exports.get_vectordb = async function(path, embedding_generator, isMultithreaded
                 embedding_generator, path),
         read: async (vector, notext) => exports.read(vector, notext, path),
         update: async (vector, metadata, text) => exports.update(vector, metadata, text, embedding_generator, path),
-        delete: async (vector, path) =>  exports.delete(vector, path),
+        delete: async (vector) =>  exports.delete(vector, path),    // the brackets are needed to make this a function else delete is a reserved word
         uningest: async vectors => exports.uningest(vectors, db_path),
         query: async (vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, filter_metadata_last, 
                 benchmarkIterations) => exports.query(
             vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, path, filter_metadata_last, 
             benchmarkIterations),
         flush_db: async _ => exports.save_db(path, true),
-        get_path: _ => path, get_embedding_generator: _ => embedding_generator,
+        get_path: _ => path, 
+        get_embedding_generator: _ => embedding_generator,
 	    sort: vectorResults => vectorResults.sort((a,b) => b.similarity - a.similarity),
         unload: async _ => {if (save_timer) clearInterval(save_timer); await exports.free(path);}
     }

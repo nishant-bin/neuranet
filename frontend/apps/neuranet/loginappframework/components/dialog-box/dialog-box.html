@@ -119,7 +119,8 @@ span#close {
     <div id="dialogcontent"></div>
     <div id="buttonbar">
         <span id="ok" onclick="event.stopPropagation(); 
-            onOK?onOK(this):monkshu_env.components['dialog-box'].submit(this)">{{i18n.OK}}</span>
+            if (typeof onOK === 'function') onOK(this); 
+            else monkshu_env.components['dialog-box'].submit(this);">{{i18n.OK}}</span>
         <span id="cancel" onclick="event.stopPropagation();
             monkshu_env.components['dialog-box'].cancel(this)">{{i18n.Cancel}}</span>
     </div>

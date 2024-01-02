@@ -26,12 +26,12 @@ const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
 const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
-const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
 const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/../3p/langdetector.js`);
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
-	MODEL_DEFAULT = "embedding-openai-ada002", DEFAULT_ID = "unknownid", DEFAULT_ORG = "unknownorg", MASTER_DB = "masterdbid";
+	MODEL_DEFAULT = "embedding-openai-ada002", DEFAULT_ID = "unknownid", DEFAULT_ORG = "unknownorg", 
+    MASTER_DB = "masterdbid";
 
 /**
  * Ingests the given file into the AI DBs.
@@ -39,13 +39,14 @@ const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT:
  * @param {string} referencelink The reference link for the document
  * @param {string} id The user ID
  * @param {string} org The user ORG
+ * @param {string} brainid The brain ID
  * @param {string} lang The language to use to ingest. If omitted will be autodetected.
  * @param {object} streamGenerator A read stream generator for this file, if available, else null
  * @param {boolean} dontRebuildDBs If true, the underlying DBs are not rebuilt. If this is used then the
  *                                 DBs must be manually rebuilt later.
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
  */
-async function ingestfile(pathIn, referencelink, id, org, lang, streamGenerator, dontRebuildDBs) {
+async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamGenerator, dontRebuildDBs) {
     LOG.info(`AI DB FS ingestion of file ${pathIn} for ID ${id} and org ${org} started.`);
     if (!(await quota.checkQuota(id, org))) {
 		LOG.error(`Disallowing the ingest call for the path ${pathIn}, as the user ${id} of org ${org} is over their quota.`);
@@ -58,7 +59,7 @@ async function ingestfile(pathIn, referencelink, id, org, lang, streamGenerator,
 			if (response.reason != embedding.REASONS.OK) return null;
 			else return response.embedding;
 		}
-    let vectordb; try { vectordb = await _getVectorDBForIDAndOrgForIngestion(id, org, embeddingsGenerator) } catch(err) { 
+    let vectordb; try { vectordb = await _getVectorDBForIDAndOrgForIngestion(id, org, brainid, embeddingsGenerator) } catch(err) { 
         LOG.error(`Can't instantiate the vector DB ${vectorDB_ID} for ID ${id} and org ${org}. Unable to continue.`);
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
@@ -70,7 +71,7 @@ async function ingestfile(pathIn, referencelink, id, org, lang, streamGenerator,
         streamGenerator() : fs.createReadStream(pathIn), aiModelObjectForEmbeddings, pathIn);
 
     // ingest into the TF.IDF DB
-    const tfidfDB = await _getTFIDFDBForIDAndOrgForIngestion(id, org); let fileContents; 
+    const tfidfDB = await _getTFIDFDBForIDAndOrgForIngestion(id, org, brainid); let fileContents; 
     try {
         LOG.info(`Starting text extraction of file ${pathIn}.`);
         fileContents = await neuranetutils.readFullFile(await _getExtractedTextStream(), "utf8");
@@ -105,10 +106,11 @@ async function ingestfile(pathIn, referencelink, id, org, lang, streamGenerator,
  * Rebuilds the AI databases in memory used during ingestion.
  * @param {string} id The user ID
  * @param {string} org The user ORG
+ * @param {string} brainid The brain ID
  * @throws Exception on error
  */
-async function rebuild(id, org) {
-    const tfidfDB = await _getTFIDFDBForIDAndOrgForIngestion(id, org); 
+async function rebuild(id, org, brainid) {
+    const tfidfDB = await _getTFIDFDBForIDAndOrgForIngestion(id, org, brainid); 
     tfidfDB.rebuild();
 }
 
@@ -116,11 +118,12 @@ async function rebuild(id, org) {
  * Flushes the databases to the file system used during ingestion.
  * @param {string} id The user ID
  * @param {string} org The user ORG
+ * @param {string} brainid The brain ID
  * @throws Exception on error
  */
-async function flush(id, org) {
-    const tfidfDB = await _getTFIDFDBForIDAndOrgForIngestion(id, org); 
-    const vectordb = await _getVectorDBForIDAndOrgForIngestion(id, org, null);
+async function flush(id, org, brainid) {
+    const tfidfDB = await _getTFIDFDBForIDAndOrgForIngestion(id, org, brainid); 
+    const vectordb = await _getVectorDBForIDAndOrgForIngestion(id, org, brainid, null);
     await tfidfDB.flush(); 
     await vectordb.flush_db();
 }
@@ -130,16 +133,17 @@ async function flush(id, org) {
  * @param {string} pathIn The path to the file
  * @param {string} id The user ID
  * @param {string} org The user ORG
+ * @param {string} brainid The brain ID
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
  */
-async function uningestfile(pathIn, id, org) {
-    let vectordb, dbPath; try { vectordb = await _getVectorDBForIDAndOrgForIngestion(id, org); dbPath = await vectordb.get_path(); } catch(err) { 
+async function uningestfile(pathIn, id, org, brainid) {
+    let vectordb; try { vectordb = await _getVectorDBForIDAndOrgForIngestion(id, org, brainid); } catch(err) { 
         LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
     // delete from the TF.IDF DB
-    const docID = _getDocID(pathIn), tfidfDB = await _getTFIDFDBForIDAndOrgForIngestion(id, org), 
+    const docID = _getDocID(pathIn), tfidfDB = await _getTFIDFDBForIDAndOrgForIngestion(id, org, brainid), 
         docsFound = tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
         metadata = docsFound.length > 0 ? docsFound[0].metadata : null;
     if (!metadata) {
@@ -151,7 +155,7 @@ async function uningestfile(pathIn, id, org) {
     const queryResults = await vectordb.query(undefined, -1, undefined, 
         metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID, true);
     if (queryResults) for (const result of queryResults) {
-        try {await vectordb.delete(result.vector, dbPath);} catch (err) {
+        try {await vectordb.delete(result.vector);} catch (err) {
             LOG.error(`Error dropping vector for file ${pathIn} for ID ${id} and org ${org} failed. Some vectors were dropped. Database needs recovery for this file.`);
             LOG.debug(`The vector which failed was ${result.vector}.`);
             return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
@@ -169,16 +173,19 @@ async function uningestfile(pathIn, id, org) {
  * Renames the given file in AI DB and their associated metadatas.
  * @param {string} from The path from
  * @param {string} to The path to
+ * @param {string} new_referencelink The new reference link
  * @param {string} id The user ID
  * @param {string} org The user ORG
+ * @param {string} brainid The brain ID
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
  */
-async function renamefile(from, to, id, org) {
+async function renamefile(from, to, new_referencelink, id, org, brainid) {
     // update TF.IDF DB 
-    const docID = _getDocID(pathIn), tfidfDB = await _getTFIDFDBForIDAndOrgForIngestion(id, org), 
+    const docID = _getDocID(from), tfidfDB = await _getTFIDFDBForIDAndOrgForIngestion(id, org, brainid), 
         docsFound = tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
         metadata = docsFound.length > 0 ? docsFound[0].metadata : null, 
-        newmetadata = {...metadata, fullpath: to}; 
+        new_referencelink_encoded = encodeURI(new_referencelink||_getDocID(to)),
+        newmetadata = {...(metadata||{}), referencelink: new_referencelink_encoded, fullpath: to}; 
     newmetadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(to);
     if (!metadata) {
         LOG.error(`Document to rename at path ${path} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
@@ -186,15 +193,15 @@ async function renamefile(from, to, id, org) {
     } else tfidfDB.update(metadata, newmetadata);
 
     // update vector DB
-    let vectordb; try { vectordb = await _getVectorDBForIDAndOrgForIngestion(id, org); } catch(err) { 
+    let vectordb; try { vectordb = await _getVectorDBForIDAndOrgForIngestion(id, org, brainid); } catch(err) { 
         LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
     const queryResults = await vectordb.query(undefined, -1, undefined, 
-        metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID, true); 
+        metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID); 
     if (queryResults) for (const result of queryResults) {
-        if (!vectordb.update(result.vector, newmetadata)) {
+        if (!vectordb.update(result.vector, newmetadata, result.text)) {
             LOG.error(`Renaming the vector file paths failed from path ${from} to path ${to} for ID ${id} and org ${org}.`);
             return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
         } 
@@ -208,48 +215,50 @@ async function renamefile(from, to, id, org) {
 }
 
 /**
- * Returns the TF.IDF DB instances for the given ID, ORG. Useful for searching only. Ingestion
- * should be done via a CMS operation which auto-triggers this module.
+ * Returns the TF.IDF DB instances for the given ID, ORG and brain IDs. Useful for searching only. 
+ * Ingestion should be done via a CMS operation which auto-triggers this module.
  * @param {string} id The user ID
  * @param {string} org The user ORG
+ * @param {string} brainid The brain ID
  * @returns The TF.IDF DB instances, throws an exception on error.
  */
-async function getTFIDFDBsForIDAndOrg(id, org) {
+async function getTFIDFDBsForIDAndOrg(id, org, brainid) {
     const aifederationmode = await dblayer.getAIFederationModeForOrg(org);
-    if (aifederationmode == "only_private") return [await _getPrivateTFIDFDBForIDAndOrg(id, org)];
+    if (aifederationmode == "only_private") return [await _getPrivateTFIDFDBForIDAndOrg(id, org, brainid,)];
     if (aifederationmode == "only_master" || "master_and_private") {
         const tfidfdbMaster = await _getMasterTFIDFDBForOrg(org);
         if (aifederationmode == "only_master" || (await login.isIDAdminForOrg(id, org))) return [tfidfdbMaster]; // admins control the master DB
-        else return [await _getPrivateTFIDFDBForIDAndOrg(id, org), tfidfdbMaster];
+        else return [await _getPrivateTFIDFDBForIDAndOrg(id, org, brainid,), tfidfdbMaster];
     }
 
     LOG.error(`Unsupported federation mode ${aifederationmode} for id ${id} and ord ${org}. Returning private TF.IDF DB only.`);
-    return await _getPrivateTFIDFDBForIDAndOrg(id, org);
+    return await _getPrivateTFIDFDBForIDAndOrg(id, org, brainid,);
 
     // todo: add mapped DBs logic here
 }
 
 /**
- * Returns the Vector DB instances for the given ID, ORG and embeddings generator. 
+ * Returns the Vector DB instances for the given ID, ORG, brain ID and embeddings generator. 
  * Useful for searching only. Ingestion should be done via a CMS operation which 
  * auto-triggers this module.
  * @param {string} id The user ID
  * @param {string} org The user ORG
+ * @param {string} brainid The brain ID
  * @param {function} embeddingsGenerator The vector embeddings generator to use. Function that takes text and returns a vector of floats.
  * @param {boolean} multithreaded Should the vector DB run multithreaded
  * @returns The Vector DB instances, throws an exception on error.
  */
-async function getVectorDBsForIDAndOrg(id, org, embeddingsGenerator, multithreaded) {
+async function getVectorDBsForIDAndOrg(id, org, brainid, embeddingsGenerator, multithreaded) {
     const aifederationmode = await dblayer.getAIFederationModeForOrg(org);
-    if (aifederationmode == "only_private") return await _getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator, multithreaded);
+    if (aifederationmode == "only_private") return await _getPrivateVectorDBForIDAndOrg(id, org, brainid, embeddingsGenerator, multithreaded);
     if (aifederationmode == "only_master" || "master_and_private") {
         const vectordbMaster = await _getMasterVectorDBForOrg(org, embeddingsGenerator, multithreaded);
         if (aifederationmode == "only_master" || (await login.isIDAdminForOrg(id, org))) return [vectordbMaster];  // admins control the master DB
-        else return [await _getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator, multithreaded), vectordbMaster];
+        else return [await _getPrivateVectorDBForIDAndOrg(id, org, brainid, embeddingsGenerator, multithreaded), vectordbMaster];
     } 
 
     LOG.error(`Unsupported federation mode ${aifederationmode} for id ${id} and ord ${org}. Returning private Vector DB only.`);
-    return await _getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator, multithreaded);
+    return await _getPrivateVectorDBForIDAndOrg(id, org, brainid, embeddingsGenerator, multithreaded);
 
     // todo: add mapped DBs logic here
 }
@@ -264,14 +273,14 @@ async function getAIModelForFiles(modelName) {
     return aiModelObjectForEmbeddings;
 }
 
-async function _getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator, multithreaded) {
-    const vectordb = await aivectordb.get_vectordb(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org)}/vectordb`, 
+async function _getPrivateVectorDBForIDAndOrg(id, org, brainid, embeddingsGenerator, multithreaded) {
+    const vectordb = await aivectordb.get_vectordb(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org, brainid)}/vectordb`, 
         embeddingsGenerator, multithreaded);
     return vectordb;
 }
 
-async function _getPrivateTFIDFDBForIDAndOrg(id, org) {
-    const tfidfdb = await aitfidfdb.get_tfidf_db(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org)}/tfidfdb`, 
+async function _getPrivateTFIDFDBForIDAndOrg(id, org, brainid) {
+    const tfidfdb = await aitfidfdb.get_tfidf_db(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org, brainid)}/tfidfdb`, 
         NEURANET_CONSTANTS.NEURANET_DOCID, NEURANET_CONSTANTS.NEURANET_LANGID, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`);
     return tfidfdb;
 }
@@ -287,12 +296,13 @@ const _getMasterTFIDFDBForOrg = async org => await aitfidfdb.get_tfidf_db(
  * Admins always ingest into master. Other IDs always ingest into their private DBs. Regardless
  * of the AI federation modes. This also implies a single unified master DB for all admins. 
  */
-const _getTFIDFDBForIDAndOrgForIngestion = async (id, org) => await login.isIDAdminForOrg(id, org) ? 
-    await _getMasterTFIDFDBForOrg(org): await _getPrivateTFIDFDBForIDAndOrg(id, org);
-const _getVectorDBForIDAndOrgForIngestion = async (id, org, embeddingsGenerator) => await login.isIDAdminForOrg(id, org) ?
-    await _getMasterVectorDBForOrg(org, embeddingsGenerator) : await _getPrivateVectorDBForIDAndOrg(id, org, embeddingsGenerator);
+const _getTFIDFDBForIDAndOrgForIngestion = async (id, org, brainid) => await login.isIDAdminForOrg(id, org) ? 
+    await _getMasterTFIDFDBForOrg(org): await _getPrivateTFIDFDBForIDAndOrg(id, org, brainid);
+const _getVectorDBForIDAndOrgForIngestion = async (id, org, brainid, embeddingsGenerator) => 
+    await login.isIDAdminForOrg(id, org) ? await _getMasterVectorDBForOrg(org, embeddingsGenerator) : 
+    await _getPrivateVectorDBForIDAndOrg(id, org, brainid, embeddingsGenerator);
 
-const _getDBID = (id, org) => `${(org||DEFAULT_ORG).toLowerCase()}/${(id||DEFAULT_ID).toLowerCase()}/${brainhandler.getActiveBrainIDForUser(id, org)}`;
+const _getDBID = (id, org, brainid) => `${(org||DEFAULT_ORG).toLowerCase()}/${(id||DEFAULT_ID).toLowerCase()}/${brainid}`;
 
 async function _extractTextViaPluginsUsingStreams(inputstream, aiModelObject, filepath) {
     for (const textExtractor of aiModelObject.text_extraction_plugins) {

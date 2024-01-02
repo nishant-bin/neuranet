@@ -1,4 +1,4 @@
 {
     "noncms_drive": "{{{APPROOT}}}/../drive",
-    "enabled": false
+    "enabled": true
 }
