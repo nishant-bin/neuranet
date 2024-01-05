@@ -44,7 +44,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 				_areCMSPathsSame(message.cmspath, cmsPath)) resolve(message); }));
 		if (!(await uploadfile.uploadFile(jsonReq.id, jsonReq.org, 
 				Buffer.from(jsonReq.data, jsonReq.encoding||"utf8"), cmsPath, jsonReq.comment, 
-				{activeBrainID: jsonReq.activeBrainID})).result) {
+				{appid: jsonReq.appid})).result) {
 
 			LOG.error(`CMS error uploading document for request ${JSON.stringify(jsonReq)}`); 
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
@@ -64,4 +64,4 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 }
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.filename && jsonReq.data && jsonReq.id && 
-	jsonReq.org && jsonReq.activeBrainID);
+	jsonReq.org && jsonReq.appid);

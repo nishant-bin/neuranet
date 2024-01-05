@@ -290,14 +290,15 @@ function _getLangNormalizedWords(document, lang, db, fastSplit = true) {
     }
     const _isStopWord = word => {   // can auto learn stop words if needed, language agnostic
         if (word.trim() == "") return true; // emptry words are useless
-        const dbDocCount = Object.keys(db.tfidfDocStore).length;
-        if ((!db._stopwords) && (dbDocCount > MIN_STOP_WORD_IDENTIFICATION_LENGTH)) {   // auto learn stop words if possible
-            db._stopwords = []; for (const [thisWordIndex, thisWordDocCount] of Object.entries(db.wordDocCounts)) 
+        const dbDocCount = Object.keys(db.tfidfDocStore).length, dbHasStopWords = db._stopwords?.[lang] && db._stopwords[lang].length > 0;
+        if ((!dbHasStopWords) && (dbDocCount > MIN_STOP_WORD_IDENTIFICATION_LENGTH)) {   // auto learn stop words if possible
+            if (!db._stopwords) db._stopwords = {}; db._stopwords.lang = [];
+            for (const [thisWordIndex, thisWordDocCount] of Object.entries(db.wordDocCounts)) 
                 if ((thisWordDocCount/dbDocCount) > MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS) 
-                    db._stopwords.push(_getDocWordFromIndex(thisWordIndex, db));
+                    db._stopwords[lang].push(_getDocWordFromIndex(thisWordIndex, db));
         }
         
-        if (!db._stopwords) return false;   // nothing to do
+        if (!db._stopwords?.[lang]) return false;   // nothing to do
         const isStopWord = db._stopwords[lang].includes(word); 
         return isStopWord;
     }

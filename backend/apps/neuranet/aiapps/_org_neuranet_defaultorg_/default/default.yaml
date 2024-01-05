@@ -1,0 +1,36 @@
+---
+id: default
+interface: chat
+users: "*"
+
+
+pregen_flow: 
+  - command: rephrasedoc
+    label: Summary
+    prompt: |
+      Summarize the document below in simple langauage in no more than {{{words}}} words.
+      {{{fragment}}}
+      The summary is
+    model: simplellm-gpt35-turbo
+    promptparam(words): 700
+    pathid: summary
+    encoding: utf8
+
+  - command: rephrasedoc
+    label: Rephrased
+    prompt: |
+      Rephrase the content based on the below instructions 
+      ---infer the contents and rephrase it in a more generic context that most people without expertise or knowledge can understand 
+      {{{fragment}}}
+    model: simplellm-gpt35-turbo
+    pathid: reworded
+    encoding: utf8
+
+
+llm_flow: 
+  - command: tfidfFollowedByVectorSearch
+  - command: llm_history_chat
+
+
+modules: 
+  llm_history_chat: llm_history_chat.js

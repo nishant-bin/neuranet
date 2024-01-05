@@ -9,15 +9,15 @@ const cms = require(`${LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 
 exports.initSync = _ => {
     cms.addCMSPathModifier((cmsroot, id, org, extraInfo) => {
-        const activeBrainIDForUser = exports.getActiveBrainIDForUser(id, org, extraInfo);
-        return `${cmsroot}/${activeBrainIDForUser}`;
+        const brainIDForUser = exports.getAppID(id, org, extraInfo);
+        return `${cmsroot}/${brainIDForUser}`;
     })
 }
 
-exports.getActiveBrainIDForUser = function(id, org, extraInfo) {
-    if (!extraInfo) return NEURANET_CONSTANTS.DEFAULT_BRAIN_ID;
+exports.getAppID = function(id, org, extraInfo) {
+    if (!extraInfo) return NEURANET_CONSTANTS.DEFAULT_AI_APP;
 
-    if (extraInfo.id != id || extraInfo.org != org) return NEURANET_CONSTANTS.DEFAULT_BRAIN_ID;
+    if (extraInfo.id != id || extraInfo.org != org) return NEURANET_CONSTANTS.DEFAULT_AI_APP;
 
-    return extraInfo.activeBrainID||NEURANET_CONSTANTS.DEFAULT_BRAIN_ID;
+    return extraInfo.appid||NEURANET_CONSTANTS.DEFAULT_AI_APP;
 }

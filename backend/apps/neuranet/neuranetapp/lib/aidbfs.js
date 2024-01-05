@@ -87,10 +87,11 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
     // ingest into the vector DB
     LOG.info(`Starting Vector DB ingestion of file ${pathIn}.`);
 	try { 
-        const chunkSize = aiModelObjectForEmbeddings.chunk_size[lang] || aiModelObjectForEmbeddings.chunk_size.en;
+        const chunkSize = aiModelObjectForEmbeddings.vector_chunk_size[lang] || aiModelObjectForEmbeddings.vector_chunk_size["*"],
+            split_separators = aiModelObjectForEmbeddings.split_separators[lang] || aiModelObjectForEmbeddings.split_separators["*"];
         await vectordb.ingeststream(metadata, fileContents ? stream.Readable.from(fileContents) : 
             await _getExtractedTextStream(), aiModelObjectForEmbeddings.encoding, chunkSize, 
-                aiModelObjectForEmbeddings.split_separators, aiModelObjectForEmbeddings.overlap);
+                split_separators, aiModelObjectForEmbeddings.overlap);
     } catch (err) { 
         tfidfDB.delete(metadata);   // delete the file from tf.idf DB too to keep them in sync
         LOG.error(`Vector ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 

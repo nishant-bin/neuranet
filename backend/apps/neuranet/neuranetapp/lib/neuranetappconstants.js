@@ -7,6 +7,7 @@
 const path = require("path");
 const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const APPROOT = path.resolve(`${LOGINAPP_CONSTANTS.APP_ROOT}/${LOGINAPP_CONSTANTS.EMBEDDED_APP_NAME}`);
+const BACKEND_ROOT = path.resolve(LOGINAPP_CONSTANTS.APP_ROOT);
 
 exports.APPROOT = path.resolve(APPROOT);
 exports.APIDIR = path.resolve(`${APPROOT}/apis`);
@@ -19,12 +20,13 @@ exports.THIRDPARTYDIR = path.resolve(`${APPROOT}/3p`);
 exports.PLUGINSDIR = path.resolve(`${APPROOT}/plugins`);
 exports.DBDIR = path.resolve(LOGINAPP_CONSTANTS.DB_DIR);
 exports.AIDBPATH = path.resolve(`${LOGINAPP_CONSTANTS.DB_DIR}/ai_db`);
+exports.DEFAULT_ORG = "_org_neuranet_defaultorg_";
+exports.AIAPPDIR = path.resolve(`${BACKEND_ROOT}/aiapps`);
+exports.DEFAULT_AI_APP = "default";
+exports.DEFAULT_AI_APP_PATH = path.resolve(`${exports.AIAPPDIR}/${exports.DEFAULT_ORG}/${exports.DEFAULT_AI_APP}`);
 
 exports.NEURANET_DOCID = "aidb_docid";
 exports.NEURANET_LANGID = "aidb_langid";
-
-exports.DEFAULT_BRAIN_ID = "default";
-exports.ACTIVE_BRAIN_ID_PROPERTY = "activeBrainID";
 
 exports.getPlugin = name => serverutils.requireWithDebug(`${APPROOT}/plugins/${name}/${name}.js`, 
     LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS.CONF.debug_mode);

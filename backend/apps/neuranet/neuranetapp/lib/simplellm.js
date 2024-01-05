@@ -30,7 +30,8 @@ exports.prompt_answer = async function(promptFileOrPrompt, id, org, data, modelN
 		return null;    // quota issue
 	}
 
-    const aiModelObject = typeof modelNameOrModelObject === "string" ? await aiutils.getAIModel(modelNameOrModelObject) : modelNameOrModelObject,
+    const aiModelObject = typeof modelNameOrModelObject === "string" ? 
+        await aiutils.getAIModel(modelNameOrModelObject) : modelNameOrModelObject,
         aiKey = crypt.decrypt(aiModelObject.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
         aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObject.driver.module}`;
 
@@ -39,16 +40,17 @@ exports.prompt_answer = async function(promptFileOrPrompt, id, org, data, modelN
         return null;    // bad AI library or model
     }
 
-    const prompt = (data?mustache.render(await aiutils.getPrompt(promptFileOrPrompt), data):promptFileOrPrompt).replace(/\r\n/gm,"\n");
+    const rawPrompt = typeof promptFileOrPrompt === "string" ? promptFileOrPrompt : await aiutils.getPrompt(promptFileOrPrompt);
+    const prompt = (data?mustache.render(rawPrompt, data):rawPrompt).replace(/\r\n/gm,"\n");
     const promptJSONForAILib = JSON.stringify([{role: aiModelObject.system_role, 
         content: aiModelObject.system_message}, {role: aiModelObject.user_role, content: prompt}]);
 
-    const response = await aiLibrary.process(null, promptJSONForAILib, aiKey, aiModelToUse, true);
+    const response = await aiLibrary.process(null, promptJSONForAILib, aiKey, aiModelObject.name, true);
     if (!response) {
         LOG.error("SimpleLLM: LLM API library returned internal error (null reponse)."); 
         return null; // LLM call error
     }
 
-    if (id) dblayer.logUsage(id, response.metric_cost, aiModelToUse);
+    if (id) dblayer.logUsage(id, response.metric_cost, aiModelObject.name);
     return response.airesponse;
 }
