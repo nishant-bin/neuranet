@@ -128,9 +128,9 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
         return false;
     }
 
-    const dbToUse = dbs[_get_db_index(db_path)];
+    const dbToUse = dbs[_get_db_index(db_path)]; 
     const vectorHash = _get_vector_hash(vector), texthash = _get_text_hash(text); 
-    if ((!dbToUse.texthashes.includes(texthash)) && (!dbToUse.index[vectorHash])) {  // only add the vector if we already don't have it
+    if ((!dbToUse.texthashes.includes(texthash)) && (!dbToUse.index[vectorHash])) {  // need to change this as we lose vectors
         dbToUse.index[vectorHash] = {vector, hash: vectorHash, metadata, length: _getVectorLength(vector), texthash}; 
         dbToUse.texthashes.push(texthash);
         
@@ -141,7 +141,7 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
             return false;
         }
         dbToUse.dirty = true; if (dbToUse.multithreaded) await _update_db_for_worker_threads();
-    }
+    } 
     
     LOG.debug(`Added vector ${vector} with hash ${vectorHash} to DB at index ${_get_db_index(db_path)}.`);
     return vector;

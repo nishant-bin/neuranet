@@ -27,7 +27,7 @@ const uploadfile = require(`${LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS.API_DIR}/upl
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"};
 
-const DYNAMIC_FILES_FOLDER = "dynamic";
+const DYNAMIC_FILES_FOLDER = NEURANET_CONSTANTS.DYNAMIC_FILES_FOLDER;
 
 exports.DYNAMIC_FILES_FOLDER = DYNAMIC_FILES_FOLDER;
 exports.doService = async (jsonReq, _servObject, _headers, _url) => {

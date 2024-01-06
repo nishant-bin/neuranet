@@ -28,6 +28,9 @@ exports.DEFAULT_AI_APP_PATH = path.resolve(`${exports.AIAPPDIR}/${exports.DEFAUL
 exports.NEURANET_DOCID = "aidb_docid";
 exports.NEURANET_LANGID = "aidb_langid";
 
+exports.DYNAMIC_FILES_FOLDER = "dynamic";
+exports.GENERATED_FILES_FOLDER = "_nueranet_generated";
+
 exports.getPlugin = name => serverutils.requireWithDebug(`${APPROOT}/plugins/${name}/${name}.js`, 
     LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS.CONF.debug_mode);
 

@@ -24,7 +24,7 @@ const deleteFile = require(`${LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS.API_DIR}/del
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"};
 
-const DYNAMIC_FILES_FOLDER = "dynamic";
+const DYNAMIC_FILES_FOLDER = NEURANET_CONSTANTS.DYNAMIC_FILES_FOLDER;
 
 exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
@@ -39,7 +39,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 			message => { if (message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED && 
 				_areCMSPathsSame(message.cmspath, cmsPath)) resolve(message); }));
 		if (!(await deleteFile.deleteFile({xbin_id: jsonReq.id, xbin_org: jsonReq.org}, cmsPath, 
-				{activeBrainID: jsonReq.activeBrainID})).result) {
+				{appid: jsonReq.appid})).result) {
 
 			LOG.error(`CMS error deleting document for request ${JSON.stringify(jsonReq)}`); 
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
@@ -58,4 +58,4 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 	}
 }
 
-const validateRequest = jsonReq => (jsonReq && jsonReq.filename && jsonReq.id && jsonReq.org && jsonReq.activeBrainID);
+const validateRequest = jsonReq => (jsonReq && jsonReq.filename && jsonReq.id && jsonReq.org && jsonReq.appid);

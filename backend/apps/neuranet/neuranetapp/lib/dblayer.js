@@ -55,7 +55,7 @@ exports.getQuota = async (id, org) => {
 }
 
 exports.getAIFederationModeForOrg = async function(org) {
-	const settings = await getOrgSettings(org);
+	const settings = await exports.getOrgSettings(org);
 	return settings.aifederationmode;
 }
 
@@ -64,7 +64,7 @@ exports.getOrgSettings = async function(org) {
 	if ((!orgSettings) || (!orgSettings.length)) {
 		LOG.warn(`No org settings found for org ${org}.`);
 		return {};
-	} else return JSON.parse(orgSettings[0]);
+	} else return JSON.parse(orgSettings[0].settings);
 }
 
 function _flattenArray(results, columnName, functionToCall) { 
