@@ -5,7 +5,6 @@
  */
 
 const path = require("path");
-const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const APPROOT = path.resolve(`${LOGINAPP_CONSTANTS.APP_ROOT}/${LOGINAPP_CONSTANTS.EMBEDDED_APP_NAME}`);
 const BACKEND_ROOT = path.resolve(LOGINAPP_CONSTANTS.APP_ROOT);
 
@@ -21,9 +20,10 @@ exports.PLUGINSDIR = path.resolve(`${APPROOT}/plugins`);
 exports.DBDIR = path.resolve(LOGINAPP_CONSTANTS.DB_DIR);
 exports.AIDBPATH = path.resolve(`${LOGINAPP_CONSTANTS.DB_DIR}/ai_db`);
 exports.DEFAULT_ORG = "_org_neuranet_defaultorg_";
+exports.DEFAULT_ID = "_default_";
 exports.AIAPPDIR = path.resolve(`${BACKEND_ROOT}/aiapps`);
-exports.DEFAULT_AI_APP = "default";
-exports.DEFAULT_AI_APP_PATH = path.resolve(`${exports.AIAPPDIR}/${exports.DEFAULT_ORG}/${exports.DEFAULT_AI_APP}`);
+exports.DEFAULT_ORG_DEFAULT_AIAPP = "_org_neuranet_default_aiapp_";
+
 
 exports.NEURANET_DOCID = "aidb_docid";
 exports.NEURANET_LANGID = "aidb_langid";
@@ -31,8 +31,7 @@ exports.NEURANET_LANGID = "aidb_langid";
 exports.DYNAMIC_FILES_FOLDER = "dynamic";
 exports.GENERATED_FILES_FOLDER = "_nueranet_generated";
 
-exports.getPlugin = name => serverutils.requireWithDebug(`${APPROOT}/plugins/${name}/${name}.js`, 
-    LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS.CONF.debug_mode);
+exports.getPlugin = name => require(`${exports.LIBDIR}/pluginhandler.js`).getPlugin(name);
 
 exports.NEURANETEVENT = "__org_monkshu_neuranet_event";
 exports.EVENTS = Object.freeze({AIDB_FILE_PROCESSING: "aidb_file_processing", 

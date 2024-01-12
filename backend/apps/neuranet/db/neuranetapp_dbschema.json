@@ -15,8 +15,9 @@
     "INSERT INTO views (org, view) VALUES ('tekmonks', 'chat')",
 
 
-    "CREATE TABLE orgsettings(org varchar not null, settings varchar not null)",
-    "INSERT INTO orgsettings (org, settings) VALUES ('tekmonks', '{\"pregen\": true, \"aifederationmode\": \"only_master\"}')",
+    "CREATE TABLE orgsettings(org varchar not null primary key, settings varchar not null)",
+    "INSERT INTO orgsettings (org, settings) VALUES ('_org_neuranet_defaultorg_', '{\"pregen\": true, \"defaultapp\": \"default\"}')",
+    "INSERT INTO orgsettings (org, settings) VALUES ('tekmonks', '{\"pregen\": true, \"defaultapp\": \"tkmaiapp\"}')",
 
 
     "CREATE TABLE usage(timestamp TIMESTAMP DEFAULT (strftime('%s', 'now')), id varchar not null, usage integer not null, model varchar not null)",

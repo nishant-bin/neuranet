@@ -24,6 +24,7 @@ const deletefile = require(`${XBIN_CONSTANTS.API_DIR}/deletefile.js`);
 const renamefile = require(`${XBIN_CONSTANTS.API_DIR}/renamefile.js`);
 const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
 const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
+const textextractor = require(`${NEURANET_CONSTANTS.LIBDIR}/textextractor.js`);
 const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
 
 let conf;
@@ -37,7 +38,7 @@ exports.initSync = _ => {
     
     blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message));
     blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, message => _handleFileEvent(message));
-    _initPluginsSync(); 
+    _initPluginsAsync(); 
 }
 
 async function _handleFileEvent(message) {
@@ -82,7 +83,7 @@ async function _handleFileEvent(message) {
 
 async function _ingestfile(pathIn, id, org, isxbin, lang, extraInfo) {
     const cmspath = isxbin ? await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn, extraInfo) : pathIn;
-    const indexer = _getFileIndexer(pathIn, isxbin, id, org, cmspath, extraInfo, lang), 
+    const indexer = await _getFileIndexer(pathIn, isxbin, id, org, cmspath, extraInfo, lang), 
         filePluginResult = await _searchForFilePlugin(indexer);
     if (filePluginResult.plugin) return {result: await filePluginResult.plugin.ingest(indexer)};
     if (filePluginResult.error) return {result: false, cause: "Plugin validation failed."}
@@ -91,7 +92,7 @@ async function _ingestfile(pathIn, id, org, isxbin, lang, extraInfo) {
 
 async function _uningestfile(pathIn, id, org, isxbin, extraInfo) {
     const cmspath = isxbin ? await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn, extraInfo) : pathIn;
-    const indexer = _getFileIndexer(pathIn, isxbin, id, org, cmspath, extraInfo), 
+    const indexer = await _getFileIndexer(pathIn, isxbin, id, org, cmspath, extraInfo), 
         filePluginResult = await _searchForFilePlugin(indexer);
     if (filePluginResult.plugin) return {result: await filePluginResult.plugin.uningest(indexer)};
     if (filePluginResult.error) return {result: false, cause: "Plugin validation failed."}
@@ -101,26 +102,22 @@ async function _uningestfile(pathIn, id, org, isxbin, extraInfo) {
 async function _renamefile(from, to, id, org, isxbin, extraInfo) {
     const cmspathFrom = isxbin ? await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, from, extraInfo) : from;
     const cmspathTo = isxbin ? await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, to, extraInfo) : to;
-    const indexer = _getFileIndexer(from, isxbin, id, org, cmspathFrom, extraInfo), filePluginResult = await _searchForFilePlugin(indexer);
+    const indexer = await _getFileIndexer(from, isxbin, id, org, cmspathFrom, extraInfo), filePluginResult = await _searchForFilePlugin(indexer);
     indexer.filepathTo = to; indexer.cmspathTo = cmspathTo;
     if (filePluginResult.plugin) return {result: await filePluginResult.plugin.rename(indexer)};
     if (filePluginResult.error) return {result: false, cause: "Plugin validation failed."}
     else {const result = await indexer.renameFile(cmspathFrom, cmspathTo, false, true); await indexer.end(); return result;}
 }
 
-async function _initPluginsSync() {
-    const aiModelObject = await aidbfs.getAIModelForFiles();
-
-    for (const file_plugin of aiModelObject.file_handling_plugins) {
+async function _initPluginsAsync() {
+    for (const file_plugin of conf.file_handling_plugins) {
         const pluginThis = NEURANET_CONSTANTS.getPlugin(file_plugin);
-        if (pluginThis.initAsync) await pluginThis.initSync();
+        if (pluginThis.initAsync) await pluginThis.initAsync();
     }
 }
 
 async function _searchForFilePlugin(fileindexerForFile) {
-    const aiModelObject = await aidbfs.getAIModelForFiles();
-
-    for (const file_plugin of aiModelObject.file_handling_plugins) {
+    for (const file_plugin of conf.file_handling_plugins) {
         const pluginThis = NEURANET_CONSTANTS.getPlugin(file_plugin);
         try {if (await pluginThis.canHandle(fileindexerForFile)) return {plugin: pluginThis, result: true, error: null};}
         catch (err) { LOG.error(`Plugin validation failed for ${file_plugin}. The error was ${err}`);
@@ -130,16 +127,27 @@ async function _searchForFilePlugin(fileindexerForFile) {
     return {error: null, result: false};
 }
 
-function _getFileIndexer(pathIn, isxbin, id, org, cmspath, extraInfo, lang) {
+async function _getFileIndexer(pathIn, isxbin, id, org, cmspath, extraInfo, lang) {
     return {
         filepath: pathIn, id, org, lang, minimum_success_percent: DEFAULT_MINIMIMUM_SUCCESS_PERCENT, cmspath,
-        aiappid: brainhandler.getAppID(id, org, extraInfo),
-        getContents: encoding => neuranetutils.readFullFile(isxbin?downloadfile.getReadStream(pathIn, extraInfo):fs.createReadStream(pathIn), encoding),
-        getReadstream: _ => isxbin?downloadfile.getReadStream(pathIn, extraInfo):fs.createReadStream(pathIn),
+        aiappid: await brainhandler.getAppID(id, org, extraInfo),
+        getReadstream: async function() {
+            const inputStream = isxbin?downloadfile.getReadStream(pathIn, extraInfo):fs.createReadStream(pathIn);
+            const readStream = await textextractor.extractTextAsStreams(inputStream, this.filepath);
+            return readStream;
+        },
+        getContents: async function(encoding) {
+            try {
+                const contents = await neuranetutils.readFullFile(await this.getReadstream(), encoding);
+                return contents;
+            } catch (err) {
+                LOG.error(`CRITICAL: File contant extraction failed for ${this.filepath}.`);
+                return null;
+            }
+        },
         start: function(){},
         end: async function() { try {await aidbfs.rebuild(id, org, this.aiappid); await aidbfs.flush(id, org, this.aiappid); return true;} catch (err) {
             LOG.error(`Error ending AI databases. The error is ${err}`); return false;} },
-
         //addfile, removefile, renamefile - all follow the same high level logic
         addFile: async function(bufferOrStream, cmsPathThisFile, langFile, comment, runAsNewInstructions, noDiskOperation) {
             try {

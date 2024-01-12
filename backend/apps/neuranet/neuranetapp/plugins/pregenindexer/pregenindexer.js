@@ -2,20 +2,31 @@
  * Indexes the given document as a pre-gen flow (GARAGe) 
  * approach.
  * 
+ * All pregen plugins must contain this function
+ * async function generate(fileindexer, generatorDefinition)
+ * 
  * (C) 2023 TekMonks. All rights reserved.
  * License: See the enclosed LICENSE file.
  */
 
 const path = require("path");
+const conf = require(`${__dirname}/pregenindexer.json`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 
-/** @return We can handle all files, so always returns true */
-exports.canHandle = _ => true; // we can handle all files
+/** @return true if we can handle else false */
+exports.canHandle = async fileindexer => {
+    const pregenStepObjects = await aiapp.getPregenObject(fileindexer.id, fileindexer.org, fileindexer.aiappid);
+    if ((!pregenStepObjects) || (!pregenStepObjects.length)) return false;  // nothing to pregen for this app
+
+    if (conf.skip_extensions.includes(path.extname(fileindexer.filepath).toLowerCase())) return false; 
+
+    return true;    // if told to pregen, then we can handle all files
+}
 
 /**
  * Will ingest the given file and generate the corresponding pregen (GARAGe) files for it.
- * @param {bject} fileindexer The file indexer object
+ * @param {object} fileindexer The file indexer object
  * @returns true on success or false on failure
  */
 exports.ingest = async function(fileindexer) {
@@ -23,8 +34,8 @@ exports.ingest = async function(fileindexer) {
     for (const pregenStep of pregenSteps) {
         const pregenResult = await pregenStep.generate(fileindexer);
         if (pregenResult.result) {
-            const indexResult = await fileindexer.addFile(pregenResult.contentBufferOrReadStream(), pregenStep.cmspath, pregenResult.lang, 
-                pregenStep.comment, false, false);
+            const indexResult = await fileindexer.addFile(pregenResult.contentBufferOrReadStream(), 
+                pregenStep.cmspath, pregenResult.lang, pregenStep.comment, false, false);
             if (!indexResult) {LOG.error(`Pregen failed at step ${pregenStep.label} in add generated file.`); finalResult = false;} 
         } else {LOG.error(`Pregen failed at step ${pregenStep.label} in generate.`); finalResult = false;}
     }

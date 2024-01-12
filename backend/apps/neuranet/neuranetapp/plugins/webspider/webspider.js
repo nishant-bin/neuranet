@@ -15,7 +15,7 @@ const DEFAULT_MIMES = {"text/html":{ending:".html"}, "application/pdf":{ending:"
 
 exports.canHandle = async function(fileindexer) {
     if (fileindexer.filepath.toLowerCase().endsWith(PLUGIN_EXTENSION)) {
-        const fileContents = await fileindexer.getContents();
+        const fileContents = await fileindexer.getContents(); if (!fileContents) return false;
         let crawlInstructions; try { crawlInstructions = JSON.parse(fileContents); } catch (err) { return false; }
         if (_normalizePath(fileindexer.cmspath.toLowerCase()) == 
             _normalizePath(crawlInstructions.outfolder.toLowerCase())) throw new Error(
@@ -25,48 +25,62 @@ exports.canHandle = async function(fileindexer) {
 }
 
 exports.ingest = async function(fileindexer) {
-    const fileContents = await fileindexer.getContents();
+    const fileContents = await fileindexer.getContents(); if (!fileContents) {LOG.error(`Content extraction failed for ${fileindexer.filepath}.`); return false;}
     let crawlingInstructions; try {crawlingInstructions = JSON.parse(fileContents)} catch (err) {
         LOG.error(`Can't crawl ${fileindexer.filepath} due to JSON parsing error ${err}.`);
         return false;
     }
     if (!Array.isArray(crawlingInstructions)) crawlingInstructions = [crawlingInstructions];
 
-    const _logCrawlError = url => LOG.error(`Site crawl of ${url} failed. Nothing was ingested from this site.`);
-
     let allCrawlsResult = true;
     for (const crawlingInstructionsThis of crawlingInstructions) {
-        const output_folder = path.resolve(`${__dirname}/${spiderconf.crawl_output_root}/${
-            spiderconf.dont_crawl ? spiderconf.ingestion_folder : crawler.coredomain(crawlingInstructionsThis.url)+"."+Date.now()}`);
-        LOG.info(`Starting crawling the URL ${crawlingInstructionsThis.url} to path ${output_folder}.`);
-        const crawlResult = spiderconf.dont_crawl ? true : await crawler.crawl(crawlingInstructionsThis.url, output_folder, 
-            spiderconf.accepted_mimes||DEFAULT_MIMES, spiderconf.timegap||50, 
-            crawlingInstructionsThis.host_dispersal_depth||spiderconf.default_host_dispersal_depth||0,
-            crawlingInstructionsThis.page_dispersal_depth||spiderconf.default_page_dispersal_depth||-1, 
-            crawlingInstructionsThis.restrict_host, spiderconf.max_path||150);
-        if (!crawlResult) {_logCrawlError(crawlingInstructionsThis.url); allCrawlsResult = false; continue;}
-        else LOG.info(`Crawl of ${crawlingInstructionsThis.url} completed successfully.`);
+        // first crawl to download all the files, this doesn't add anything to the CMS or AI DBs
+        const crawlResult = _crawlWebsite(crawlingInstructionsThis);
         if (spiderconf.dont_ingest) continue;    // only testing crawling
+
+        if (crawlResult) LOG.info(`Site crawl completed for ${crawlingInstructionsThis.url}, starting ingestion into the AI databases and stores.`);
+        else {LOG.info(`Site crawl failed for ${crawlingInstructionsThis.url}, not ingesting into the AI databases and stores.`); allCrawlsResult = false; continue;}
         
-        // start ingestion into Neuranet databases
-        LOG.info(`Site crawl completed for ${crawlingInstructionsThis.url}, ingesting into the AI databases and stores.`);
-        fileindexer.start();
-        const ingestionResult = await _ingestFolder(output_folder, 
-            crawlingInstructionsThis.outfolder||`${crawler.coredomain(crawlingInstructionsThis.url)}_${Date.now()}`,
-            fileindexer);
-        if (!await fileindexer.end()) {_logCrawlError(crawlingInstructionsThis.url); allCrawlsResult = false;}  // rebuild AI DBs etc.
-        const percentSuccess = ingestionResult.result?ingestionResult.successfully_ingested.length/
-            (ingestionResult.successfully_ingested.length+ingestionResult.failed_ingestion.length):0;
-        const thisCrawlResult = ingestionResult.result && ingestionResult.successfully_ingested != 0 && percentSuccess > 
-            (fileindexer.minimum_success_percent||DEFAULT_MINIMUM_SUCCESS_PERCENT);
-        if (!thisCrawlResult) {
-            LOG.error(`Ingestion of ${crawlingInstructionsThis.url} failed. Folder ingestion into AI databases failed, partial ingestion may have occured requiring database cleanup.`);
-            allCrawlsResult = false;
-        } else LOG.info(`Ingestion of ${crawlingInstructionsThis.url} succeeded. Folder ingestion into AI databases completed.`);
-        if (ingestionResult.result) LOG.debug(`List of successfully ingested files: ${ingestionResult.successfully_ingested.toString()}`);
-        if (ingestionResult.result) LOG.debug(`List of failed to ingest files: ${ingestionResult.failed_ingestion.toString()}`);
+        // now that the download succeeded, ingest into Neuranet databases
+        const ingestResult = await _ingestCrawledFilesIntoNeuranet(crawlingInstructionsThis, fileindexer);
+        if (ingestResult) LOG.info(`Site AI database ingestion completed for ${crawlingInstructionsThis.url}.`);
+        else {LOG.info(`Site AI database ingestion failed for ${crawlingInstructionsThis.url}`); allCrawlsResult = false;}
     }
     return allCrawlsResult;
+}
+
+async function _crawlWebsite(crawlingInstructionsThis) {
+    const output_folder = path.resolve(`${__dirname}/${spiderconf.crawl_output_root}/${
+        spiderconf.dont_crawl ? spiderconf.ingestion_folder : crawler.coredomain(crawlingInstructionsThis.url)+"."+Date.now()}`);
+    LOG.info(`Starting crawling the URL ${crawlingInstructionsThis.url} to path ${output_folder}.`);
+    const crawlResult = spiderconf.dont_crawl ? true : await crawler.crawl(crawlingInstructionsThis.url, output_folder, 
+        spiderconf.accepted_mimes||DEFAULT_MIMES, spiderconf.timegap||50, 
+        crawlingInstructionsThis.host_dispersal_depth||spiderconf.default_host_dispersal_depth||0,
+        crawlingInstructionsThis.page_dispersal_depth||spiderconf.default_page_dispersal_depth||-1, 
+        crawlingInstructionsThis.restrict_host, spiderconf.max_path||150);
+    if (!crawlResult) _logCrawlError(crawlingInstructionsThis.url); 
+    else LOG.info(`Crawl of ${crawlingInstructionsThis.url} completed successfully.`);
+
+    return crawlResult;
+}
+
+async function _ingestCrawledFilesIntoNeuranet(crawlingInstructionsThis, fileindexer) {
+    let finalResult = true; fileindexer.start();
+    const ingestionResult = await _ingestFolder(output_folder, 
+        crawlingInstructionsThis.outfolder||`${crawler.coredomain(crawlingInstructionsThis.url)}_${Date.now()}`,
+        fileindexer);
+    if (!await fileindexer.end()) {_logCrawlError(crawlingInstructionsThis.url); finalResult = false;}  // rebuild AI DBs etc.
+    const percentSuccess = ingestionResult.result?ingestionResult.successfully_ingested.length/
+        (ingestionResult.successfully_ingested.length+ingestionResult.failed_ingestion.length):0;
+    const thisCrawlResult = ingestionResult.result && ingestionResult.successfully_ingested != 0 && percentSuccess > 
+        (fileindexer.minimum_success_percent||DEFAULT_MINIMUM_SUCCESS_PERCENT);
+    if (!thisCrawlResult) {
+        LOG.error(`Ingestion of ${crawlingInstructionsThis.url} failed. Folder ingestion into AI databases failed, partial ingestion may have occured requiring database cleanup.`);
+        finalResult = false;
+    } else LOG.info(`Ingestion of ${crawlingInstructionsThis.url} succeeded. Folder ingestion into AI databases completed.`);
+    if (ingestionResult.result) LOG.debug(`List of successfully ingested files: ${ingestionResult.successfully_ingested.toString()}`);
+    if (ingestionResult.result) LOG.debug(`List of failed to ingest files: ${ingestionResult.failed_ingestion.toString()}`);
+    return finalResult;
 }
 
 async function _ingestFolder(pathIn, cmsPath, fileindexer, memory) {
@@ -87,7 +101,7 @@ async function _ingestFolder(pathIn, cmsPath, fileindexer, memory) {
                     continue;
                 }
                 const result = await _promiseExceptionToBoolean(fileindexer.addFile(Buffer.from(fileJSON.text, 
-                    fileJSON.is_binary?"base64":"utf8"), cmsPathThisEntry, `URL: ${fileJSON.url}`, false));   // don't rebuild DBs
+                    fileJSON.is_binary?"base64":"utf8"), cmsPathThisEntry, undefined, `URL: ${fileJSON.url}`, false, false));   
                 if ((!result) || (!result.result)) {
                     memory.failed_ingestion.push(pathThisEntry); 
                     LOG.error(`AI ingestion of URL ${fileJSON.url} failed.`); 
@@ -105,6 +119,8 @@ async function _ingestFolder(pathIn, cmsPath, fileindexer, memory) {
             failed_ingestion: memory?memory.failed_ingestion:undefined}; 
     }
 }
+
+const _logCrawlError = url => LOG.error(`Site crawl of ${url} failed. Nothing was ingested from this site.`);
 
 const _promiseExceptionToBoolean = async promise => {try{const result = await promise; return result||true;} catch(err) {return false;}}
 

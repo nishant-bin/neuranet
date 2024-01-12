@@ -1,4 +1,5 @@
 {
     "noncms_drive": "{{{APPROOT}}}/../drive",
+    "file_handling_plugins": ["webspider", "pregenindexer"],
     "enabled": true
 }

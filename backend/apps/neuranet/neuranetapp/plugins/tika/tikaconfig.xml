@@ -14,13 +14,13 @@
     <parser class="org.apache.tika.parser.ocr.TesseractOCRParser">
       <params>
         <!-- Path to the Tesseract OCR engine executable -->
-        <param name="tesseractPath" type="string">/usr/bin/</param>
+        <param name="tesseractPath" type="string">c:/Users/rvkapoor/AppData/Local/Programs/Tesseract-OCR</param>
 
         <!-- Specify the language for OCR (Chinese Simplified in this case) -->
         <param name="language" type="string">chi_sim</param>
 
         <!-- Provide the path to the tessdata directory for Tesseract data -->
-        <param name="tessdataPath" type="string">/usr/share/tesseract-ocr/4.00/tessdata/</param>
+        <param name="tessdataPath" type="string">c:/Users/rvkapoor/AppData/Local/Programs/Tesseract-OCR/tessdata</param>
         
         <!-- Set the source resolution for processing (300 DPI in this example) -->
         <param name="sourceResolution" type="string">300</param>

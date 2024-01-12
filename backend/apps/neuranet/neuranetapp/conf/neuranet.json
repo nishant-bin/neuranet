@@ -2,9 +2,7 @@
     "crypt_key":"82577als2141rwq294938wasj3029ldwpz",
     "ai_model_default": "chat-gpt35-turbo",
     "debug_mode": true,
-    "quota_default_org": "_default_",
     "multithreaded": false,
-    "tdidf_search_langs": ["ja", "zh"],
 
     "ai_models": {
         "sql-code-gen35": {
@@ -104,10 +102,6 @@
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
             },
             "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
-            "topK_vectors": "3",
-            "min_distance_vectors": 0.50,
-            "topK_tfidf": "3",
-            "cutoff_score_tfidf": 0.75,
             "embeddings_model": "embedding-openai-ada002",
             "request_contentpath": "messages",
             "response_contentpath": "data.choices[0].message.content",
@@ -160,8 +154,6 @@
                 "max_tokens": 16384
             },
             "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
-            "file_handling_plugins": ["pregenindexer", "webspider"],
-            "text_extraction_plugins": ["tika"],
             "split_separators": {"en":[".","\n"," "], "zh":["。","\n"," ","."], "ja":["。","\n"," ","."], "*":[".","\n"," "]},
             "split_joiners": {"*":["\n\n"]},
             "overlap": 0,

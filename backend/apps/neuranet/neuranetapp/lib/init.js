@@ -14,11 +14,13 @@ exports.initSync = _ => {
     const fileindexer = require(`${NEURANET_CONSTANTS.LIBDIR}/fileindexer.js`);
     const loginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`);
     const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
+    const textextractor = require(`${NEURANET_CONSTANTS.LIBDIR}/textextractor.js`);
 
     loginhandler.initSync(); 
     fileindexer.initSync();
     events.initSync();
     brainhandler.initSync();
+    textextractor.initAsync();  // yes this is async so there is a slim chance by the first call it is still loading
 }
 
 function _readConfSync() {

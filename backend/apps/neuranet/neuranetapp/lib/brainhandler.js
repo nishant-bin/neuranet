@@ -1,23 +1,32 @@
 /**
  * Handles federated brains for Neuranet.
+ * 
  * (C) 2023 TekMonks. All rights reserved.
+ * License: See the enclosed LICENSE file.
  */
 
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 
+const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const cms = require(`${LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 
 exports.initSync = _ => {
-    cms.addCMSPathModifier((cmsroot, id, org, extraInfo) => {
-        const brainIDForUser = exports.getAppID(id, org, extraInfo);
+    cms.addCMSPathModifier(async (cmsroot, id, org, extraInfo) => {
+        const brainIDForUser = await exports.getAppID(id, org, extraInfo);
         return `${cmsroot}/${brainIDForUser}`;
-    })
+    });
 }
 
-exports.getAppID = function(id, org, extraInfo) {
-    if (!extraInfo) return NEURANET_CONSTANTS.DEFAULT_AI_APP;
+exports.isThisDefaultOrgsDefaultApp = (_id, _org, aiappid) => aiappid == NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP;
 
-    if (extraInfo.id != id || extraInfo.org != org) return NEURANET_CONSTANTS.DEFAULT_AI_APP;
+exports.getAppID = async function(id, org, extraInfo) {
+    // everything is ok so use what is requested
+    if (extraInfo && (extraInfo.id == id) && (extraInfo.org == org)) return extraInfo.aiappid;    
 
-    return extraInfo.appid||NEURANET_CONSTANTS.DEFAULT_AI_APP;
+    // if this org has a default app then use that if missing
+    const orgSettings = await dblayer.getOrgSettings(org);
+    if (orgSettings.defaultapp) return orgSettings.defaultapp;  
+
+    // finally failover to default org's default AI app
+    return NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP; 
 }

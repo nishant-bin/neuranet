@@ -14,10 +14,14 @@ const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.j
 const PROMPT_PARAM = "promptparam(";
 
 async function generate(fileindexer, generatorDefinition) {
-    const document = await fileindexer.getContents(generatorDefinition.encoding||"utf8"), prompt = generatorDefinition.prompt, 
+    const document = await fileindexer.getContents(generatorDefinition.encoding||"utf8"), 
+        prompt = generatorDefinition.prompt, 
         modelObject = await aiutils.getAIModel(generatorDefinition.model),
-        embeddingsModel = await aiutils.getAIModel(modelObject.embeddings_model),
-        langDetected = langdetector.getISOLang(document),
+        embeddingsModel = await aiutils.getAIModel(modelObject.embeddings_model);
+
+    if (!document) {LOG.error(`File content extraction failed for ${fileindexer.filepath}.`); return {result: false};}
+
+    const langDetected = langdetector.getISOLang(document),
         split_separators = embeddingsModel.split_separators[langDetected] || embeddingsModel.split_separators["*"],
         split_joiners = embeddingsModel.split_joiners[langDetected] || embeddingsModel.split_joiners["*"],
         splits = textsplitter.getSplits(document, embeddingsModel.request_chunk_size, 0, split_separators);

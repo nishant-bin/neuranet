@@ -14,31 +14,38 @@
 
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
-const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
 
-const SEARCH_MODEL_DEFAULT = "chat-knowledgebase-gpt35-turbo", REASONS = {INTERNAL: "internal"},
-	TEMP_MEM_TFIDF_ID = "_com_tekmonks_neuranet_tempmem_tfidfdb_id_";
+const REASONS = {INTERNAL: "internal"}, TEMP_MEM_TFIDF_ID = "_com_tekmonks_neuranet_tempmem_tfidfdb_id_";
 
 /**
  * Searches the AI DBs for the given query. Strategy is documents are searched
  * first using keyword search, then for the top matching documents, vector shards
  * are returned for the relevant portions of the document which can answer the
  * query.
- * @param {string} id The ID of the logged in user 
- * @param {string} org The ID of the logged in user's org
- * @param {string} query The query to search for
- * @param {string} aimodelToUse The name of the Neuranet AI model to use, optional.
- * 								Defaults to chat-knowledgebase-gpt35-turbo.
+ * 
+ * @param params Contains the following properties
+ * 							id The ID of the logged in user 
+ * 							The org of the logged in user's org
+ * 							query The query to search for
+ * 							metadata The metadata to condition on
+ *                          search_metadata true if metadata is to be used to condition else false
+ *                          topK_tfidf TopK for TD-IDF search
+ *                          cutoff_score_tfidf Cutoff score for TF-IDF
+ *                          topK_vectors TopK for vector search
+ *                          min_distance_vectors Cutoff distance for vector search
+ *                          embeddings_model The embedding model usually embedding-openai-ada002
+ * @param {Object} _llmstepDefinition Not used, optional.
+ * 
  * @returns The search returns array of {metadata, text} objects matching the 
  * 			resulting documents. The texts are shards of the document of
  * 			context length specified in the embedding generation model which
  * 			was used to ingest the documents.
  */
-exports.search = async function(id, org, query, aimodelToUse=SEARCH_MODEL_DEFAULT) {
-    const aiModelToUseForSearch = aimodelToUse, aiModelObjectForSearch = await aiutils.getAIModel(aiModelToUseForSearch);
+exports.search = async function(params, _llmstepDefinition) {
+	const id = params.id, org = params.org, query = params.query, aiModelObjectForSearch = {...params};
 
-    const tfidfDBs = await aidbfs.getTFIDFDBsForIDAndOrg(id, org);
+    const tfidfDBs = await aidbfs.getTFIDFDBsForIDAndOrgAndBrainID(id, org, undefined);
 	let tfidfScoredDocuments = []; 
 	for (const tfidfDB of tfidfDBs) tfidfScoredDocuments.push(
 		...tfidfDB.query(query, aiModelObjectForSearch.topK_tfidf, null, aiModelObjectForSearch.cutoff_score_tfidf));	
@@ -51,7 +58,7 @@ exports.search = async function(id, org, query, aimodelToUse=SEARCH_MODEL_DEFAUL
 	const documentsToUseDocIDs = []; for (const tfidfScoredDoc of tfidfScoredDocuments) 
 		documentsToUseDocIDs.push(tfidfScoredDoc.metadata[NEURANET_CONSTANTS.NEURANET_DOCID]);
 	
-	let vectordbs; try { vectordbs = await aidbfs.getVectorDBsForIDAndOrg(id, org, undefined, 
+	let vectordbs; try { vectordbs = await aidbfs.getVectorDBsForIDAndOrgAndBrainID(id, org, undefined, 
 			NEURANET_CONSTANTS.CONF.multithreaded) } catch(err) { 
 		LOG.error(`Can't instantiate the vector DB for ID ${id}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 

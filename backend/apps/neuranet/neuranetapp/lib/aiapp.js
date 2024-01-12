@@ -8,6 +8,7 @@
 const yaml = require("yaml");
 const fspromises = require("fs").promises;
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
 
 const APP_CACHE = {}, PREGENFLOW_CACHE = {}, LLMGENFLOW_CACHE = {}, DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
 
@@ -54,5 +55,5 @@ exports.getCommandModule = async function(id, org, aiappid, command) {
 
 const _getAppFile = (id, org, aiappid) => `${_getAppDir(id, org, aiappid)}/${aiappid}.yaml`;
 
-const _getAppDir = (_id, org, aiappid) => aiappid == NEURANET_CONSTANTS.DEFAULT_AI_APP ? 
-    `${NEURANET_CONSTANTS.DEFAULT_AI_APP_PATH}` : `${NEURANET_CONSTANTS.AIAPPDIR}/${org}/${aiappid}`
+const _getAppDir = (id, org, aiappid) => brainhandler.isThisDefaultOrgsDefaultApp(id, org, aiappid) ?
+    `${NEURANET_CONSTANTS.AIAPPDIR}/${NEURANET_CONSTANTS.DEFAULT_ORG}/${aiappid}` : `${NEURANET_CONSTANTS.AIAPPDIR}/${org}/${aiappid}`;

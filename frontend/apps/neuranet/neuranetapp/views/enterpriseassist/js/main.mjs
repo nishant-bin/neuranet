@@ -21,9 +21,8 @@ function initView(data) {
     window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {
         ...(window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME]||{}), enterprise_assist_main: main}; 
     data.VIEW_PATH = VIEW_PATH;
-    data.show_ai_training = loginresponse.aifederationmode ? (loginresponse.aifederationmode == "only_master") && isAdmin ? true : 
-        (loginresponse.aifederationmode.toLowerCase().includes("private")) ? true : false : isAdmin;
-    data.collapse_ai_training = data.show_ai_training && isAdmin ? false : true;
+    data.show_ai_training = isAdmin;
+    data.collapse_ai_training = false;
     data.shownotifications = {action: "monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].enterprise_assist_main.getNotifications()"};
 }
 

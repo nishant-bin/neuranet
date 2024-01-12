@@ -1,0 +1,83 @@
+---
+id: default
+interface: chat
+users: "*"
+
+
+pregen_flow: 
+  - command: rephrasedoc
+    label: Summary
+    prompt: |
+      Summarize the document below in simple langauage in no more than {{{words}}} words.
+      {{{fragment}}}
+      The summary is
+    model: simplellm-gpt35-turbo
+    promptparam(words): 700
+    pathid: summary
+    encoding: utf8
+
+  - command: rephrasedoc
+    label: Rephrased
+    prompt: |
+      Rephrase the content based on the below instructions 
+      ---infer the contents and rephrase it in a more generic context that most people without expertise or knowledge can understand 
+      {{{fragment}}}
+    model: simplellm-gpt35-turbo
+    pathid: reworded
+    encoding: utf8
+
+
+llm_flow: 
+  - command: doctfidfsearch
+    condition-js: |
+      const langdetector = require(`${LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
+      const lang = langdetector.getISOLang("{{{query}}}"); if ((lang == "zh") || (lang == "ja")) return true; else return false;
+    in: 
+      query: "{{{query}}}"
+      metadata: null
+      search_metadata: false
+      topK_tfidf: 3
+      cutoff_score_tfidf: 0.75
+      topK_vectors: 3
+      min_distance_vectors: 0.50
+      embeddings_model: embedding-openai-ada002
+    out: tdidfSearchResults
+
+  - command: docvectorsearch
+    condition-js: |
+      const langdetector = require(`${LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
+      const lang = langdetector.getISOLang("{{{query}}}"); if ((lang == "zh") || (lang == "ja")) return false; else return true;
+    in: 
+      query: "{{{query}}}"
+      metadata: tdidfSearchResults.documents
+      search_metadata: true
+      topK_tfidf: 3
+      cutoff_score_tfidf: 0.75
+      topK_vectors: 3
+      min_distance_vectors: 0.50
+      embeddings_model: embedding-openai-ada002
+    out: vectorSearchResults
+
+  - command: llm_history_chat
+    in: 
+      prompt: |
+        Answer the following question only using the documents provided below.
+        Question:
+        {{{question}}}
+
+        Documents:
+        {{#documents}}
+        {{{content}}}
+
+        {{/documents}}
+
+        Answer in the same language as the question:
+      question: "{{{query}}}"
+      documents: vectorSearchResults.documents
+
+      model: chat-knowledgebase-gpt35-turbo
+    out: aiResponse
+
+
+modules: 
+  llm_history_chat: llm_history_chat.js
