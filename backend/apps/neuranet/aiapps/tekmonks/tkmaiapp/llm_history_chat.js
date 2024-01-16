@@ -49,26 +49,27 @@ const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-
  *  	                 metadatas - the response document metadatas. typically metadata.referencelink points
  * 					                 to the exact document
  */
-exports.doService = async (params) => {
+exports.answer = async (params) => {
+	const id = params.id, org = params.org, session_id = params.session_id;
+
 	LOG.debug(`Got LLM_History chat request from ID ${id} of org ${org}. Incoming params are ${JSON.stringify(params)}`);
 
-	const id = params.id, org = params.org, session_id = params.session_id;
 	if (!(await quota.checkQuota(id, org))) {
 		LOG.error(`Disallowing the API call, as the user ${id} of org ${org} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
 
 	const chatsession = chatAPI.getUsersChatSession(id, session_id).chatsession;
-	const aiModelToUseForChat = params.model||CHAT_MODEL_DEFAULT, 
-		aiModelObjectForChat = await aiutils.getAIModel(aiModelToUseForChat),
-		aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObjectForChat.driver.module}`;
+	const aiModelToUseForChat = params.model.name||CHAT_MODEL_DEFAULT, 
+		aiModelObjectForChat = await aiutils.getAIModel(aiModelToUseForChat, params.model.model_overrides);
+	const aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObjectForChat.driver.module}`
 	let aiLibrary; try{aiLibrary = utils.requireWithDebug(aiModuleToUse, DEBUG_MODE);} catch (err) {
 		LOG.error("Bad AI Library or model - "+aiModuleToUse); 
 		return {reason: REASONS.BAD_MODEL, ...CONSTANTS.FALSE_RESULT};
 	}
 	const finalSessionObject = chatsession.length ? await chatAPI.trimSession(
 		aiModelObjectForChat.max_memory_tokens||DEFAULT_MAX_MEMORY_TOKENS,
-		chatAPI.jsonifyContentsInThisSession(chatsession), aiModelToUseForChat, 
+		chatAPI.jsonifyContentsInThisSession(chatsession), aiModelObjectForChat, 
 		aiModelObjectForChat.token_approximation_uplift, aiModelObjectForChat.tokenizer, aiLibrary) : [];
 	if (finalSessionObject.length) finalSessionObject[finalSessionObject.length-1].last = true;
 
@@ -81,7 +82,7 @@ exports.doService = async (params) => {
 	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, 
         {...params, documents: documentsForPrompt});
 
-	const paramsChat = { id, org, maintain_session: true, session_id, model: aiModelToUseForChat,
+	const paramsChat = { id, org, maintain_session: true, session_id, model: aiModelObjectForChat,
             session: [{"role": aiModelObjectForChat.user_role, "content": knowledegebaseWithQuestion}] };
 	const response = await chatAPI.doService(paramsChat);
 

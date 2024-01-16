@@ -17,7 +17,7 @@ const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}", SAMPLE_MODULE_PREFIX = "module(
 
 exports.process = async function(data, promptOrPromptFile, apiKey, model, dontInflatePrompt) {
     const prompt = dontInflatePrompt ? promptOrPromptFile : mustache.render(await aiutils.getPrompt(promptOrPromptFile), data).replace(/\r\n/gm,"\n");   // create the prompt
-    const modelObject = await aiutils.getAIModel(model); 
+    const modelObject = typeof model === "object" ? model : await aiutils.getAIModel(model); 
     if (!modelObject) { LOG.error(`Bad model object - ${modelObject}.`); return null; }
 
     const tokencount_request = await exports.countTokens(prompt, modelObject.request.model, 

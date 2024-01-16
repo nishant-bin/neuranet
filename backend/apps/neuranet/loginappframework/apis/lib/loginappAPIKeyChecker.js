@@ -16,17 +16,17 @@ function initSync() {
 }
 
 async function checkSecurity(apiregentry, _url, req, headers, _servObject, reason) {
-    if (!req.org) {
+    if ((!req) || (!req.org)) {
         LOG.error(`Incoming request ${JSON.stringify(req)} does not have org key set. Authorization Rejected.`);
         reason.reason = "API Key Error"; reason.code = 403; return false; // loginapp uses org based keys for APIs
     }
 
-    const allJWTClaimsCheck = true; // if the request carries a proper JWT, then use the stronger JWT check.
+    let allJWTClaimsCheck = true; // if the request carries a proper JWT, then use the stronger JWT check.
     if (apiregentry.query.loginapp_key_checker_enforce_for_jwt) for (const enforcedClaim of 
             utils.escapedSplit(apiregentry.query.loginapp_key_checker_enforce_for_jwt, ",")) {
     
         if (enforcedClaim.trim() == "id" && login.getID(headers) != req.id) allJWTClaimsCheck = false;
-        if (enforcedClaim.trim() == "org" && login.getOrg(headers).toLowerCase() != req.org.toLowerCase()) allJWTClaimsCheck = false;
+        if (enforcedClaim.trim() == "org" && login.getOrg(headers)?.toLowerCase() != req.org?.toLowerCase()) allJWTClaimsCheck = false;
     }
     if (allJWTClaimsCheck) return true; // request was properly JWT authorized, else all we can do next is an org key check
     

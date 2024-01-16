@@ -21,6 +21,8 @@
 
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 
+const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
+const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
 const llmflowrunner = require(`${NEURANET_CONSTANTS.LIBDIR}/llmflowrunner.js`);
 
 exports.doService = async (jsonReq, _servObject, _headers, _url) => {
@@ -29,7 +31,8 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 
 	LOG.debug(`Got knowledge base chat request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
-    const result = await llmflowrunner.answer(jsonReq.question, jsonReq.id, jsonReq.org, brainhandler.getAppID(jsonReq));
+    const appid = await brainhandler.getAppID(jsonReq.id, jsonReq.org, {id: jsonReq.id, org: jsonReq.org, aiappid: jsonReq.aiappid});
+    const result = await llmflowrunner[aiapp.DEFAULT_ENTRIES.llm_flow](jsonReq.question, jsonReq.id, jsonReq.org, appid);
     return result;
 }
 

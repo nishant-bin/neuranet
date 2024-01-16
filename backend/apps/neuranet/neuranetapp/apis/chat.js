@@ -37,7 +37,8 @@ exports.doService = async jsonReq => {
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
 
-	const aiModelToUse = jsonReq.model || MODEL_DEFAULT, aiModelObject = await aiutils.getAIModel(aiModelToUse),
+	const aiModelToUse = jsonReq.model || MODEL_DEFAULT, 
+		aiModelObject = typeof aiModelToUse === "object" ? aiModelToUse : {...await aiutils.getAIModel(aiModelToUse)},
         aiKey = crypt.decrypt(aiModelObject.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
         aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObject.driver.module}`;
 	let aiLibrary; try{aiLibrary = utils.requireWithDebug(aiModuleToUse, DEBUG_MODE);} catch (err) {
@@ -84,14 +85,16 @@ exports.getUsersChatSession = (userid, session_id_in) => {
 	return {chatsession: utils.clone(chatsession), sessionID, sessionKey};
 }
 
-exports.trimSession = async function(max_session_tokens, sessionObjects, aiModelName, 
+exports.trimSession = async function(max_session_tokens, sessionObjects, aiModel, 
 		token_approximation_uplift, tokenizer_name, tokenprocessor) {
+
+	const aiModelObject = typeof aiModel === "object" ? aiModel : await aiutils.getAIModel(aiModel);
 
 	let tokensSoFar = 0; const sessionTrimmed = [];
 	for (let i = sessionObjects.length - 1; i >= 0; i--) {
 		const sessionObjectThis = sessionObjects[i];
 		tokensSoFar = tokensSoFar + await tokenprocessor.countTokens(sessionObjectThis.content,
-			aiModelName, token_approximation_uplift, tokenizer_name);
+			aiModelObject.request.model, token_approximation_uplift, tokenizer_name);
 		if (tokensSoFar > max_session_tokens) break;
 		sessionTrimmed.unshift(sessionObjectThis);
 	}

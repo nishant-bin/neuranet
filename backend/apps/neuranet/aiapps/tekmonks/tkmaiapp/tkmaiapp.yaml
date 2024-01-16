@@ -1,66 +1,77 @@
 ---
-id: default
-interface: chat
-users: "*"
+id: tkmaiapp                                # the AI application name / ID
+interface: chat                             # this is for the frontend can be chat, translate or search interfaces
+users: ["*"]                                # * means all users, else must be an array of user IDs
 
 
 pregen_flow: 
-  - command: rephrasedoc
-    label: Summary
-    prompt: |
-      Summarize the document below in simple langauage in no more than {{{words}}} words.
-      {{{fragment}}}
-      The summary is
-    model: simplellm-gpt35-turbo
-    promptparam(words): 700
-    pathid: summary
-    encoding: utf8
+  - command: rephrasedoc.generate           # module and entry function can be used using module.entry
+    in: 
+      label: Summary
+      prompt: |
+        Summarize the document below in simple langauage in no more than {{{words}}} words.
+        {{{fragment}}}
+        The summary is
+      model: 
+        name: simplellm-gpt35-turbo
+        model_overrides:                      # this allows us to override model params on a per AI app basis
+            read_ai_response_from_samples: true
+      promptparam(words): 700
+      pathid: summary
+      encoding: utf8
 
-  - command: rephrasedoc
-    label: Rephrased
-    prompt: |
-      Rephrase the content based on the below instructions 
-      ---infer the contents and rephrase it in a more generic context that most people without expertise or knowledge can understand 
-      {{{fragment}}}
-    model: simplellm-gpt35-turbo
-    pathid: reworded
-    encoding: utf8
+  - command: rephrasedoc                    # entry function name is skipped as the default is generate anyways
+    in: 
+      label: Rephrased
+      prompt: |
+        Rephrase the content based on the below instructions 
+        ---infer the contents and rephrase it in a more generic context that most people without expertise or knowledge can understand 
+        {{{fragment}}}
+      model: 
+        name: simplellm-gpt35-turbo
+        model_overrides:                      
+            read_ai_response_from_samples: true
+      pathid: reworded
+      encoding: utf8
 
 
-llm_flow: 
-  - command: doctfidfsearch
+llm_flow:   
+  - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
     condition-js: |
-      const langdetector = require(`${LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
+      const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
+
       const lang = langdetector.getISOLang("{{{query}}}"); if ((lang == "zh") || (lang == "ja")) return true; else return false;
     in: 
       query: "{{{query}}}"
       metadata: null
-      search_metadata: false
       topK_tfidf: 3
       cutoff_score_tfidf: 0.75
       topK_vectors: 3
-      min_distance_vectors: 0.50
-      embeddings_model: embedding-openai-ada002
-    out: tdidfSearchResults
+      min_distance_vectors: 0
+      brainid: "{{{aiappid}}}"
+    out: documentsfound
 
-  - command: docvectorsearch
+  - command: docvectorsearch.search         # for all languages except Chinese and Japanese, the condition below 
     condition-js: |
-      const langdetector = require(`${LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
+      const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
       const lang = langdetector.getISOLang("{{{query}}}"); if ((lang == "zh") || (lang == "ja")) return false; else return true;
     in: 
       query: "{{{query}}}"
-      metadata: tdidfSearchResults.documents
-      search_metadata: true
       topK_tfidf: 3
       cutoff_score_tfidf: 0.75
       topK_vectors: 3
-      min_distance_vectors: 0.50
-      embeddings_model: embedding-openai-ada002
-    out: vectorSearchResults
+      min_distance_vectors: 0
+      embeddings_model: 
+        name: embedding-openai-ada002
+        model_overrides:                    
+          read_ai_response_from_samples: true
+      brainid: "{{{aiappid}}}"
+    out: documentsfound
 
-  - command: llm_history_chat
+  - command: llm_history_chat               # default function entry is answer so entry function name is skipped
     in: 
-      prompt: |
+      session_id: "{{{request.session_id}}}"
+      prompt_noinflate: |
         Answer the following question only using the documents provided below.
         Question:
         {{{question}}}
@@ -73,10 +84,13 @@ llm_flow:
 
         Answer in the same language as the question:
       question: "{{{query}}}"
-      documents: vectorSearchResults.documents
+      documents_js: return documentsfound
 
-      model: chat-knowledgebase-gpt35-turbo
-    out: aiResponse
+      model: 
+        name: chat-knowledgebase-gpt35-turbo
+        model_overrides: 
+          read_ai_response_from_samples: true
+    out: airesponse                         # the final response must output to this property - airesponse for LLM flows
 
 
 modules: 

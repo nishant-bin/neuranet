@@ -16,6 +16,7 @@
 
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
+const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 
 const REASONS = {INTERNAL: "internal"};
@@ -45,9 +46,10 @@ const REASONS = {INTERNAL: "internal"};
  * 			was used to ingest the documents.
  */
 exports.search = async function(params, _llmstepDefinition) {
-	const id = params.id, org = params.org, query = params.query, aiModelObjectForSearch = {...params}
+	const id = params.id, org = params.org, query = params.query, aiModelObjectForSearch = {...params},
+		brainid = params.brainid;
 
-    const tfidfDBs = await aidbfs.getTFIDFDBsForIDAndOrg(id, org);
+    const tfidfDBs = await aidbfs.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainid);
 	let tfidfScoredDocuments = []; 
 	for (const tfidfDB of tfidfDBs) tfidfScoredDocuments.push(
 		...tfidfDB.query(query, aiModelObjectForSearch.topK_tfidf, null, aiModelObjectForSearch.cutoff_score_tfidf));	
@@ -60,9 +62,10 @@ exports.search = async function(params, _llmstepDefinition) {
 	const documentsToUseDocIDs = []; for (const tfidfScoredDoc of tfidfScoredDocuments) 
 		documentsToUseDocIDs.push(tfidfScoredDoc.metadata[NEURANET_CONSTANTS.NEURANET_DOCID]);
 	
-	const aiModelToUseForEmbeddings = aiModelObjectForSearch.embeddings_model;
+	const aiModelObjectToUseForEmbeddings = await aiutils.getAIModel(aiModelObjectForSearch.embeddings_model.name,
+		params.embeddings_model.model_overrides);
 	const embeddingsGenerator = async text => {
-		const response = await embedding.createEmbeddingVector(id, text, aiModelToUseForEmbeddings); 
+		const response = await embedding.createEmbeddingVector(id, text, aiModelObjectToUseForEmbeddings); 
 		if (response.reason != embedding.REASONS.OK) return null;
 		else return response.embedding;
 	}
@@ -72,8 +75,8 @@ exports.search = async function(params, _llmstepDefinition) {
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 	}
 
-	let vectordbs; try { vectordbs = await aidbfs.getVectorDBsForIDAndOrgAndBrainID(id, org, embeddingsGenerator, 
-			NEURANET_CONSTANTS.CONF.multithreaded) } catch(err) { 
+	let vectordbs; try { vectordbs = await aidbfs.getVectorDBsForIDAndOrgAndBrainID(id, org, brainid, 
+			embeddingsGenerator, NEURANET_CONSTANTS.CONF.multithreaded) } catch(err) { 
 		LOG.error(`Can't instantiate the vector DB for ID ${id}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
 	}

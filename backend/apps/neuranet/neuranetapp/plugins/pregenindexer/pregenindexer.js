@@ -32,6 +32,7 @@ exports.canHandle = async fileindexer => {
 exports.ingest = async function(fileindexer) {
     const pregenSteps = await _getPregenStepsAIApp(fileindexer); let finalResult = true;
     for (const pregenStep of pregenSteps) {
+        if (!await _condition_to_run_met(pregenStep)) continue;    // run only if condition is satisfied
         const pregenResult = await pregenStep.generate(fileindexer);
         if (pregenResult.result) {
             const indexResult = await fileindexer.addFile(pregenResult.contentBufferOrReadStream(), 
@@ -52,6 +53,7 @@ exports.ingest = async function(fileindexer) {
 exports.uningest = async function(fileindexer) {
     const pregenSteps = await _getPregenStepsAIApp(fileindexer); let finalResult = true;
     for (const pregenStep of pregenSteps) {
+        if (!await _condition_to_run_met(pregenStep)) continue;    // run only if condition is satisfied
         const stepIndexerResult = await fileindexer.removeFile(pregenStep.cmspath, false, false);
         if (!stepIndexerResult.result) {LOG.error(`Pregen removal failed at step ${pregenStep.label} in remove generated file.`); 
             finalResult = false;}
@@ -70,6 +72,7 @@ exports.uningest = async function(fileindexer) {
 exports.rename = async function(fileindexer) {
     const pregenSteps = await _getPregenStepsAIApp(fileindexer); let finalResult = true;
     for (const pregenStep of pregenSteps) {
+        if (!await _condition_to_run_met(pregenStep)) continue;    // run only if condition is satisfied
         const stepIndexerResult = await fileindexer.renameFile(pregenStep.cmspath, pregenStep.cmspathTo, 
             pregenStep.commentTo, false, false);
         if (!stepIndexerResult.result) {
@@ -85,17 +88,31 @@ async function _getPregenStepsAIApp(fileindexer) {
     const pregenStepObjects = await aiapp.getPregenObject(fileindexer.id, fileindexer.org, fileindexer.aiappid);
     const pregenFunctions = []; for (const pregenStepObject of pregenStepObjects) {
         const genfilesDir = NEURANET_CONSTANTS.GENERATED_FILES_FOLDER,
-            cmspath = `${path.dirname(fileindexer.cmspath)}/${genfilesDir}/${pregenStepObject.pathid}_${path.basename(fileindexer.cmspath)}`,
-            cmspathTo = fileindexer.cmspathTo ? `${path.dirname(fileindexer.cmspathTo)}/${genfilesDir}/${pregenStepObject.pathid}_${path.basename(fileindexer.cmspathTo)}` : undefined,
-            comment = `${pregenStepObject.label}: ${path.basename(fileindexer.cmspath)}`,
-            commentTo = fileindexer.cmspathTo ? `${pregenStepObject.label}: ${path.basename(fileindexer.cmspathTo)}` : undefined;
+            cmspath = `${path.dirname(fileindexer.cmspath)}/${genfilesDir}/${pregenStepObject.in.pathid}_${path.basename(fileindexer.cmspath)}`,
+            cmspathTo = fileindexer.cmspathTo ? `${path.dirname(fileindexer.cmspathTo)}/${genfilesDir}/${pregenStepObject.in.pathid}_${path.basename(fileindexer.cmspathTo)}` : undefined,
+            comment = `${pregenStepObject.in.label}: ${path.basename(fileindexer.cmspath)}`,
+            commentTo = fileindexer.cmspathTo ? `${pregenStepObject.in.label}: ${path.basename(fileindexer.cmspathTo)}` : undefined;
+        const [command, command_function] = pregenStepObject.command.split(".");
         pregenFunctions.push({
             generate: async fileindexer => (await aiapp.getCommandModule(fileindexer.id, fileindexer.org, 
-                fileindexer.aiappid, pregenStepObject.command)).generate(fileindexer, pregenStepObject),
-            label: pregenStepObject.label,
+                fileindexer.aiappid, command))[command_function||aiapp.DEFAULT_ENTRIES.pregen_flow](fileindexer, pregenStepObject.in),
+            label: pregenStepObject.in.label,
             cmspath, comment, cmspathTo, commentTo
         });
     }
         
     return pregenFunctions;
+}
+
+async function _condition_to_run_met(pregenStep) {
+    const condition_code = pregenStep["condition-js"];
+    if (condition_code) return await _runJSCode(condition_code, {NEURANET_CONSTANTS, 
+        require: function() {const module = require(...arguments); return module}, fileindexer }); 
+    else return true;   // no condition specified
+}
+
+async function _runJSCode(code, context) {
+    try {return await (utils.createAsyncFunction(code)(context))} catch (err) {
+        LOG.error(`Error running custom JS code error is: ${err}`); return false;
+    }
 }

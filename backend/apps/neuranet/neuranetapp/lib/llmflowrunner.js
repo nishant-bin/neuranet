@@ -5,6 +5,8 @@
  * License: See the enclosed LICENSE file.
  */
 
+const mustache = require("mustache");
+const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 
@@ -20,9 +22,10 @@ exports.REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDA
  * @param {string} id The ID of the user
  * @param {string} org The org of the user
  * @param {string} aiappid The AI app requested
+ * @param {Object} request The incoming request params
  * @returns {Object} Final answer as {result: true|false,  response: set if result is true,error: set if result is false}. 
  */
-exports.answer = async function(query, id, org, aiappid) {
+exports.answer = async function(query, id, org, aiappid, request) {
     const working_memory = {
         __error: false, __error_message: "", query, id, org, aiappid,
         return_error: message => {this.__error = true; __error_message = message; LOG.error(message);}
@@ -30,14 +33,34 @@ exports.answer = async function(query, id, org, aiappid) {
 
     const llmflowCommands = await aiapp.getLLMGenObject(id, org, aiappid); 
     for (const llmflowCommandDefinition of llmflowCommands) {
-        const llmflowModule = await aiapp.getCommandModule(id, org, llmflowCommandDefinition.command);
-        const callParams = {id, org, query}; for (const [key, value] of Object.entries(llmflowCommandDefinition))
-            callParams[key] = mustache.render(value, working_memory);
+        const condition_code = llmflowCommandDefinition["condition-js"] ? mustache.render(
+            llmflowCommandDefinition["condition-js"], working_memory) : undefined;
+        if (condition_code) if (!await _runJSCode(condition_code, {NEURANET_CONSTANTS,  // run only if condition is satisfied
+            require: function() {const module = require(...arguments); return module} })) continue;  
+
+        const [command, command_function] = llmflowCommandDefinition.command.split(".");
+        const llmflowModule = await aiapp.getCommandModule(id, org, aiappid, command);
+        const callParams = {id, org, query, aiappid, request}; 
+        for (const [key, value] of Object.entries(llmflowCommandDefinition.in)) {
+            if (key.endsWith("_noinflate")) callParams[key.split("_")[0]] = value;
+            else if (key.endsWith("_js")) {
+                const thisvalue = await _runJSCode(value, working_memory);
+                callParams[key.split("_")[0]] = thisvalue;
+            } else callParams[key] = typeof value === "object" ? JSON.parse(
+                mustache.render(JSON.stringify(value), working_memory)) : typeof value === "string" ? 
+                mustache.render(value.toString(), working_memory) : value;
+        }
         working_memory[llmflowCommandDefinition.out||DEFAULT_OUT] = 
-            await llmflowModule.answer(callParams, llmflowCommandDefinition);
+            await llmflowModule[command_function||aiapp.DEFAULT_ENTRIES.llm_flow](callParams, llmflowCommandDefinition);
         if (working_memory.__error) break;
     }
 
-    if (!working_memory.__error) return {...CONSTANTS.TRUE_RESULT, response: working_memory.airesponse};
+    if (!working_memory.__error) return {...CONSTANTS.TRUE_RESULT, ...(working_memory.airesponse||[])};
     else return {...CONSTANTS.FALSE_RESULT, error: __error_message};
+}   
+
+async function _runJSCode(code, context) {
+    try {return await (utils.createAsyncFunction(code)(context))} catch (err) {
+        LOG.error(`Error running custom JS code error is: ${err}`); return false;
+    }
 }

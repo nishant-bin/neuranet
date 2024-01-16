@@ -16,7 +16,7 @@ const PROMPT_PARAM = "promptparam(";
 async function generate(fileindexer, generatorDefinition) {
     const document = await fileindexer.getContents(generatorDefinition.encoding||"utf8"), 
         prompt = generatorDefinition.prompt, 
-        modelObject = await aiutils.getAIModel(generatorDefinition.model),
+        modelObject = await aiutils.getAIModel(generatorDefinition.model.name, generatorDefinition.model.model_overrides),
         embeddingsModel = await aiutils.getAIModel(modelObject.embeddings_model);
 
     if (!document) {LOG.error(`File content extraction failed for ${fileindexer.filepath}.`); return {result: false};}

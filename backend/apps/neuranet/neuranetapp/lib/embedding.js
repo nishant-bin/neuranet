@@ -23,21 +23,22 @@ async function createEmbeddingVector(id, org, text, model) {
 		return {reason: REASONS.LIMIT, error: "User is over quota limit."};
 	}
 
-    const aiModelToUse = model || MODEL_DEFAULT, aiModelObject = await aiutils.getAIModel(aiModelToUse),
+    const aiModelToUse = model || MODEL_DEFAULT, 
+		aiModelObject = typeof aiModelToUse === "object" ? aiModelToUse : await aiutils.getAIModel(aiModelToUse),
         aiKey = crypt.decrypt(aiModelObject.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
-		aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${NEURANET_CONSTANTS.CONF.ai_models[aiModelToUse].driver.module}`;
+		aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObject.driver.module}`;
 	let aiLibrary; try{aiLibrary = require(aiModuleToUse);} catch (err) {
 		LOG.error("Bad AI Library or model - "+aiModuleToUse); 
 		return {reason: REASONS.BAD_MODEL, error: err};
 	}
 	
-	const response = await aiLibrary.process({text}, EMBEDDING_PROMPT, aiKey, aiModelToUse);
+	const response = await aiLibrary.process({text}, EMBEDDING_PROMPT, aiKey, aiModelObject);
 
 	if (!response) {
 		LOG.error(`AI library error processing request for embedding ${text}`); 
 		return {reason: REASONS.INTERNAL, error: "AI library error."};
 	} else {
-        dblayer.logUsage(id, response.metric_cost||0, aiModelToUse);
+        dblayer.logUsage(id, response.metric_cost||0, aiModelObject.name);
 		return {reason: REASONS.OK, embedding: response.airesponse};
 	}
 }

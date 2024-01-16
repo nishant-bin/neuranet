@@ -21,11 +21,13 @@ exports.isThisDefaultOrgsDefaultApp = (_id, _org, aiappid) => aiappid == NEURANE
 
 exports.getAppID = async function(id, org, extraInfo) {
     // everything is ok so use what is requested
-    if (extraInfo && (extraInfo.id == id) && (extraInfo.org == org)) return extraInfo.aiappid;    
+    if (extraInfo && (extraInfo.id == id) && (extraInfo.org == org) && (extraInfo.aiappid)) return extraInfo.aiappid;    
 
     // if this org has a default app then use that if missing
-    const orgSettings = await dblayer.getOrgSettings(org);
-    if (orgSettings.defaultapp) return orgSettings.defaultapp;  
+    if (org) {
+        const orgSettings = await dblayer.getOrgSettings(org);
+        if (orgSettings.defaultapp) return orgSettings.defaultapp; 
+    } 
 
     // finally failover to default org's default AI app
     return NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP; 

@@ -34,7 +34,6 @@ const REASONS = {INTERNAL: "internal"}, TEMP_MEM_TFIDF_ID = "_com_tekmonks_neura
  *                          cutoff_score_tfidf Cutoff score for TF-IDF
  *                          topK_vectors TopK for vector search
  *                          min_distance_vectors Cutoff distance for vector search
- *                          embeddings_model The embedding model usually embedding-openai-ada002
  * @param {Object} _llmstepDefinition Not used, optional.
  * 
  * @returns The search returns array of {metadata, text} objects matching the 
@@ -43,9 +42,10 @@ const REASONS = {INTERNAL: "internal"}, TEMP_MEM_TFIDF_ID = "_com_tekmonks_neura
  * 			was used to ingest the documents.
  */
 exports.search = async function(params, _llmstepDefinition) {
-	const id = params.id, org = params.org, query = params.query, aiModelObjectForSearch = {...params};
+	const id = params.id, org = params.org, query = params.query, aiModelObjectForSearch = {...params},
+		brainid = params.brainid;
 
-    const tfidfDBs = await aidbfs.getTFIDFDBsForIDAndOrgAndBrainID(id, org, undefined);
+    const tfidfDBs = await aidbfs.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainid);
 	let tfidfScoredDocuments = []; 
 	for (const tfidfDB of tfidfDBs) tfidfScoredDocuments.push(
 		...tfidfDB.query(query, aiModelObjectForSearch.topK_tfidf, null, aiModelObjectForSearch.cutoff_score_tfidf));	
@@ -58,7 +58,7 @@ exports.search = async function(params, _llmstepDefinition) {
 	const documentsToUseDocIDs = []; for (const tfidfScoredDoc of tfidfScoredDocuments) 
 		documentsToUseDocIDs.push(tfidfScoredDoc.metadata[NEURANET_CONSTANTS.NEURANET_DOCID]);
 	
-	let vectordbs; try { vectordbs = await aidbfs.getVectorDBsForIDAndOrgAndBrainID(id, org, undefined, 
+	let vectordbs; try { vectordbs = await aidbfs.getVectorDBsForIDAndOrgAndBrainID(id, org, brainid, 
 			NEURANET_CONSTANTS.CONF.multithreaded) } catch(err) { 
 		LOG.error(`Can't instantiate the vector DB for ID ${id}. Unable to continue.`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
