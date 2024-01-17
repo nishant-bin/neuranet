@@ -10,7 +10,7 @@ const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 
-const DEFAULT_OUT = "lastLLMFlowStepOutput";
+const DEFAULT_OUT = "lastLLMFlowStepOutput", CONDITION_JS = "condition_js", NOINFLATE = "_noinflate", JSCODE = "_js";
 
 /** Response reasons for LLM flows */
 exports.REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
@@ -33,8 +33,8 @@ exports.answer = async function(query, id, org, aiappid, request) {
 
     const llmflowCommands = await aiapp.getLLMGenObject(id, org, aiappid); 
     for (const llmflowCommandDefinition of llmflowCommands) {
-        const condition_code = llmflowCommandDefinition["condition-js"] ? mustache.render(
-            llmflowCommandDefinition["condition-js"], working_memory) : undefined;
+        const condition_code = llmflowCommandDefinition[CONDITION_JS] ? mustache.render(
+            llmflowCommandDefinition[CONDITION_JS], working_memory) : undefined;
         if (condition_code) if (!await _runJSCode(condition_code, {NEURANET_CONSTANTS,  // run only if condition is satisfied
             require: function() {const module = require(...arguments); return module} })) continue;  
 
@@ -42,8 +42,8 @@ exports.answer = async function(query, id, org, aiappid, request) {
         const llmflowModule = await aiapp.getCommandModule(id, org, aiappid, command);
         const callParams = {id, org, query, aiappid, request}; 
         for (const [key, value] of Object.entries(llmflowCommandDefinition.in)) {
-            if (key.endsWith("_noinflate")) callParams[key.split("_")[0]] = value;
-            else if (key.endsWith("_js")) {
+            if (key.endsWith(NOINFLATE)) callParams[key.split("_")[0]] = value;
+            else if (key.endsWith(JSCODE)) {
                 const thisvalue = await _runJSCode(value, working_memory);
                 callParams[key.split("_")[0]] = thisvalue;
             } else callParams[key] = typeof value === "object" ? JSON.parse(

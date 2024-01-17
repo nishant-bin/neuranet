@@ -1,8 +1,15 @@
 ---
 id: tkmaiapp                                # the AI application name / ID
-interface: chat                             # this is for the frontend can be chat, translate or search interfaces
+interface:                                  # the interface details
+  type: chat                                # this is for the frontend can be chat, translate or search interfaces
+  label: Enterprise chat                    # the label for the app icon on the UI
+endpoint: llmflow
 users: ["*"]                                # * means all users, else must be an array of user IDs
 
+
+# all flows are sequence of commands which follow the same syntax - command, in, out - in is the input
+# to the command, out is the variable holding the output and name points to the command module and entry
+# point. the command sytax is documented below as well.
 
 pregen_flow: 
   - command: rephrasedoc.generate           # module and entry function can be used using module.entry
@@ -14,9 +21,9 @@ pregen_flow:
         The summary is
       model: 
         name: simplellm-gpt35-turbo
-        model_overrides:                      # this allows us to override model params on a per AI app basis
+        model_overrides:                    # this allows us to override model params on a per AI app basis
             read_ai_response_from_samples: true
-      promptparam(words): 700
+      words_promptparam: 700
       pathid: summary
       encoding: utf8
 
@@ -37,22 +44,22 @@ pregen_flow:
 
 llm_flow:   
   - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
-    condition-js: |
+    condition_js: |
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
 
       const lang = langdetector.getISOLang("{{{query}}}"); if ((lang == "zh") || (lang == "ja")) return true; else return false;
     in: 
-      query: "{{{query}}}"
+      query: "{{{query}}}"                  # inbuilt variable contains the user's query
       metadata: null
       topK_tfidf: 3
       cutoff_score_tfidf: 0.75
       topK_vectors: 3
       min_distance_vectors: 0
-      brainid: "{{{aiappid}}}"
+      brainid: "{{{aiappid}}}"              # inbuilt variable contains the ai app ID
     out: documentsfound
 
   - command: docvectorsearch.search         # for all languages except Chinese and Japanese, the condition below 
-    condition-js: |
+    condition_js: |
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
       const lang = langdetector.getISOLang("{{{query}}}"); if ((lang == "zh") || (lang == "ja")) return false; else return true;
     in: 
@@ -70,8 +77,8 @@ llm_flow:
 
   - command: llm_history_chat               # default function entry is answer so entry function name is skipped
     in: 
-      session_id: "{{{request.session_id}}}"
-      prompt_noinflate: |
+      session_id: "{{{request.session_id}}}" # request is inbuilt variable contains user's request params
+      prompt_noinflate: |                   # means do not inflate this at the flow engine - the calling command will use it as is
         Answer the following question only using the documents provided below.
         Question:
         {{{question}}}
@@ -84,7 +91,7 @@ llm_flow:
 
         Answer in the same language as the question:
       question: "{{{query}}}"
-      documents_js: return documentsfound
+      documents_js: return documentsfound   # the _js means the value of this property is the inline JS code
 
       model: 
         name: chat-knowledgebase-gpt35-turbo

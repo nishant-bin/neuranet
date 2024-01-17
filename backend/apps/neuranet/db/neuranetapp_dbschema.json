@@ -15,6 +15,10 @@
     "INSERT INTO views (org, view) VALUES ('tekmonks', 'chat')",
 
 
+    "CREATE TABLE aiapps(id varchar not null primary key, aiappid varchar not null, org varchar not null, status varchar)",
+    "INSERT INTO aiapps (id, aiappid, org, status, users) VALUES ('tkmaiapp_tekmonks', 'tkmaiapp', 'tekmonks', 'published')",
+
+
     "CREATE TABLE orgsettings(org varchar not null primary key, settings varchar not null)",
     "INSERT INTO orgsettings (org, settings) VALUES ('_org_neuranet_defaultorg_', '{\"pregen\": true, \"defaultapp\": \"default\"}')",
     "INSERT INTO orgsettings (org, settings) VALUES ('tekmonks', '{\"pregen\": true, \"defaultapp\": \"tkmaiapp\"}')",

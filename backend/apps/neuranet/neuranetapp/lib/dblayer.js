@@ -92,6 +92,40 @@ exports.setOrgSettings = async function(org, settings) {
 	return result;
 }
 
+exports.getAllAIAppsForOrg = async function(org) {
+	const query = "SELECT * FROM aiapps WHERE org=? COLLATE NOCASE";
+	
+	const aiapps = await db.getQuery(query, [org]);
+	if ((!aiapps) || (!aiapps.length)) {
+		LOG.warn(`No ai apps found for org ${org}.`);
+		return [];
+	} else return aiapps;
+}
+
+exports.getAIAppForOrg = async function(org, aiappid) {
+	const query = "SELECT * FROM aiapps WHERE id=? COLLATE NOCASE";
+	
+	const aiapps = await db.getQuery(query, [`${org.toLowerCase()}_${aiappid.toLowerCase()}`]);
+	if ((!aiapps) || (!aiapps.length)) {
+		LOG.warn(`No aiapps named ${aiappid} found for org ${org}.`);
+		return [];
+	} else return aiapps[0];
+}
+
+exports.addOrUpdateAIAppForOrg = async function(org, aiappid, status, users) {
+	const query = "REPLACE INTO aiapps (id, org, aiappid, users, status) values (?,?,?,?,?)";
+	
+	const result = await db.runCmd(query, [`${org.toLowerCase()}_${aiappid.toLowerCase()}`, org, aiappid, users, status]);
+	return result;
+}
+
+exports.deleteAIAppforOrg = async function(org, aiappid) {
+	const query = "DELETE FROM aiapps where id = ?";
+	
+	const result = await db.runCmd(query, [`${org.toLowerCase()}_${aiappid.toLowerCase()}`]);
+	return result;
+}
+
 const _setDBCache = (query, params, result) => DB_CACHE[_getQueryHash(query, params)] = utils.clone(result);
 const _getDBCache = (query, params) => DB_CACHE[_getQueryHash(query, params)];
 const _getQueryHash = (query, params) => utils.hashObject([query, ...params]);

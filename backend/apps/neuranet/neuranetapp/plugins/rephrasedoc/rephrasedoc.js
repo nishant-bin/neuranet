@@ -11,7 +11,7 @@ const simplellm = require(`${NEURANET_CONSTANTS.LIBDIR}/simplellm.js`);
 const textsplitter = require(`${NEURANET_CONSTANTS.LIBDIR}/textsplitter.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
 
-const PROMPT_PARAM = "promptparam(";
+const PROMPT_PARAM = "_promptparam";
 
 async function generate(fileindexer, generatorDefinition) {
     const document = await fileindexer.getContents(generatorDefinition.encoding||"utf8"), 
@@ -28,8 +28,7 @@ async function generate(fileindexer, generatorDefinition) {
 
     const promptData = {}; for (const [key,value] of Object.entries(generatorDefinition)) {
         const keyNormalized = key.toLowerCase().trim();
-        if (keyNormalized.startsWith(PROMPT_PARAM)) 
-            promptData[keyNormalized.substring(PROMPT_PARAM.length, keyNormalized.length-1)] = value;
+        if (keyNormalized.endsWith(PROMPT_PARAM)) promptData[keyNormalized.split("_")[0]] = value;
     }
 
     const rephrasedSplits = []; for (const split of splits) {

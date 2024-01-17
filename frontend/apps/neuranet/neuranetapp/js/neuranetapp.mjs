@@ -25,15 +25,15 @@ const main = async (data, mainLoginAppModule) => {
 
 async function _createdata(data) {   
     let viewPath, views; delete data.showhome; delete data.shownotifications;
-    const viewsAllowed = (session.get(APP_CONSTANTS.LOGIN_RESPONSE))?.views||[];
+    const appsAllowed = (session.get(APP_CONSTANTS.LOGIN_RESPONSE))?.apps||[];
     if (!session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)) {
-        viewPath = viewsAllowed.length == 1?`${APP_CONSTANTS.VIEWS_PATH}/${viewsAllowed[0]}` :
-            `${APP_CONSTANTS.VIEWS_PATH}/${APP_CONSTANTS.VIEW_CHOOSER}`;
-        views = []; for (const view of viewsAllowed) if (view != APP_CONSTANTS.VIEW_CHOOSER) views.push(  // views we can choose from
-            {viewicon: `${APP_CONSTANTS.VIEWS_PATH}/${view}/img/icon.svg`, 
-                viewlabel: await i18n.get(`ViewLabel_${view}`), viewname: view});
+        const interfaceForView = appsAllowed.length == 1 ? appsAllowed[0].interface.type.toString() : APP_CONSTANTS.VIEW_CHOOSER;
+        viewPath = `${APP_CONSTANTS.VIEWS_PATH}/${interfaceForView}`;
+        views = []; for (const app of appsAllowed) if (app.interface != APP_CONSTANTS.VIEW_CHOOSER) views.push(  // views we can choose from
+            {viewicon: `${APP_CONSTANTS.VIEWS_PATH}/${app.interface.type.toString()}/img/icon.svg`, 
+                viewlabel: await i18n.get(`ViewLabel_${app.interface.type.toString()}`), viewname: app});
     } else {
-        if (viewsAllowed.length > 1) data.showhome = true;
+        if (appsAllowed.length > 1) data.showhome = true;
         viewPath = `${APP_CONSTANTS.VIEWS_PATH}/${session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)}`;
     }
 
