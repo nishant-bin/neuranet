@@ -11,7 +11,7 @@ import {router} from "/framework/js/router.mjs";
 import {session} from "/framework/js/session.mjs";
 
 const MODULE_PATH = util.getModulePath(import.meta), 
-    MAIN_HTML = util.resolveURL(`${APP_CONSTANTS.EMBEDDED_APP_PATH}/main.html`);
+    MAIN_HTML = util.resolveURL(`${APP_CONSTANTS.EMBEDDED_APP_PATH}/main.html`), IMAGE_DATA = "data:image";
 
 let loginappMain;
 
@@ -24,21 +24,33 @@ const main = async (data, mainLoginAppModule) => {
 }
 
 async function _createdata(data) {   
-    let viewPath, views; delete data.showhome; delete data.shownotifications;
+    let viewPath, aiendpoint, views; delete data.showhome; delete data.shownotifications;
     const appsAllowed = (session.get(APP_CONSTANTS.LOGIN_RESPONSE))?.apps||[];
-    if (!session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)) {
-        const interfaceForView = appsAllowed.length == 1 ? appsAllowed[0].interface.type.toString() : APP_CONSTANTS.VIEW_CHOOSER;
-        viewPath = `${APP_CONSTANTS.VIEWS_PATH}/${interfaceForView}`;
-        views = []; for (const app of appsAllowed) if (app.interface != APP_CONSTANTS.VIEW_CHOOSER) views.push(  // views we can choose from
-            {viewicon: `${APP_CONSTANTS.VIEWS_PATH}/${app.interface.type.toString()}/img/icon.svg`, 
-                viewlabel: await i18n.get(`ViewLabel_${app.interface.type.toString()}`), viewname: app});
-    } else {
+
+    const _getAppToForceLoadOrFalse = _ => session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)?.toString()||false;
+    const _loadForcedView = appid => {
         if (appsAllowed.length > 1) data.showhome = true;
-        viewPath = `${APP_CONSTANTS.VIEWS_PATH}/${session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)}`;
+        const appidToOpen = appid||_getAppToForceLoadOrFalse(), 
+            app = (appsAllowed.filter(app => app.id == appidToOpen))[0];
+        viewPath = `${APP_CONSTANTS.VIEWS_PATH}/${app.interface.type}`;
+        aiendpoint = app.endpoint;
     }
 
+     // load the given app if forced, or if apps allowed is just one, else load chooser
+    if (appsAllowed.length == 1) _loadForcedView(appsAllowed[0].id);
+    else if (_getAppToForceLoadOrFalse()) _loadForcedView();   
+    else {    // left with chooser
+        viewPath = `${APP_CONSTANTS.VIEWS_PATH}/${APP_CONSTANTS.VIEW_CHOOSER}`;
+        views = []; for (const app of appsAllowed) if (app.interface != APP_CONSTANTS.VIEW_CHOOSER) views.push(  // views we can choose from
+            {viewicon: app.interface.icon && app.interface.icon.toLowerCase().startsWith(IMAGE_DATA) ? app.interface.icon :
+                    `${APP_CONSTANTS.VIEWS_PATH}/${app.interface.type.toString()}/img/icon.svg`, 
+                viewlabel: app.interface.label||await i18n.get(`ViewLabel_${app.interface.type.toString()}`), 
+                viewid: app.id});
+    } 
+
+    // now load the view's HTML
     const viewURL = `${viewPath}/main.html`, viewMainMJS = `${viewPath}/js/main.mjs`;
-    data.viewpath = viewPath; 
+    data.viewpath = viewPath; data.aiendpoint = aiendpoint;
     try { const viewMain = await import(viewMainMJS); await viewMain.main.initView(data, neuranetapp); }    // init the view before loading it
     catch (err) { LOG.error(`Error in initializing view ${viewPath}.`); }
     data.viewcontent = await router.loadHTML(viewURL, {...data, views}); 
@@ -46,8 +58,8 @@ async function _createdata(data) {
 
 const gohome = _ => session.remove(APP_CONSTANTS.FORCE_LOAD_VIEW);
 
-async function openView(viewname) {
-    session.set(APP_CONSTANTS.FORCE_LOAD_VIEW, viewname);
+async function openView(appid) {
+    session.set(APP_CONSTANTS.FORCE_LOAD_VIEW, appid);
     const {loginmanager} = await import (`${APP_CONSTANTS.LOGINFRAMEWORK_LIB_PATH}/loginmanager.mjs`);
     loginmanager.addLogoutListener(`${MODULE_PATH}/neuranetapp.mjs`, "neuranetapp", "onlogout");
 

@@ -106,7 +106,7 @@ span#collapser {display: none; ismobile: true}
 
 <div id="maincontainer">
 
-<chat-box id="enterpriseassistant" chatapi="{{APP_CONSTANTS.BACKEND}}/apps/{{APP_CONSTANTS.APP_NAME}}/enterpriseassistant"
+<chat-box id="enterpriseassistant" chatapi="{{APP_CONSTANTS.BACKEND}}/apps/{{APP_CONSTANTS.APP_NAME}}/{{aiendpoint}}"
     onresult="window.monkshu_env.apps.neuranetapp.enterprise_assist_main.processAssistantResponse(result, 'enterpriseassistant')"
     onrequest="window.monkshu_env.apps.neuranetapp.enterprise_assist_main.getAssistantRequest(prompt, 'enterpriseassistant')"></chat-box>
 

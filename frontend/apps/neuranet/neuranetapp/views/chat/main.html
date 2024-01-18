@@ -4,6 +4,6 @@ chat-box#generalchat {
     height: 100%;
 }
 </style>
-<chat-box id="generalchat" chatapi="{{APP_CONSTANTS.BACKEND}}/apps/{{APP_CONSTANTS.APP_NAME}}/chat"
+<chat-box id="generalchat" chatapi="{{APP_CONSTANTS.BACKEND}}/apps/{{APP_CONSTANTS.APP_NAME}}/{{aiendpoint}}"
     onresult="window.monkshu_env.apps.neuranetapp.chat_main.processChatResponse(result, 'generalchat')"
     onrequest="window.monkshu_env.apps.neuranetapp.chat_main.getChatRequest(prompt, 'generalchat')"></chat-box>
