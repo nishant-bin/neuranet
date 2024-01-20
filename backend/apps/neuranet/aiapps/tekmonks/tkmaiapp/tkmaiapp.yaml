@@ -50,7 +50,6 @@ llm_flow:
   - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
     condition_js: |
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-
       const lang = langdetector.getISOLang("{{{query}}}"); if ((lang == "zh") || (lang == "ja")) return true; else return false;
     in: 
       query: "{{{query}}}"                  # inbuilt variable contains the user's query
