@@ -10,7 +10,7 @@ import {util} from "/framework/js/util.mjs";
 import {router} from "/framework/js/router.mjs";
 import {session} from "/framework/js/session.mjs";
 
-const MODULE_PATH = util.getModulePath(import.meta), 
+const MODULE_PATH = util.getModulePath(import.meta), AI_WORKSHOP_VIEW = "aiworkshop",
     MAIN_HTML = util.resolveURL(`${APP_CONSTANTS.EMBEDDED_APP_PATH}/main.html`), IMAGE_DATA = "data:image";
 
 let loginappMain;
@@ -25,7 +25,10 @@ const main = async (data, mainLoginAppModule) => {
 
 async function _createdata(data) {   
     let viewPath, aiendpoint, views; delete data.showhome; delete data.shownotifications;
-    const appsAllowed = (session.get(APP_CONSTANTS.LOGIN_RESPONSE))?.apps||[];
+    const loginresponse = session.get(APP_CONSTANTS.LOGIN_RESPONSE), appsAllowed = [...(loginresponse?.apps||[])],
+        isAdmin = session.get(APP_CONSTANTS.CURRENT_USERROLE).toString() == "admin"
+    if (isAdmin) appsAllowed.push({id: AI_WORKSHOP_VIEW, interface: {type: AI_WORKSHOP_VIEW,
+        label: await i18n.get(`ViewLabel_${AI_WORKSHOP_VIEW}`)}});  // admins can run AI workshops always
 
     const _getAppToForceLoadOrFalse = _ => session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)?.toString()||false;
     const _loadForcedView = appid => {
@@ -41,11 +44,12 @@ async function _createdata(data) {
     else if (_getAppToForceLoadOrFalse()) _loadForcedView();   
     else {    // left with chooser
         viewPath = `${APP_CONSTANTS.VIEWS_PATH}/${APP_CONSTANTS.VIEW_CHOOSER}`;
-        views = []; for (const app of appsAllowed) if (app.interface != APP_CONSTANTS.VIEW_CHOOSER) views.push(  // views we can choose from
-            {viewicon: app.interface.icon && app.interface.icon.toLowerCase().startsWith(IMAGE_DATA) ? app.interface.icon :
-                    `${APP_CONSTANTS.VIEWS_PATH}/${app.interface.type.toString()}/img/icon.svg`, 
-                viewlabel: app.interface.label||await i18n.get(`ViewLabel_${app.interface.type.toString()}`), 
-                viewid: app.id});
+        views = []; 
+        for (const app of appsAllowed) if (app.interface != APP_CONSTANTS.VIEW_CHOOSER) views.push(  // views we can choose from
+            {viewicon: app.interface?.icon && app.interface.icon.toLowerCase().startsWith(IMAGE_DATA) ? app.interface.icon :
+                `${APP_CONSTANTS.VIEWS_PATH}/${app.interface.type.toString()}/img/icon.svg`, 
+            viewlabel: app.interface?.label||await i18n.get(`ViewLabel_${app.interface.type.toString()}`), 
+            viewid: app.id});
     } 
 
     // now load the view's HTML

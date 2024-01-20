@@ -6,6 +6,7 @@
  */
 
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const simplellm = require(`${NEURANET_CONSTANTS.LIBDIR}/simplellm.js`);
 const textsplitter = require(`${NEURANET_CONSTANTS.LIBDIR}/textsplitter.js`);
@@ -28,7 +29,7 @@ async function generate(fileindexer, generatorDefinition) {
 
     const promptData = {}; for (const [key,value] of Object.entries(generatorDefinition)) {
         const keyNormalized = key.toLowerCase().trim();
-        if (keyNormalized.endsWith(PROMPT_PARAM)) promptData[keyNormalized.split("_")[0]] = value;
+        if (keyNormalized.endsWith(PROMPT_PARAM)) promptData[aiapp.extractRawKeyName(key)] = value;
     }
 
     const rephrasedSplits = []; for (const split of splits) {

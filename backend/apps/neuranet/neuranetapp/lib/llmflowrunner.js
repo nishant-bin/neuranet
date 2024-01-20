@@ -42,10 +42,10 @@ exports.answer = async function(query, id, org, aiappid, request) {
         const llmflowModule = await aiapp.getCommandModule(id, org, aiappid, command);
         const callParams = {id, org, query, aiappid, request}; 
         for (const [key, value] of Object.entries(llmflowCommandDefinition.in)) {
-            if (key.endsWith(NOINFLATE)) callParams[key.split("_")[0]] = value;
+            if (key.endsWith(NOINFLATE)) callParams[aiapp.extractRawKeyName(key)] = value;
             else if (key.endsWith(JSCODE)) {
                 const thisvalue = await _runJSCode(value, working_memory);
-                callParams[key.split("_")[0]] = thisvalue;
+                callParams[aiapp.extractRawKeyName(key)] = thisvalue;
             } else callParams[key] = typeof value === "object" ? JSON.parse(
                 mustache.render(JSON.stringify(value), working_memory)) : typeof value === "string" ? 
                 mustache.render(value.toString(), working_memory) : value;

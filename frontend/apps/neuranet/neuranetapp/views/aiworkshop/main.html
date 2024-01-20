@@ -1,0 +1,134 @@
+<style>
+    div#body {
+        border: 1px solid #03B3FF;
+        border-radius: 1em;
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
+        margin-bottom: 1em;
+        display: flex;
+        flex-direction: column;
+    }
+
+    div#header {
+        width: 100%;
+        background-color: #03B3FF;
+        border-radius: 1em 1em 0em 0em;
+        font-size: smaller;
+        color: aliceblue;
+        padding: 1em;
+        box-sizing: border-box;
+    }
+
+    div#bottombar {
+        width: 100%;
+        background-color: #03B3FF;
+        border-radius: 0em 0em 1em 1em;
+        font-size: smaller;
+        color: aliceblue;
+        padding: 1em;
+        box-sizing: border-box;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    div#main {
+        flex-grow: 1;
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+    }
+
+    div#mainleft {
+        background-color: aliceblue;
+        height: 100%;
+        width: 40%;
+        border-right: 1px solid #03B3FF;
+    }
+    div#mainright {
+        background-color: aliceblue;
+        height: 100%;
+        flex-grow: 1;
+    }
+
+    div.brainicon {
+        border: 0.5px solid transparent;
+        display: flex;
+        flex-direction: column;
+        height: fit-content;
+        width: 8em;
+        font-size: small;
+        margin: 1em;
+        color: #168CD0;
+        user-select: none;
+        align-items: center;
+        padding: 1em;
+        box-sizing: border-box;
+    }
+    div.brainicon:hover {
+        border: 0.5px solid #C8CDD1;
+        background-color: #FAFAFB;
+        border-radius: 0.5em;
+    }
+    div.brainicon img {
+        width: 3.5em;
+    }
+    div.brainicon span {
+        width: 100%;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        overflow: hidden;
+        height: 1em;
+        text-align: center;
+    }
+
+    span.button {
+        background-color: #C2E8FF;
+        width: 6em;
+        color: #444444;
+        border-radius: 0.2em;
+        font-size: small;
+        text-align: center;
+        padding: 0.5em;
+        user-select: none;
+    }
+</style>
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_START}}}
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_END}}}
+
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_PORTRAIT_START}}}
+div#main {flex-direction: column;}
+div#mainleft {
+    height: 40%;
+    width: 100%;
+    border-bottom: 1px solid #03B3FF;
+    border-right: unset;
+}
+div#mainright {height: unset;}
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_PORTRAIT_END}}}
+
+<div id="body">
+    <div id="header">AI Workshop</div>
+
+    <div id="main">
+        <div id="mainleft">
+            {{#aiapps}}
+            <div class="brainicon" id="brain_tkmaiapp">
+                <img src="{{#interface.icon}}{{.}}{{/interface.icon}}{{^interface.icon}}{{{VIEW_PATH}}}/img/bot.svg{{/interface.icon}}">
+                <span>{{interface.label}}</span>
+            </div>
+            {{/aiapps}}
+        </div>
+
+        <div id="mainright">
+            
+        </div>
+    </div>
+
+    <div id="bottombar">
+        <span class="button">New</span>
+        <span class="button">Delete</span>
+        <span class="button">Unpublish</span>
+        <span class="button">Publish</span>
+    </div>
+</div>

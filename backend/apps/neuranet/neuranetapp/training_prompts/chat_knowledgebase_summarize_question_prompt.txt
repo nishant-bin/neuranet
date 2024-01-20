@@ -1,9 +1,0 @@
-Given the following conversation and a question, rephrase the question to include all relevant keywords and context from the conversation.
-Chat History:
-{{#session}}
-{{{role}}}: {{{content}}}
-{{/session}}
-
-Question: {{{question}}}
-
-Standalone question:

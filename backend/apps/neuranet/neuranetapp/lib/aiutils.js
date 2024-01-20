@@ -41,6 +41,6 @@ exports.getAIModel = async function(model_name, overrides) {
     NEURANET_CONSTANTS.CONF.ai_models[model_name] = jsonConf.ai_models[model_name];   // update cached models
 
     const model = serverutils.clone(NEURANET_CONSTANTS.CONF.ai_models[model_name]);
-    if (overrides) for (const [key, value] of Object.entries(overrides)) model[key] = value;
+    if (overrides) for (const [key, value] of Object.entries(overrides)) serverutils.setObjProperty(model, key, value);
     return model;
 }

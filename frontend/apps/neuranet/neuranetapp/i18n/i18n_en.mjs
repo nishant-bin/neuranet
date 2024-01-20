@@ -19,10 +19,12 @@ export const i18n = {
 "NeuralNetReady": "AI Neural Network<br>Ready...",
 "TypeMessage": "Type Message",
 
-"ViewLabel_gencode": "Generate Code",
-"ViewLabel_enterpriseassist": "Enterprise Assistant",
+"ViewLabel_gencode": "Generate code",
+"ViewLabel_enterpriseassist": "Enterprise assistant",
 "ViewLabel_sqltranslate": "Translate SQL",
-"ViewLabel_chat": "General Chat",
+"ViewLabel_chat": "General chat",
+"ViewLabel_aiworkshop": "AI workshop",
+
 
 "ErrorConvertingBadInputCode": "Error in conversion, due to bad input code.\n\n{{#message}}{{message}}{{/message}}{{^message}}Code parser failed to parse.{{/message}}\n\nFound at: Line:{{#line}}{{line}}{{/line}}{{^line}}0{{/line}}, Column:{{#column}}{{column}}{{/column}}{{^column}}0{{/column}}.",
 "PossibleErrorConvertingCode": "--- WARNING: Possibly bad code.\n--- {{#message}}{{message}}{{/message}}{{^message}}Code parser failed to parse.{{/message}}\n--- Found at: {{#line}}{{line}}{{/line}}{{^line}}0{{/line}}, Column:{{#column}}{{column}}{{/column}}{{^column}}0{{/column}}.",

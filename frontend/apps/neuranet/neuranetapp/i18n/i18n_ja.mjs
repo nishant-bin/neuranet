@@ -23,6 +23,7 @@ export const i18n = {
 "ViewLabel_enterpriseassist": "Enterprise Assistant",
 "ViewLabel_sqltranslate": "Translate SQL",
 "ViewLabel_chat": "General Chat",
+"ViewLabel_aiworkshop": "AI workshop",
 
 "ErrorConvertingBadInputCode": "Error in conversion, due to bad input code.\n\n{{#message}}{{message}}{{/message}}{{^message}}Code parser failed to parse.{{/message}}\n\nFound at: Line:{{#line}}{{line}}{{/line}}{{^line}}0{{/line}}, Column:{{#column}}{{column}}{{/column}}{{^column}}0{{/column}}.",
 "PossibleErrorConvertingCode": "--- WARNING: Possibly bad code.\n--- {{#message}}{{message}}{{/message}}{{^message}}Code parser failed to parse.{{/message}}\n--- Found at: {{#line}}{{line}}{{/line}}{{^line}}0{{/line}}, Column:{{#column}}{{column}}{{/column}}{{^column}}0{{/column}}.",

@@ -18,14 +18,19 @@ exports.initSync = _ => {
 
 exports.viewInjector = async function(result) {
     if (result.tokenflag) try {     // add in all AI apps the user has access to
-        const aiapps = await dblayer.getAllAIAppsForOrg(result.org), aiappsForUser = [];
-        for (const aiappThis of aiapps) {
-            const aiappObject = await aiapp.getAIApp(result.id, result.org, aiappThis.aiappid),
-                usersThisApp = aiappObject?aiappObject.users:[];
-            if (usersThisApp.includes('*') || usersThisApp.some(id => id.toLowerCase() == result.id.toLowerCase()))
-                aiappsForUser.push({id: aiappObject.id, interface: aiappObject.interface, endpoint: aiappObject.endpoint});
+        try {
+            const aiapps = await dblayer.getAllAIAppsForOrg(result.org), aiappsForUser = [];
+            for (const aiappThis of aiapps) {
+                const aiappObject = await aiapp.getAIApp(result.id, result.org, aiappThis.aiappid),
+                    usersThisApp = aiappObject?aiappObject.users:[];
+                if (usersThisApp.includes('*') || usersThisApp.some(id => id.toLowerCase() == result.id.toLowerCase()))
+                    aiappsForUser.push({id: aiappObject.id, interface: aiappObject.interface, endpoint: aiappObject.endpoint});
+            }
+            result.apps = aiappsForUser; 
+        } catch(err) {
+            LOG.error(`Error fetching AI apps for org ${result.org}, the error is: ${err}`);
+            result.apps = [];
         }
-        result.apps = aiappsForUser; 
         return true;
     } catch (err) {return false;}
 }

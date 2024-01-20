@@ -4,7 +4,7 @@
  * API Request
  * 	id - The user ID
  *  org - The user org
- *  appid - The AI app to use
+ *  appid - The AI app to use, if not provided then the org's default app is used
  *  question - The user's question
  *  session_id - The session ID for a previous session if this is a continuation
  * 
@@ -17,6 +17,7 @@
  * 				to the exact document
  * 
  * (C) 2023 TekMonks. All rights reserved.
+ * License: See the enclosed LICENSE file.
  */
 
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
