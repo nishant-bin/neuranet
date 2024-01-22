@@ -1,5 +1,5 @@
 # Neuranet
-Neural network and LLM framework.
+Neural network and LLM application server for AI applications.
 
 Getting Started
 ===============

@@ -43,7 +43,7 @@ async function getNotifications() {
     return renderedEvents;
 }
 
-async function processAssistantResponse(result, _chatboxid) {
+async function processAssistantResponse(result, _chatboxid, _aiappid) {
     if (!result) return {error: (await i18n.get("EnterpriseAssist_AIError")), ok: false}
     if (result.session_id) chatsessionID = result.session_id;  // save session ID so that backend can maintain session
     if ((!result.result) && (result.reason == "limit")) return {error: await i18n.get("ErrorConvertingAIQuotaLimit"), ok: false};
@@ -59,9 +59,9 @@ async function processAssistantResponse(result, _chatboxid) {
     return {ok: true, response: resultFinal};
 }
 
-const getAssistantRequest = (question, _chatboxid) => {
+const getAssistantRequest = (question, _chatboxid, aiappid) => {
     return {id: session.get(APP_CONSTANTS.USERID), org: session.get(APP_CONSTANTS.USERORG), question, 
-        session_id: chatsessionID};
+        session_id: chatsessionID, aiappid};
 }
 
 export const main = {initView, getNotifications, processAssistantResponse, getAssistantRequest};

@@ -24,11 +24,8 @@ const main = async (data, mainLoginAppModule) => {
 }
 
 async function _createdata(data) {   
-    let viewPath, aiendpoint, views; delete data.showhome; delete data.shownotifications;
-    const loginresponse = session.get(APP_CONSTANTS.LOGIN_RESPONSE), appsAllowed = [...(loginresponse?.apps||[])],
-        isAdmin = session.get(APP_CONSTANTS.CURRENT_USERROLE).toString() == "admin"
-    if (isAdmin) appsAllowed.push({id: AI_WORKSHOP_VIEW, interface: {type: AI_WORKSHOP_VIEW,
-        label: await i18n.get(`ViewLabel_${AI_WORKSHOP_VIEW}`)}});  // admins can run AI workshops always
+    let viewPath, aiendpoint, views, activeaiapp; delete data.showhome; delete data.shownotifications;
+    const loginresponse = session.get(APP_CONSTANTS.LOGIN_RESPONSE), appsAllowed = [...(loginresponse?.apps||[])];
 
     const _getAppToForceLoadOrFalse = _ => session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)?.toString()||false;
     const _loadForcedView = appid => {
@@ -36,7 +33,7 @@ async function _createdata(data) {
         const appidToOpen = appid||_getAppToForceLoadOrFalse(), 
             app = (appsAllowed.filter(app => app.id == appidToOpen))[0];
         viewPath = `${APP_CONSTANTS.VIEWS_PATH}/${app.interface.type}`;
-        aiendpoint = app.endpoint;
+        aiendpoint = app.endpoint; activeaiapp = app;
     }
 
      // load the given app if forced, or if apps allowed is just one, else load chooser
@@ -54,7 +51,7 @@ async function _createdata(data) {
 
     // now load the view's HTML
     const viewURL = `${viewPath}/main.html`, viewMainMJS = `${viewPath}/js/main.mjs`;
-    data.viewpath = viewPath; data.aiendpoint = aiendpoint;
+    data.viewpath = viewPath; data.aiendpoint = aiendpoint; data.activeaiapp = activeaiapp;
     try { const viewMain = await import(viewMainMJS); await viewMain.main.initView(data, neuranetapp); }    // init the view before loading it
     catch (err) { LOG.error(`Error in initializing view ${viewPath}.`); }
     data.viewcontent = await router.loadHTML(viewURL, {...data, views}); 
