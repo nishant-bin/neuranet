@@ -25,7 +25,10 @@ const main = async (data, mainLoginAppModule) => {
 
 async function _createdata(data) {   
     let viewPath, aiendpoint, views, activeaiapp; delete data.showhome; delete data.shownotifications;
-    const loginresponse = session.get(APP_CONSTANTS.LOGIN_RESPONSE), appsAllowed = [...(loginresponse?.apps||[])];
+    const loginresponse = session.get(APP_CONSTANTS.LOGIN_RESPONSE), appsAllowed = [...(loginresponse?.apps||[])],
+        isAdmin = session.get(APP_CONSTANTS.CURRENT_USERROLE).toString() == "admin";
+    if (isAdmin) appsAllowed.push({id: AI_WORKSHOP_VIEW, interface: {type: AI_WORKSHOP_VIEW,
+        label: await i18n.get(`ViewLabel_${AI_WORKSHOP_VIEW}`)}});  // admins can run AI workshops always
 
     const _getAppToForceLoadOrFalse = _ => session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)?.toString()||false;
     const _loadForcedView = appid => {

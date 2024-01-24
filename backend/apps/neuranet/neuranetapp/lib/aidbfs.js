@@ -223,7 +223,6 @@ async function renamefile(from, to, new_referencelink, id, org, brainid) {
  */
 async function getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainid) {
     return [await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid,)];
-    // TODO: ensure the brainid which is same as aiappid is mapped to the user here as a security check
 }
 
 /**
@@ -239,7 +238,6 @@ async function getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainid) {
  */
 async function getVectorDBsForIDAndOrgAndBrainID(id, org, brainid, embeddingsGenerator, multithreaded) {
     return [await _getVectorDBForIDAndOrgAndBrainID(id, org, brainid, embeddingsGenerator, multithreaded)];
-    // TODO: ensure the brainid which is same as aiappid is mapped to the user here as a security check
 }
 
 /**
@@ -253,18 +251,20 @@ async function getAIModelForFiles(modelName) {
 }
 
 async function _getVectorDBForIDAndOrgAndBrainID(id, org, brainid, embeddingsGenerator, multithreaded) {
+    // TODO: ensure the brainid which is same as aiappid is mapped to the user here as a security check
     const vectordb = await aivectordb.get_vectordb(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org, brainid)}/vectordb`, 
         embeddingsGenerator, multithreaded);
     return vectordb;
 }
 
 async function _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid) {
+    // TODO: ensure the brainid which is same as aiappid is mapped to the user here as a security check
     const tfidfdb = await aitfidfdb.get_tfidf_db(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org, brainid)}/tfidfdb`, 
         NEURANET_CONSTANTS.NEURANET_DOCID, NEURANET_CONSTANTS.NEURANET_LANGID, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`);
     return tfidfdb;
 }
 
-const _getDBID = (id, org, brainid) => `${(org||UNKNOWN_ORG).toLowerCase()}/${(id||UNKNOWN_ID).toLowerCase()}/${brainid}`;
+const _getDBID = (_id, org, brainid) => `${(org||UNKNOWN_ORG).toLowerCase()}/${brainid}`;
 
 const _getDocID = pathIn => crypto.createHash("md5").update(path.resolve(pathIn)).digest("hex");
 

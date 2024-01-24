@@ -5,15 +5,16 @@
  * License: See the enclosed LICENSE file.
  */
 
+const path = require("path");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
-
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const cms = require(`${LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 
 exports.initSync = _ => {
-    cms.addCMSPathModifier(async (cmsroot, id, org, extraInfo) => {
+    cms.addCMSPathModifier(async (cmsroot, id, org, extraInfo) => { // we remove user ID from the path
         const brainIDForUser = await exports.getAppID(id, org, extraInfo);
-        return `${cmsroot}/${brainIDForUser}`;
+        const modifiedRootWithNoUserID = path.resolve(cmsroot.replace(encodeURIComponent(id), ""));
+        return `${modifiedRootWithNoUserID}/${brainIDForUser}`;
     });
 }
 
