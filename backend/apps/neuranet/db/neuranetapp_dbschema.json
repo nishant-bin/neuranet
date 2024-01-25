@@ -16,7 +16,7 @@
 
 
     "CREATE TABLE aiapps(id varchar not null primary key, aiappid varchar not null, org varchar not null, status varchar)",
-    "INSERT INTO aiapps (id, aiappid, org, status, users) VALUES ('tkmaiapp_tekmonks', 'tkmaiapp', 'tekmonks', 'published')",
+    "INSERT INTO aiapps (id, aiappid, org, status) VALUES ('tkmaiapp_tekmonks', 'tkmaiapp', 'tekmonks', 'published')",
 
 
     "CREATE TABLE orgsettings(org varchar not null primary key, settings varchar not null)",
