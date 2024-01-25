@@ -27,7 +27,6 @@ exports.init = _ => {
 		}
 	})
 
-	register.addNewUserListener(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`, "initXbinPath");// ID registration listener
 }
 
 /**
@@ -76,19 +75,6 @@ exports.getFullPath = async function(headersOrLoginIDAndOrg, cmsPath, extraInfo)
 	const cmsroot = await exports.getCMSRoot(headersOrLoginIDAndOrg, extraInfo);
 	const fullpath = path.resolve(`${cmsroot}/${cmsPath}`);
 	return fullpath;
-}
-
-/**
- * Reinits the XBIN path for the given user. Delete all existing files.
- * @param {object} headersOrLoginIDAndOrg HTTP request headers or {xbin_id, xbin_org} object
- * @returns {boolean} true on success and false on failure
- */
-exports.initXbinPath = async (headersOrLoginIDAndOrg) => {
-	const home = await exports.getCMSRoot(headersOrLoginIDAndOrg, {rawRoot: true});
-	try {await utils.rmrf(home); return true;} catch(err) {
-			LOG.error(`Can't init the home folder for id ${result.id} for org ${result.org} as can't access or delete path ${home}. The error is ${err}.`);
-			return false;
-	}
 }
 
 /**
