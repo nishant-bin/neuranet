@@ -33,7 +33,8 @@ async function generate(fileindexer, generatorDefinition) {
     }
 
     const rephrasedSplits = []; for (const split of splits) {
-        promptData.fragment = split; 
+        promptData.fragment = split;
+        promptData.lang = langDetected; 
         const rephrasedSplit = await simplellm.prompt_answer(prompt, fileindexer.id, fileindexer.org, promptData, modelObject);
         if (!rephrasedSplit) return {result: false};
         rephrasedSplits.push(rephrasedSplit);
