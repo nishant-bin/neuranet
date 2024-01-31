@@ -31,10 +31,6 @@ exports.getPrompt = async function(promptFile) {
 exports.getAIModel = async function(model_name, overrides) {
     if (!DEBUG_RUN) return NEURANET_CONSTANTS.CONF.ai_models[model_name];
 
-    const lastModTimeForModel = (await fspromises.stat(`${NEURANET_CONSTANTS.CONFDIR}/neuranet.json`)).mtimeMs;
-    if (lastModTimeForModel == modified_times[model_name]) return NEURANET_CONSTANTS.CONF.ai_models[model_name];
-    else modified_times[model_name] = lastModTimeForModel;
-
     const confFile = await fspromises.readFile(`${NEURANET_CONSTANTS.CONFDIR}/neuranet.json`, "utf8");
     const renderedFile = mustache.render(confFile, NEURANET_CONSTANTS).replace(/\\/g, "\\\\");  // escape windows paths
     const jsonConf = JSON.parse(renderedFile);
