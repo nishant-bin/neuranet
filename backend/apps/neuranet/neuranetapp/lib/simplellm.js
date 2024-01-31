@@ -45,7 +45,7 @@ exports.prompt_answer = async function(promptFileOrPrompt, id, org, data, modelN
     const promptJSONForAILib = JSON.stringify([{role: aiModelObject.system_role, 
         content: aiModelObject.system_message}, {role: aiModelObject.user_role, content: prompt}]);
 
-    const response = await aiLibrary.process(null, promptJSONForAILib, aiKey, aiModelObject.name, true);
+    const response = await aiLibrary.process(null, promptJSONForAILib, aiKey, aiModelObject, true);
     if (!response) {
         LOG.error("SimpleLLM: LLM API library returned internal error (null reponse)."); 
         return null; // LLM call error
