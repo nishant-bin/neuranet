@@ -33,9 +33,13 @@ async function generate(fileindexer, generatorDefinition) {
         if (keyNormalized.endsWith(PROMPT_PARAM)) promptData[aiapp.extractRawKeyName(key)] = value;
     }
 
+    const langArr = splits.map(part => langdetector.getISOLang(part));
+    const langSelected = (langArr.includes('zh') && langArr.includes('ja') && generatorDefinition?.defaultlanguage) ?
+        generatorDefinition.defaultlanguage : (langArr.includes('zh') ? 'zh' : (langArr.includes('ja') ? 'ja' : langDetected));
+
     const rephrasedSplits = []; for (const split of splits) {
         promptData.fragment = split;
-        promptData.lang = langDetected; 
+        promptData.lang = langSelected; 
         const rephrasedSplit = await simplellm.prompt_answer(prompt, fileindexer.id, fileindexer.org, promptData, modelObject);
         if (!rephrasedSplit) return {result: false};
         rephrasedSplits.push(rephrasedSplit);
