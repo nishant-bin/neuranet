@@ -8,7 +8,6 @@ const fspromises = fs.promises;
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
-const register = require(`${LOGINAPP_CONSTANTS.API_DIR}/register.js`);
 const updateuser = require(`${LOGINAPP_CONSTANTS.API_DIR}/updateuser.js`);
 const loginappAPIKeyChecker = require(`${LOGINAPP_CONSTANTS.LIB_DIR}/loginappAPIKeyChecker.js`);
 
