@@ -25,7 +25,8 @@ async function generate(fileindexer, generatorDefinition) {
     const langDetected = langdetector.getISOLang(document),
         split_separators = embeddingsModel.split_separators[langDetected] || embeddingsModel.split_separators["*"],
         split_joiners = embeddingsModel.split_joiners[langDetected] || embeddingsModel.split_joiners["*"],
-        splits = textsplitter.getSplits(document, embeddingsModel.request_chunk_size[langDetected], split_separators,0);
+        splits = textsplitter.getSplits(document, embeddingsModel.request_chunk_size[langDetected], 
+            split_separators, 0);
 
     const promptData = {}; for (const [key,value] of Object.entries(generatorDefinition)) {
         const keyNormalized = key.toLowerCase().trim();
