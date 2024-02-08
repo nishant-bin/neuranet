@@ -49,10 +49,16 @@ exports.process = async function(data, promptOrPromptFile, apiKey, model, dontIn
     
     let response, retries = 0;
     do {    // auto retry if API is overloaded (503 error)
-        response = modelObject.read_ai_response_from_samples ? await _getSampleResponse(modelObject.sample_ai_response) : 
-        await rest.postHttps(modelObject.driver.host, modelObject.driver.port, modelObject.driver.path,
-            {"Authorization": modelObject.isBasicAuth ? `Basic ${apiKey}` : `Bearer ${apiKey}`, ...(modelObject.x_api_key ? {"x-api-key": modelObject.x_api_key} : {})}, promptObject);
-        retries++;
+        try {
+            response = modelObject.read_ai_response_from_samples ? await _getSampleResponse(modelObject.sample_ai_response) : 
+            await rest.postHttps(modelObject.driver.host, modelObject.driver.port, modelObject.driver.path,
+                {"Authorization": modelObject.isBasicAuth ? `Basic ${apiKey}` : `Bearer ${apiKey}`, ...(modelObject.x_api_key ? {"x-api-key": modelObject.x_api_key} : {})}, promptObject);
+            retries++;
+        } catch (error) {
+            LOG.error(`The AI engine failed to provide a response due to ${error}`);
+            return null;
+        }
+    
     } while (response && ( (modelObject.http_retry_codes && modelObject.http_retry_codes.includes(response.status)) || 
             ((!modelObject.http_retry_codes) && response.status == 503) ) && 
             (retries <= (modelObject.api_max_retries||DEFAULT_503_RETRIES)))
