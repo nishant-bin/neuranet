@@ -23,7 +23,8 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3
+            "api_overloaded_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
         },
 
         "sql-code-gen4": {
@@ -44,7 +45,8 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.00002",
-            "api_overloaded_max_retries": 3
+            "api_overloaded_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
         },
 
         "chat-gpt35-turbo": {
@@ -90,7 +92,8 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3
+            "api_overloaded_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
         },
 
         "lang-code-gen4": {
@@ -111,7 +114,8 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.00002",
-            "api_overloaded_max_retries": 3
+            "api_overloaded_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
         },
 
         "lang-code-chaingen35": {
@@ -133,7 +137,8 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3
+            "api_overloaded_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
         },
 
         "lang-code-chaingen4": {
@@ -155,7 +160,8 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.00002",
-            "api_overloaded_max_retries": 3
+            "api_overloaded_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
         },
 
         "chat-knowledgebase-gpt35-turbo": {
@@ -180,7 +186,8 @@
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.000002",
             "max_memory_tokens": 12000,
-            "api_overloaded_max_retries": 3
+            "api_overloaded_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
         },
 
         "chat-knowledgebase-gpt4-turbo": {
@@ -205,7 +212,8 @@
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.00002",
             "max_memory_tokens": 12000,
-            "api_overloaded_max_retries": 3
+            "api_overloaded_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
         },
 
         "simplellm-gpt35-turbo": {
@@ -231,7 +239,8 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3
+            "api_overloaded_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
         },
 
         "embedding-openai-ada002": {
@@ -255,7 +264,9 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "price_per_unit": "0.0000001",
-            "api_overloaded_max_retries": 3
+            "api_overloaded_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
+
         },
 
         "llama-2-7b-chat-hf": {
@@ -282,7 +293,9 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3
+            "api_overloaded_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
+
         },
         "mistral-7b-instruct": {
             "name": "mistral-7b-instruct",
@@ -308,7 +321,9 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3
+            "api_overloaded_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
+
         },
         "mistral-7b-openorca": {
             "name": "mistral-7b-openorca",
@@ -334,7 +349,8 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3
+            "api_overloaded_max_retries": 3,
+            "http_retry_codes": [503, 500, 504]
         }
 
 
