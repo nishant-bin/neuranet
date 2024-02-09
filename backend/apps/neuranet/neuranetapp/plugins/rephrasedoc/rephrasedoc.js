@@ -16,7 +16,6 @@ const PROMPT_PARAM = "_promptparam";
 
 async function generate(fileindexer, generatorDefinition) {
     let document = await fileindexer.getContents(generatorDefinition.encoding||"utf8"), 
-        prompt = generatorDefinition.prompt, 
         modelObject = await aiutils.getAIModel(generatorDefinition.model.name, generatorDefinition.model.model_overrides),
         embeddingsModel = await aiutils.getAIModel(modelObject.embeddings_model);
 
@@ -34,14 +33,17 @@ async function generate(fileindexer, generatorDefinition) {
         if (keyNormalized.endsWith(PROMPT_PARAM)) promptData[aiapp.extractRawKeyName(key)] = value;
     }
 
-    const langArr = splits.map(part => langdetector.getISOLang(part));
-    const langSelected = (langArr.includes('zh') && langArr.includes('ja') && generatorDefinition?.defaultlanguage) ?
-        generatorDefinition.defaultlanguage : (langArr.includes('zh') ? 'zh' : (langArr.includes('ja') ? 'ja' : langDetected));
+    const langArr = splits.map(part => langdetector.getISOLang(part)),
+        langSelected = (langArr.includes('zh') && langArr.includes('ja') && generatorDefinition?.defaultlanguage) ?
+            generatorDefinition.defaultlanguage : (langArr.includes('zh') ? 'zh' : (langArr.includes('ja') ? 'ja' : langDetected)),
+        promptToUse = generatorDefinition[`prompt_${langSelected}`] || generatorDefinition.prompt;
+
+
 
     const rephrasedSplits = []; for (const split of splits) {
         promptData.fragment = split;
         promptData.lang = langSelected; 
-        const rephrasedSplit = await simplellm.prompt_answer(prompt, fileindexer.id, fileindexer.org, promptData, modelObject);
+        const rephrasedSplit = await simplellm.prompt_answer(promptToUse, fileindexer.id, fileindexer.org, promptData, modelObject);
         if (!rephrasedSplit) continue;
         rephrasedSplits.push(rephrasedSplit);
     }
