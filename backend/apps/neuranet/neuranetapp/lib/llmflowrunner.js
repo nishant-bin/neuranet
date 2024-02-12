@@ -27,7 +27,7 @@ exports.REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDA
  */
 exports.answer = async function(query, id, org, aiappid, request) {
     const working_memory = {
-        __error: false, __error_message: "", query, id, org, aiappid,
+        __error: false, __error_message: "", query, id, org, aiappid, request,
         return_error: message => {this.__error = true; __error_message = message; LOG.error(message);}
     };
 

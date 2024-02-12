@@ -26,9 +26,11 @@ const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const llmchat = require(`${NEURANET_CONSTANTS.LIBDIR}/llmchat.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const llmflowrunner = require(`${NEURANET_CONSTANTS.LIBDIR}/llmflowrunner.js`);
+const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
+const simplellm = require(`${NEURANET_CONSTANTS.LIBDIR}/simplellm.js`);
 
 const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-gpt35-turbo", 
-    DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
+    DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode, DEFAULT_MAX_MEMORY_TOKENS = 1000;
 
 /**
  * Runs the LLM. 
@@ -73,9 +75,12 @@ exports.answer = async (params) => {
 		aiModelObjectForChat.token_approximation_uplift, aiModelObjectForChat.tokenizer, aiLibrary) : [];
 	if (finalSessionObject.length) finalSessionObject[finalSessionObject.length-1].last = true;
 
+	const languageDetectedForQuestion =  langdetector.getISOLang(params.question)
+
 	if (params.rephrasequestion && finalSessionObject.length > 0) {
-		const standaloneQuestionResult = await simplellm.prompt_answer(params.prompt_for_question_rephrasing, id, org, 
-			{session: finalSessionObject, question: params.question});
+
+		const standaloneQuestionResult = await simplellm.prompt_answer(params[`prompt_for_question_rephrasing_${languageDetectedForQuestion}`] || params.prompt_for_question_rephrasing, id, org, 
+			{session: finalSessionObject, question: params.question},aiModelObjectForChat);
 		if (!standaloneQuestionResult) {
 			LOG.error("Couldn't create a stand alone version of the user's question.");
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
@@ -88,8 +93,8 @@ exports.answer = async (params) => {
 	const documentsForPrompt = [], metadatasForResponse = []; for (const [i,documentResult] of documentResultsForPrompt.entries()) {
 		documentsForPrompt.push({content: documentResult.text, document_index: i+1}); metadatasForResponse.push(documentResult.metadata) };
 
-	const knowledgebasePromptTemplate = params.prompt;
-	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, 
+		const knowledgebasePromptTemplate =  params[`prompt_${languageDetectedForQuestion}`] || params.prompt;
+		const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, 
         {...params, documents: documentsForPrompt});
 
 	const paramsChat = { id, org, maintain_session: true, session_id, model: aiModelObjectForChat,
