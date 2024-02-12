@@ -20,7 +20,7 @@ const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
-const deleteFile = require(`${LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS.API_DIR}/deleteFile.js`);
+const deleteFile = require(`${LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS.API_DIR}/deletefile.js`);
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"};
 
