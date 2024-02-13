@@ -53,7 +53,7 @@ function _insertAIResponse(shadowRoot, userMessageArea, userPrompt, aiResponse, 
     const insertion = oldInsertion||insertionTemplate.content.cloneNode(true), 
         insertionDiv = oldInsertion||insertion.querySelector("div#insertiondiv");
     insertion.querySelector("span#userprompt").innerHTML = userPrompt;
-    if (aiResponse) insertion.querySelector("span#airesponse").innerHTML = decodeURI(aiResponse);
+    if (aiResponse) insertion.querySelector("span#airesponse").innerHTML = aiResponse;
     shadowRoot.querySelector("div#chatmainarea").appendChild(insertion);
     const chatScroller = shadowRoot.querySelector("div#chatscroller");
     chatScroller.scrollTop = chatScroller.scrollHeight;

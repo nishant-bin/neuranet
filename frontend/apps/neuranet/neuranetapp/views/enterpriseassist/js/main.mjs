@@ -52,7 +52,10 @@ async function processAssistantResponse(result, _chatboxid, _aiappid) {
     if ((!result.result) && (result.reason == "noknowledge")) return {ok: true, response: await i18n.get("EnterpriseAssist_ErrorNoKnowledge")};
 
     if (!result.result) return {error: await i18n.get("ChatAIError"), ok: false};
-
+    
+    result.metadatas.forEach(obj => {
+        obj.referencelink=decodeURI(obj.referencelink)
+    });
     const resultFinal = (await router.getMustache()).render(await i18n.get("EnterpriseAssist_ResponseTemplate"), 
         {response: result.response, metadatas: result.metadatas});
 
