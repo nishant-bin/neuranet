@@ -77,7 +77,7 @@ exports.search = async function(params, _llmstepDefinition) {
 		const uniqueID = Date.now() + Math.random(); vectorResult.metadata.__uniqueid = uniqueID;
 		const temporaryMetadata = {...(vectorResult.metadata)}; temporaryMetadata[NEURANET_CONSTANTS.NEURANET_DOCID]  = uniqueID;
 		tfidfDBInMem.create(vectorResult.text, temporaryMetadata, true); } tfidfDBInMem.rebuild(); 
-	const tfidfVectors = tfidfDBInMem.query(query), searchResultsAll = tfidfDBInMem.sortForTF(tfidfVectors), 
+	const tfidfVectors = tfidfDBInMem.query(query, aiModelObjectForSearch.topK_tfidf, null, aiModelObjectForSearch.cutoff_score_tfidf), searchResultsAll = tfidfDBInMem.sortForTF(tfidfVectors), 
 		tfidfSearchResultsTopK = searchResultsAll.slice(0, aiModelObjectForSearch.topK_vectors);
 	tfidfDBInMem.free_memory();
 
