@@ -13,7 +13,7 @@ const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/../3p/langdete
 
 const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}", SAMPLE_MODULE_PREFIX = "module(", DEFAULT_GPT_CHARS_PER_TOKEN = 4,
     DEFAULT_GPT_TOKENS_PER_WORD = 1.25, INTERNAL_TOKENIZER = "internal", DEFAULT_GPT_TOKENIZER = "gpt-tokenizer", 
-    DEFAULT_TOKEN_UPLIFT = 1.05, DEFAULT_503_RETRIES = 3;
+    DEFAULT_TOKEN_UPLIFT = 1.05, DEFAULT_AI_API_RETRIES = 5, DEFAULT_AI_API_BACKOFF_WAIT = 150, DEFAULT_AI_API_BACKOFF_EXPONENT=2;
 
 exports.process = async function(data, promptOrPromptFile, apiKey, model, dontInflatePrompt) {
     const prompt = dontInflatePrompt ? promptOrPromptFile : mustache.render(await aiutils.getPrompt(promptOrPromptFile), data).replace(/\r\n/gm,"\n");   // create the prompt
@@ -48,20 +48,27 @@ exports.process = async function(data, promptOrPromptFile, apiKey, model, dontIn
     if (modelObject.read_ai_response_from_samples) LOG.info("Reading sample response as requested by the model.");
     
     let response, retries = 0;
+    const _postAIRequest = _ => rest.postHttps(modelObject.driver.host, modelObject.driver.port, 
+        modelObject.driver.path, {"Authorization": modelObject.isBasicAuth ? `Basic ${apiKey}` : `Bearer ${apiKey}`, 
+            ...(modelObject.x_api_key ? {"x-api-key": modelObject.x_api_key} : {})}, promptObject);
+    const _is200ResponseStatus = status => typeof status !== "number" ? false : 
+        Math.trunc(status / 200) == 1 && status % 200 < 100;
     do {    // auto retry if API is overloaded (503 error)
+        let backoffwait = 0; if (retries > 0) {
+            backoffwait = Math.pow(modelObject.driver.backoffexponent||DEFAULT_AI_API_BACKOFF_EXPONENT, retries-1) * 
+                ((modelObject.driver.backoffwait||DEFAULT_AI_API_BACKOFF_WAIT)*(1+Math.random()));
+            LOG.warn(`Retrying with backoff wait of ${(modelObject.backoffwait||DEFAULT_AI_API_BACKOFF_WAIT)*retries} ms.`);
+        }
         try {
-            response = modelObject.read_ai_response_from_samples ? await _getSampleResponse(modelObject.sample_ai_response) : 
-            await rest.postHttps(modelObject.driver.host, modelObject.driver.port, modelObject.driver.path,
-                {"Authorization": modelObject.isBasicAuth ? `Basic ${apiKey}` : `Bearer ${apiKey}`, ...(modelObject.x_api_key ? {"x-api-key": modelObject.x_api_key} : {})}, promptObject);
-            retries++;
+            retries++; response = await (modelObject.read_ai_response_from_samples ? 
+                _getSampleResponse(modelObject.sample_ai_response) : _callFunctionWithWait(_postAIRequest, backoffwait));
         } catch (error) {
             LOG.error(`The AI engine failed to provide a response due to ${error}`);
-            return null;
+            response = {status: "unknown"}
         }
-    
-    } while (response && ( (modelObject.http_retry_codes && modelObject.http_retry_codes.includes(response.status)) || 
-            ((!modelObject.http_retry_codes) && response.status == 503) ) && 
-            (retries <= (modelObject.api_max_retries||DEFAULT_503_RETRIES)))
+    } while (response && (modelObject.driver.http_retry_codes && 
+            (modelObject.driver.http_retry_codes.includes(response.status)||modelObject.driver.http_retry_codes.includes("*")))
+        && retries <= (modelObject.driver.api_max_retries||DEFAULT_AI_API_RETRIES) && (!_is200ResponseStatus(response.status)))
 
     if ((!response) || (!response.data) || (response.error)) {
         LOG.error(`Error: AI engine call error.`);
@@ -122,4 +129,14 @@ async function _getSampleResponse(sampleAIReponseDirective) {
         LOG.error(`Error loading sample response module. Error is ${err}.`);
         return null;
     }
+}
+
+async function _callFunctionWithWait(callee, wait) {
+    return new Promise(async (resolve, reject) => {
+        const callAndResolve = async _ => {
+            try {const result = await callee(); resolve(result);}
+            catch (err) {reject(err)};
+        }
+        if (wait) setTimeout(callAndResolve, wait); else callAndResolve();
+    });
 }
