@@ -7,7 +7,9 @@
     "ai_models": {
         "sql-code-gen35": {
             "name": "sql-code-gen35",
-            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
+            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
+                "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]}, 
             "request":{ 
                 "model": "gpt-3.5-turbo-instruct", "temperature": 0, "stream": false, "max_tokens": 4096, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1, "stop":["---"], 
@@ -22,14 +24,14 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
+            "price_per_unit": "0.000002"
         },
 
         "sql-code-gen4": {
             "name": "sql-code-gen4",
-            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
+            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
+                "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]}, 
             "request":{ 
                 "model": "gpt-4-1106-preview", "temperature": 0, "stream": false, "max_tokens": 128000, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1, "stop":["---"], 
@@ -44,14 +46,14 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.00002",
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
+            "price_per_unit": "0.00002"
         },
 
         "chat-gpt35-turbo": {
             "name": "chat-gpt35-turbo",
-            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
+            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
+                "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]}, 
             "request":{ 
                 "model": "gpt-3.5-turbo-1106", "temperature": 0.7, "stream": false, "max_tokens": 16384, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
@@ -69,14 +71,14 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.000002",
-            "max_memory_tokens": 12000,
-            "api_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
+            "max_memory_tokens": 12000
         },
 
         "lang-code-gen35": {
             "name": "lang-code-gen35",
-            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
+            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
+                "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]}, 
             "request":{ 
                 "model": "gpt-3.5-turbo-instruct", "temperature": 0, "stream": false, "max_tokens": 4096, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1,
@@ -91,14 +93,14 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
+            "price_per_unit": "0.000002"
         },
 
         "lang-code-gen4": {
             "name": "lang-code-gen4",
-            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
+            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
+                "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]}, 
             "request":{ 
                 "model": "gpt-4-1106-preview", "temperature": 0, "stream": false, "max_tokens": 128000, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1,
@@ -113,14 +115,14 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.00002",
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
+            "price_per_unit": "0.00002"
         },
 
         "lang-code-chaingen35": {
             "name": "lang-code-chaingen35",
-            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
+            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
+                "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]}, 
             "request":{ 
                 "model": "gpt-3.5-turbo-instruct", "temperature": 0, "stream": false, "max_tokens": 4096, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1, 
@@ -136,14 +138,14 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
+            "price_per_unit": "0.000002"
         },
 
         "lang-code-chaingen4": {
             "name": "lang-code-chaingen4",
-            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
+            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
+                "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]}, 
             "request":{ 
                 "model": "gpt-4-1106-preview", "temperature": 0, "stream": false, "max_tokens": 128000, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1, 
@@ -159,14 +161,14 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.00002",
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
+            "price_per_unit": "0.00002"
         },
 
         "chat-knowledgebase-gpt35-turbo": {
             "name": "chat-knowledgebase-gpt35-turbo",
-            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
+            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
+                "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]}, 
             "request":{ 
                 "model": "gpt-3.5-turbo-1106", "temperature": 0.7, "stream": false, "max_tokens": 16384, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
@@ -185,14 +187,14 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.000002",
-            "max_memory_tokens": 12000,
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
+            "max_memory_tokens": 12000
         },
 
         "chat-knowledgebase-gpt4-turbo": {
             "name": "chat-knowledgebase-gpt4-turbo",
-            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
+            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
+                "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]}, 
             "request":{ 
                 "model": "gpt-4-1106-preview", "temperature": 0.7, "stream": false, "max_tokens": 128000, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
@@ -211,14 +213,14 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.00002",
-            "max_memory_tokens": 12000,
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
+            "max_memory_tokens": 12000
         },
 
         "simplellm-gpt35-turbo": {
             "name": "simplellm-gpt35-turbo",
-            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/chat/completions"}, 
+            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
+                "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]}, 
             "request":{ 
                 "model": "gpt-3.5-turbo-1106", "temperature": 0.7, "stream": false, "max_tokens": 16384, 
                 "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
@@ -238,14 +240,14 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
+            "price_per_unit": "0.000002"
         },
 
         "embedding-openai-ada002": {
             "name": "embedding-openai-ada002",
-            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, "path":"/v1/embeddings"}, 
+            "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
+                "path":"/v1/embeddings", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]}, 
             "request":{ 
                 "model": "text-embedding-ada-002", 
                 "input":"${__ORG_NEURANET_PROMPT__}",
@@ -263,15 +265,14 @@
             "sample_ai_response": "module(genRandomEmbedding.js),embedding_ai_response.json,1536,data.data[0].embedding",
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
-            "price_per_unit": "0.0000001",
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
-
+            "price_per_unit": "0.0000001"
         },
 
         "llama-2-7b-chat-hf": {
             "name": "llama-2-7b-chat-hf",
-            "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, "path":"/tekmonks.com/chat/completions"},
+            "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, 
+                "path":"/tekmonks.com/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]},
             "ai_key" :"c75173574d160cae6031f197cf480c17e476fa32b544838fa01d173ee4ce82fc648dbfbedf125e4d",
             "x_api_key" :"4829fd36-39e3-4431-8160-5b55969d7ff8",
             "isBasicAuth":"true",
@@ -292,14 +293,14 @@
             "sample_ai_response": "chat_ai_response.json",
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
-            "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
-
+            "price_per_unit": "0.000002"
         },
+
         "mistral-7b-instruct": {
             "name": "mistral-7b-instruct",
-            "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, "path":"/tekmonks.com/chat/completions"},
+            "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, 
+                "path":"/tekmonks.com/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]},
             "ai_key" :"c75173574d160cae6031f197cf480c17e476fa32b544838fa01d173ee4ce82fc648dbfbedf125e4d",
             "x_api_key" :"4829fd36-39e3-4431-8160-5b55969d7ff8",
             "isBasicAuth":"true",
@@ -321,14 +322,14 @@
             "read_ai_response_from_samples": true,
             "tokenizer": "gpt-tokenizer",
             "token_approximation_uplift": 1.10,
-            "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
-
+            "price_per_unit": "0.000002"
         },
+
         "mistral-7b-openorca": {
             "name": "mistral-7b-openorca",
-            "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, "path":"/tekmonks.com/chat/completions"},
+            "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, 
+                "path":"/tekmonks.com/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]},
             "ai_key" :"c75173574d160cae6031f197cf480c17e476fa32b544838fa01d173ee4ce82fc648dbfbedf125e4d",
             "x_api_key" :"4829fd36-39e3-4431-8160-5b55969d7ff8",
             "isBasicAuth":"true",
@@ -350,13 +351,14 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
+            "price_per_unit": "0.000002"
         },
+        
         "hugging-face-h4-zephyr": {
             "name": "hugging-face-h4-zephyr",
-            "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, "path":"/tekmonks.com/chat/completions"},
+            "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, 
+                "path":"/tekmonks.com/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]},
             "ai_key" :"c75173574d160cae6031f197cf480c17e476fa32b544838fa01d173ee4ce82fc648dbfbedf125e4d",
             "x_api_key" :"4829fd36-39e3-4431-8160-5b55969d7ff8",
             "isBasicAuth":"true",
@@ -378,9 +380,7 @@
             "read_ai_response_from_samples": true,
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
-            "price_per_unit": "0.000002",
-            "api_overloaded_max_retries": 3,
-            "http_retry_codes": [503, 500, 504]
+            "price_per_unit": "0.000002"
         }
 
 
