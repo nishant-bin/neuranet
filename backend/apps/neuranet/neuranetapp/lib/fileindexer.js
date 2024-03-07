@@ -132,7 +132,7 @@ async function _getFileIndexer(pathIn, isxbin, id, org, cmspath, extraInfo, lang
         filepath: pathIn, id, org, lang, minimum_success_percent: DEFAULT_MINIMIMUM_SUCCESS_PERCENT, cmspath,
         aiappid: await brainhandler.getAppID(id, org, extraInfo),
         getReadstream: async function() {
-            const inputStream = isxbin?downloadfile.getReadStream(pathIn, extraInfo):fs.createReadStream(pathIn);
+            const inputStream = isxbin?downloadfile.getReadStream(pathIn, false):fs.createReadStream(pathIn);
             const readStream = await textextractor.extractTextAsStreams(inputStream, this.filepath);
             return readStream;
         },
