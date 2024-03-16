@@ -17,3 +17,4 @@ backend/apps/neuranet/drive/*
 !backend/apps/neuranet/drive/_do_not_delete_
 backend/apps/neuranet/cms/*
 !backend/apps/neuranet/cms/_do_not_delete_
+.DS_store*
