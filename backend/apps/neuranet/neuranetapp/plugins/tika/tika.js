@@ -14,18 +14,29 @@ const fs = require("fs");
 const path = require("path");
 const fspromises = fs.promises;
 const stream = require("stream");
+const process = require('process');
 const mustache = require("mustache");
-const calljava = require(`${CONSTANTS.LIBDIR}/calljava.js`);
+const {spawn} = require('node:child_process');
+const {Ticketing} = require(`${CONSTANTS.LIBDIR}/ticketing.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
 
-const ONE_GB_STRINGS = 1024*1024*1024, TIKA_TEMP_SUBDIR_WRITE = `${NEURANET_CONSTANTS.TEMPDIR}/tika/out`, 
-    TIKA_TEMP_SUBDIR_READ = `${NEURANET_CONSTANTS.TEMPDIR}/tika/in`;
+const TIKA_TEMP_SUBDIR_WRITE = `${NEURANET_CONSTANTS.TEMPDIR}/tika/out`, 
+    TIKA_TEMP_SUBDIR_READ = `${NEURANET_CONSTANTS.TEMPDIR}/tika/in`, 
+    TIKA_TEMP_SUBDIR_TEMP = `${NEURANET_CONSTANTS.TEMPDIR}/tika/temp`,
+    JAVA_CP_JOIN_CHAR = process.platform === "win32" ? ";" : ":";
 
-let tikaconf, tikaFacade, java, htmlparser2;
+let tikaconf, initialized, htmlparser2, ticketing;
 
 exports.initAsync = async _ => {
-    await _createTikaFacade();
+    try { tikaconf = JSON.parse(mustache.render(await fspromises.readFile(`${__dirname}/tika.json`, "utf8"), 
+            {__dirname: __dirname.split(path.sep).join(path.posix.sep)})); } catch (err) {
+        
+        LOG.error(`Can't read Tika configuration. The error was ${err}.`); throw err;
+    }
+
+    ticketing = new Ticketing(tikaconf.max_tika_instances);
+
     try { await fspromises.access(TIKA_TEMP_SUBDIR_READ); } catch (err) {
         if (err.code == "ENOENT") await fspromises.mkdir(TIKA_TEMP_SUBDIR_READ, {recursive: true});
         else {LOG.error(`Can't access temporary paths needed by Tika. The error was ${err}.`); throw err;}
@@ -34,17 +45,22 @@ exports.initAsync = async _ => {
         if (err.code == "ENOENT") await fspromises.mkdir(TIKA_TEMP_SUBDIR_WRITE, {recursive: true});
         else {LOG.error(`Can't access temporary paths needed by Tika. The error was ${err}.`); throw err;}
     }
+    try { await fspromises.access(TIKA_TEMP_SUBDIR_TEMP); } catch (err) { 
+        if (err.code == "ENOENT") await fspromises.mkdir(TIKA_TEMP_SUBDIR_TEMP, {recursive: true});
+        else {LOG.error(`Can't access temporary paths needed by Tika. The error was ${err}.`); throw err;}
+    }
     try { htmlparser2 = require("htmlparser2"); } catch (err) { LOG.error(`Tika plugin unable to load htmlparser2. Will be using Tika for HTML parsing.`); }
+    initialized = true;
 }
 
 exports.getContentStream = async function (inputstream, filepath, forcetika) {
-    if (!tikaFacade) try { await exports.initAsync(); } catch (err) {
-        LOG.error(`Unable to initialize the Tika plugin for text extraction. Error was ${err}`);
-        return null; 
+    if (!initialized) try { await exports.initAsync(); } catch (err) {
+        const error = `Unable to initialize the Tika plugin for text extraction. Error was ${err}`;
+        LOG.error(error); throw(error);
     }
 
     const basename = path.basename(filepath), extension = path.extname(filepath);
-    if (!tikaconf.supported_types.includes(extension)) return null;
+    if (!tikaconf.supported_types.includes(extension)) throw("Unsupported file");
 
     if ((!forcetika) && filepath.toLowerCase().endsWith(".text") || filepath.toLowerCase().endsWith(".txt")) {
         LOG.info(`Tika.js using native text reader assuming UTF8 for the file ${filepath}.`);
@@ -60,45 +76,40 @@ exports.getContentStream = async function (inputstream, filepath, forcetika) {
     const workingareaReadPath = `${TIKA_TEMP_SUBDIR_READ}/${Date.now()}_${basename}`;
     const workingareaWritePath = `${TIKA_TEMP_SUBDIR_WRITE}/${Date.now()}_${basename}.txt`;
     await _copyFileToWorkingArea(inputstream, workingareaReadPath);
+    const outstream = fs.createWriteStream(workingareaWritePath);
+    const tikaExecutor = _ => new Promise(async (resolve, reject) => {
+        const tikaoptions = [...tikaconf.tikaoptions, `--config=${await _getTikaConfig(basename)}`];
+        LOG.info(`Spawning Tika with ${tikaconf.java} ${tikaconf.javaoptions.join(" ")} -cp ${tikaconf.classpath.join(JAVA_CP_JOIN_CHAR)} -jar ${tikaconf.tikajar} ${tikaoptions.join(" ")} ${workingareaReadPath}`);
+        const execed_process = spawn(`${tikaconf.java}`, [...tikaconf.javaoptions, "-cp", tikaconf.classpath.join(JAVA_CP_JOIN_CHAR), 
+            "-jar", tikaconf.tikajar, ...tikaoptions, workingareaReadPath]);
+        let resolved = false; 
+        execed_process.stdout.on("data", text => outstream.write(text));
+        execed_process.on("close", _ => outstream.end());
+        execed_process.stderr.on("error", error => {
+            LOG.error(`Tika error parsing file ${filepath} error is ${error}.`); outstream.end();
+            if (!resolved) {resolved = true; reject(error);}
+        });
+        outstream.on("finish", _ => { if (!resolved) {
+            resolved = true; resolve(fs.createReadStream(workingareaWritePath)); } });
+    });
 
-    const thisInputPath = java.callStaticMethodSync("java.nio.file.Paths", "get", workingareaReadPath), 
-        thisOutputPath = java.callStaticMethodSync("java.nio.file.Paths", "get", workingareaWritePath);
-    const thisTikaInputStream = java.callStaticMethodSync("org.apache.tika.io.TikaInputStream", "get", thisInputPath);
-    const thisOutputStream = java.callStaticMethodSync("java.nio.file.Files", "newOutputStream", thisOutputPath);
-    const javaToTextContentHandler = java.import("org.apache.tika.sax.ToTextContentHandler"), thisToTextContentHandler = new javaToTextContentHandler(thisOutputStream, "UTF-8");
-    const javaTikaConfig  = java.import("org.apache.tika.config.TikaConfig"), thisConfig = tikaconf.tika_config ? new javaTikaConfig(tikaconf.tika_config) : undefined;
-    const javaAutoDetectParser =  java.import("org.apache.tika.parser.AutoDetectParser"), thisParser = thisConfig ? new javaAutoDetectParser(thisConfig) : new javaAutoDetectParser();
-    const javaMetadata = java.import("org.apache.tika.metadata.Metadata"), thisMetadata = new javaMetadata();
-    const javaParseContext = java.import("org.apache.tika.parser.ParseContext"), thisContext = new javaParseContext();
-
-    try {
-        await thisParser.parseAsync(thisTikaInputStream, thisToTextContentHandler, thisMetadata, thisContext);
-        return fs.createReadStream(workingareaWritePath);   // return file input stream of extracted text
-    } catch (err) {
-        LOG.error(`Tika error parsing file ${filepath}.`); return null;
-    } finally {
-        thisTikaInputStream.close(); thisOutputStream.close();
-    }
+    return ticketing.getTicket(tikaExecutor, true, "Tika plugin is in a wait to receive execution ticket.");
 }
 
 exports.getContent = async function(filepath, forcetika) {
-    const readstreamTExtractedText = await exports.getContentStream(fs.createReadStream(filepath), filepath, forcetika);
-    return new Promise((resolve, reject) => {
-        if (!readstreamTExtractedText) reject("Failed on Tika stream creation.");
-        const contents = [];
-        readstreamTExtractedText.on("data", chunk => contents.push(chunk));
-        readstreamTExtractedText.on("close", _ => resolve(Buffer.concat(contents)));
-        readstreamTExtractedText.on("error", err => reject(err));
-    });
-}
-
-async function _createTikaFacade() {
-    tikaconf = JSON.parse(mustache.render(await fspromises.readFile(`${__dirname}/tika.json`, "utf8"), 
-        {__dirname: __dirname.split(path.sep).join(path.posix.sep)}));
-    java = await calljava.getJava(tikaconf.classpath, true);
-    const tikaFacadeClass = java.import("org.apache.tika.Tika"); 
-    tikaFacade = new tikaFacadeClass(); 
-    tikaFacade.setMaxStringLengthSync(tikaconf.max_content_length||ONE_GB_STRINGS);
+    try {
+        const readstreamExtractedText = await exports.getContentStream(fs.createReadStream(filepath), filepath, forcetika);
+        return new Promise((resolve, reject) => {
+            if (!readstreamExtractedText) reject("Failed on Tika stream creation.");
+            const contents = [];
+            readstreamExtractedText.on("data", chunk => contents.push(chunk));
+            readstreamExtractedText.on("close", _ => resolve(Buffer.concat(contents)));
+            readstreamExtractedText.on("error", err => reject(err));
+        });
+    } catch (err) {
+        LOG.error(`Error extracting text due to ${err}`);
+        throw err;
+    }
 }
 
 function _copyFileToWorkingArea(inputstream, workingareaPath) {
@@ -121,4 +132,22 @@ async function _getHTMLReadStream(inputstream) {
     }, {decodeEntities: true});
     htmlparser.write(html); htmlparser.end();
     return stream.Readable.from([Buffer.from(text, "utf8")]);
+}
+
+async function _getTikaConfig(basenameOfFileToParse) {
+    const ocrThisFile = tikaconf.always_ocr||basenameOfFileToParse.toLowerCase().indexOf(".ocr.") != -1;
+    let filePreferredOCRLanguage; if (ocrThisFile) for (const key of Object.keys(tikaconf.ocrlanguage_bundles))
+        if (basenameOfFileToParse.toLowerCase().indexOf(`.ocr.${key}.`) != -1) {
+            filePreferredOCRLanguage = tikaconf.ocrlanguage_bundles[key]; break; }
+    const ocrlanguages = ocrThisFile ? filePreferredOCRLanguage || Object.values(tikaconf.ocrlanguage_bundles).join("+") : undefined;
+    const data = {max_content_length: tikaconf.max_content_length};
+    if (ocrThisFile) data.ocr = {tesseract_path: tikaconf.tesseract_path, 
+        tesseract_datapath: tikaconf.tesseract_datapath, ocrlanguages};
+
+    const prefix = (ocrThisFile?"ocr":"noocr")+"_"+ocrlanguages||"noocrlang";
+    const tmpFileName = `${TIKA_TEMP_SUBDIR_TEMP}/${prefix}_tikaconfig.xml`;
+    let tikaXML = await fspromises.readFile(tikaconf.tika_config, "utf8"); 
+    tikaXML = mustache.render(tikaXML, data);
+    await fspromises.writeFile(tmpFileName, tikaXML, "utf8");
+    return tmpFileName;
 }

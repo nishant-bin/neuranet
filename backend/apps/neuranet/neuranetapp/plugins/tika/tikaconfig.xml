@@ -10,17 +10,25 @@
     <detector class="org.apache.tika.detect.DefaultDetector"/>
   </detectors>
   <parsers>
-    <parser class="org.apache.tika.parser.DefaultParser"/>
+    <parser class="org.apache.tika.parser.DefaultParser">
+      <params> 
+        <param name="byteArrayMaxOverride" type="int">{{{max_content_length}}}</param> 
+      </params>
+      {{^ocr}}
+      <parser-exclude class="org.apache.tika.parser.ocr.TesseractOCRParser"/>
+      {{/ocr}}
+    </parser>
+    {{#ocr}}
     <parser class="org.apache.tika.parser.ocr.TesseractOCRParser">
       <params>
         <!-- Path to the Tesseract OCR engine executable -->
-        <param name="tesseractPath" type="string">c:/Users/rvkapoor/AppData/Local/Programs/Tesseract-OCR</param>
+        <param name="tesseractPath" type="string">{{{tesseract_path}}}</param>
 
         <!-- Specify the language for OCR (Chinese Simplified in this case) -->
-        <param name="language" type="string">chi_sim</param>
+        <param name="language" type="string">{{{ocrlanguages}}}</param>
 
         <!-- Provide the path to the tessdata directory for Tesseract data -->
-        <param name="tessdataPath" type="string">c:/Users/rvkapoor/AppData/Local/Programs/Tesseract-OCR/tessdata</param>
+        <param name="tessdataPath" type="string">{{{tesseract_datapath}}}</param>
         
         <!-- Set the source resolution for processing (300 DPI in this example) -->
         <param name="sourceResolution" type="string">300</param>
@@ -31,7 +39,7 @@
         <!-- Specify the OCR Engine Mode (OEM) for Tesseract (3 in this example) -->
         <param name="oem" type="int">3</param>
       </params>
-
     </parser>
+    {{/ocr}}
   </parsers>
 </properties>

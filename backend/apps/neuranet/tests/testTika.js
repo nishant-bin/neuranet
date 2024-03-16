@@ -18,7 +18,8 @@ exports.runTestsAsync = async function(argv) {
 
     const forceTika = (argv[2]?.toLowerCase() == true);
 
-    try { await tika.initAsync(); } catch (err) { LOG.error(`Can't initialize Tika. Error is ${err}.`); return false; }
+    try { await tika.initAsync(); } catch (err) { 
+        const error = `Can't initialize Tika. Error is ${err}.`; LOG.error(error); LOG.console(error); return false; }
     const result = await tika.getContent(pathToFile, forceTika);  // test text extraction using the Tika plugin
     if (!result) return false;
 
