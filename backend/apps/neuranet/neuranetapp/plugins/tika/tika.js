@@ -93,7 +93,7 @@ exports.getContentStream = async function (inputstream, filepath, forcetika) {
             resolved = true; resolve(fs.createReadStream(workingareaWritePath)); } });
     });
 
-    return ticketing.getTicket(tikaExecutor, true, "Tika plugin is in a wait to receive execution ticket.");
+    return ticketing.getTicket(tikaExecutor, true, `Tika plugin is in a wait to receive execution ticket for file ${filepath}.`);
 }
 
 exports.getContent = async function(filepath, forcetika) {
