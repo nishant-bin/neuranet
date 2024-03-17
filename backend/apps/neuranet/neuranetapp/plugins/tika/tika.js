@@ -24,16 +24,19 @@ const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
 const TIKA_TEMP_SUBDIR_WRITE = `${NEURANET_CONSTANTS.TEMPDIR}/tika/out`, 
     TIKA_TEMP_SUBDIR_READ = `${NEURANET_CONSTANTS.TEMPDIR}/tika/in`, 
     TIKA_TEMP_SUBDIR_TEMP = `${NEURANET_CONSTANTS.TEMPDIR}/tika/temp`,
-    JAVA_CP_JOIN_CHAR = process.platform === "win32" ? ";" : ":";
+    JAVA_CP_JOIN_CHAR = process.platform === "win32" ? ";" : ":", 
+    JAVA_EXE = process.platform === "win32" ? "java.exe" : "java";
 
 let tikaconf, initialized, htmlparser2, ticketing;
 
 exports.initAsync = async _ => {
-    try { tikaconf = JSON.parse(mustache.render(await fspromises.readFile(`${__dirname}/tika.json`, "utf8"), 
-            {__dirname: __dirname.split(path.sep).join(path.posix.sep)})); } catch (err) {
-        
-        LOG.error(`Can't read Tika configuration. The error was ${err}.`); throw err;
-    }
+    try { 
+        const _toUnixPath = pathIn => pathIn.split(path.sep).join(path.posix.sep);
+        const jsonConfParsed = mustache.render(await fspromises.readFile(`${__dirname}/tika.json`, "utf8"), 
+            {__dirname: _toUnixPath(__dirname), 
+                java_home: `${_toUnixPath(NEURANET_CONSTANTS.CONF.java_home||process.env.JAVA_HOME)}/bin/${JAVA_EXE}`}); 
+        tikaconf = JSON.parse(jsonConfParsed); 
+    } catch (err) { LOG.error(`Can't read Tika configuration. The error was ${err}.`); throw err; }
 
     ticketing = new Ticketing(tikaconf.max_tika_instances);
 
@@ -78,22 +81,27 @@ exports.getContentStream = async function (inputstream, filepath, forcetika) {
     await _copyFileToWorkingArea(inputstream, workingareaReadPath);
     const outstream = fs.createWriteStream(workingareaWritePath);
     const tikaExecutor = _ => new Promise(async (resolve, reject) => {
+        let resolved = false; 
         const tikaoptions = [...tikaconf.tikaoptions, `--config=${await _getTikaConfig(basename)}`];
         LOG.info(`Spawning Tika with ${tikaconf.java} ${tikaconf.javaoptions.join(" ")} -cp ${tikaconf.classpath.join(JAVA_CP_JOIN_CHAR)} -jar ${tikaconf.tikajar} ${tikaoptions.join(" ")} ${workingareaReadPath}`);
-        const execed_process = spawn(`${tikaconf.java}`, [...tikaconf.javaoptions, "-cp", tikaconf.classpath.join(JAVA_CP_JOIN_CHAR), 
-            "-jar", tikaconf.tikajar, ...tikaoptions, workingareaReadPath]);
-        let resolved = false; 
-        execed_process.stdout.on("data", text => outstream.write(text));
-        execed_process.on("close", _ => outstream.end());
-        execed_process.stderr.on("error", error => {
-            LOG.error(`Tika error parsing file ${filepath} error is ${error}.`); outstream.end();
+        try {
+            const execed_process = spawn(`${tikaconf.java}`, [...tikaconf.javaoptions, "-cp", tikaconf.classpath.join(JAVA_CP_JOIN_CHAR), 
+                "-jar", tikaconf.tikajar, ...tikaoptions, workingareaReadPath]);
+            execed_process.stdout.on("data", text => outstream.write(text));
+            execed_process.on("close", _ => outstream.end());
+            execed_process.stderr.on("error", error => {
+                LOG.error(`Tika error parsing file ${filepath} error is ${error}.`); outstream.end();
+                if (!resolved) {resolved = true; reject(error);}
+            });
+            outstream.on("finish", _ => { if (!resolved) {
+                resolved = true; resolve(fs.createReadStream(workingareaWritePath)); } });
+        } catch (err) {
+            LOG.error(`Tika error parsing file ${filepath} error is ${err}.`); outstream.end();
             if (!resolved) {resolved = true; reject(error);}
-        });
-        outstream.on("finish", _ => { if (!resolved) {
-            resolved = true; resolve(fs.createReadStream(workingareaWritePath)); } });
+        }
     });
 
-    return ticketing.getTicket(tikaExecutor, true, "Tika plugin is in a wait to receive execution ticket.");
+    return ticketing.getTicket(tikaExecutor, true, `Tika plugin is in a wait to receive execution ticket for file ${filepath}.`);
 }
 
 exports.getContent = async function(filepath, forcetika) {
