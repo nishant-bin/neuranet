@@ -83,10 +83,11 @@ exports.getContentStream = async function (inputstream, filepath, forcetika) {
     const tikaExecutor = _ => new Promise(async (resolve, reject) => {
         let resolved = false; 
         const tikaoptions = [...tikaconf.tikaoptions, `--config=${await _getTikaConfig(basename)}`];
-        LOG.info(`Spawning Tika with ${tikaconf.java} ${tikaconf.javaoptions.join(" ")} -cp ${tikaconf.classpath.join(JAVA_CP_JOIN_CHAR)} -jar ${tikaconf.tikajar} ${tikaoptions.join(" ")} ${workingareaReadPath}`);
+        const platformDependentArg = process.platform === "linux" ? ["org.apache.tika.cli.TikaCLI"] : ["-jar", tikaconf.tikajar];
+        LOG.info(`Spawning Tika with ${tikaconf.java} ${tikaconf.javaoptions.join(" ")} -cp ${tikaconf.classpath.join(JAVA_CP_JOIN_CHAR)} ${platformDependentArg.join(" ")}  ${tikaoptions.join(" ")} ${workingareaReadPath}`);    
         try {
             const execed_process = spawn(`${tikaconf.java}`, [...tikaconf.javaoptions, "-cp", tikaconf.classpath.join(JAVA_CP_JOIN_CHAR), 
-                "-jar", tikaconf.tikajar, ...tikaoptions, workingareaReadPath]);
+                ...platformDependentArg, ...tikaoptions, workingareaReadPath]);
             execed_process.stdout.on("data", text => outstream.write(text));
             execed_process.on("close", _ => outstream.end());
             execed_process.stderr.on("error", error => {
