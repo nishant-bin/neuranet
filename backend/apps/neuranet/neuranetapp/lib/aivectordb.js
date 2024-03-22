@@ -362,7 +362,7 @@ const _cosine_similarity = (v1, v2, lengthV1, lengthV2) => {
 function _search_singlethreaded(dbToUse, vectorToFindSimilarTo, metadata_filter_function) {
     const similarities = [], lengthOfVectorToFindSimilarTo = vectorToFindSimilarTo?
         _getVectorLength(vectorToFindSimilarTo):undefined;
-    for (const entryToCompareTo of Object.values(dbToUse.index)) 
+    for (const entryToCompareTo of Object.values(serverutils.clone(dbToUse).index)) 
         if ((!metadata_filter_function) || metadata_filter_function(entryToCompareTo.metadata)) similarities.push({   // calculate cosine similarities
             vector: entryToCompareTo.vector, 
             similarity: vectorToFindSimilarTo ? _cosine_similarity(entryToCompareTo.vector, vectorToFindSimilarTo, 
