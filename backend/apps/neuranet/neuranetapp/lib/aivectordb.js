@@ -362,12 +362,14 @@ const _cosine_similarity = (v1, v2, lengthV1, lengthV2) => {
 function _search_singlethreaded(dbToUse, vectorToFindSimilarTo, metadata_filter_function) {
     const similarities = [], lengthOfVectorToFindSimilarTo = vectorToFindSimilarTo?
         _getVectorLength(vectorToFindSimilarTo):undefined;
-    for (const entryToCompareTo of Object.values(serverutils.clone(dbToUse).index)) 
+    for (const dbEntry of Object.values(dbToUse.index)) {
+        const entryToCompareTo = serverutils.clone(dbEntry);
         if ((!metadata_filter_function) || metadata_filter_function(entryToCompareTo.metadata)) similarities.push({   // calculate cosine similarities
             vector: entryToCompareTo.vector, 
             similarity: vectorToFindSimilarTo ? _cosine_similarity(entryToCompareTo.vector, vectorToFindSimilarTo, 
                 entryToCompareTo.length, lengthOfVectorToFindSimilarTo) : undefined,
             metadata: entryToCompareTo.metadata});
+    }
     return similarities;
 }
 
@@ -404,12 +406,14 @@ async function _callWorker(worker, functionToCall, argumentsToSend) {
 /*** Start: worker module functions ***/
 function _worker_calculate_cosine_similarity(dbPath, startIndex, endIndex, vectorToFindSimilarTo, lengthOfVectorToFindSimilarTo, metadata_filter_function) {
     const db = dbs_worker[_get_db_index(dbPath)], arrayToCompareTo = Object.values(db.index).slice(startIndex, endIndex);
-    const similarities = []; for (const entryToCompareTo of arrayToCompareTo) 
+    const similarities = []; for (const dbEntry of arrayToCompareTo) {
+        const entryToCompareTo = serverutils.clone(dbEntry);
         if ((!metadata_filter_function) || metadata_filter_function(entryToCompareTo.metadata)) similarities.push({   // calculate cosine similarities
             vector: entryToCompareTo.vector, 
             similarity: vectorToFindSimilarTo ? _cosine_similarity(entryToCompareTo.vector, vectorToFindSimilarTo, 
                 entryToCompareTo.length, lengthOfVectorToFindSimilarTo) : undefined,
             metadata: entryToCompareTo.metadata});
+    }
     return similarities;
 }
 
