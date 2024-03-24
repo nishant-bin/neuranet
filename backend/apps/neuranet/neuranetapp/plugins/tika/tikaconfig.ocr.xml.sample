@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<properties>
+  <!--for example: <mimeTypeRepository resource="/org/apache/tika/mime/tika-mimetypes.xml"/>-->
+  <service-loader dynamic="true" loadErrorHandler="IGNORE"/>
+  <encodingDetectors>
+    <encodingDetector class="org.apache.tika.detect.DefaultEncodingDetector"/>
+  </encodingDetectors>
+  <translator class="org.apache.tika.language.translate.DefaultTranslator"/>
+  <detectors>
+    <detector class="org.apache.tika.detect.DefaultDetector"/>
+  </detectors>
+  <parsers>
+    <parser class="org.apache.tika.parser.DefaultParser"/>
+    <parser class="org.apache.tika.parser.ocr.TesseractOCRParser">
+      <params>
+        <!-- Path to the Tesseract OCR engine executable -->
+        <param name="tesseractPath" type="string">/usr/local/Cellar/tesseract/5.3.4_1/bin/</param>
+
+        <!-- Specify the language for OCR (Chinese Simplified in this case) -->
+        <param name="language" type="string">eng+chi_sim</param>
+
+        <!-- Provide the path to the tessdata directory for Tesseract data -->
+        <param name="tessdataPath" type="string">/usr/local/share/tessdata</param>
+        
+        <!-- Set the source resolution for processing (300 DPI in this example) -->
+        <param name="sourceResolution" type="string">300</param>
+        
+        <!-- Specify the Page Segmentation Mode (PSM) for OCR (13 in this example) -->
+        <param name="psm" type="int">13</param>
+        
+        <!-- Specify the OCR Engine Mode (OEM) for Tesseract (3 in this example) -->
+        <param name="oem" type="int">3</param>
+      </params>
+
+    </parser>
+  </parsers>
+</properties>
