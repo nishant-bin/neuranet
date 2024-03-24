@@ -34,7 +34,8 @@ exports.initAsync = async _ => {
         const _toUnixPath = pathIn => pathIn.split(path.sep).join(path.posix.sep);
         const jsonConfParsed = mustache.render(await fspromises.readFile(`${__dirname}/tika.json`, "utf8"), 
             {__dirname: _toUnixPath(__dirname), 
-                java_home: `${_toUnixPath(NEURANET_CONSTANTS.CONF.java_home||process.env.JAVA_HOME)}/bin/${JAVA_EXE}`}); 
+                java_home: `${_toUnixPath(NEURANET_CONSTANTS.CONF.java_home||process.env.JAVA_HOME)}/bin/${JAVA_EXE}`,
+                env: process.env}); 
         tikaconf = JSON.parse(jsonConfParsed); 
     } catch (err) { LOG.error(`Can't read Tika configuration. The error was ${err}.`); throw err; }
 
