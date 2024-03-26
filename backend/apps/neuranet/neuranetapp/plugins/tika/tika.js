@@ -95,11 +95,10 @@ exports.getContentStream = async function (inputstream, filepath, forcetika) {
         const tikaExecutor = _ => new Promise(async (resolve, reject) => {
             let resolved = false; 
             const tikaoptions = [...tikaconf.tikaoptions, `--config=${await _getTikaConfig(basename)}`];
-            const platformDependentArg = process.platform === "linux" ? ["org.apache.tika.cli.TikaCLI"] : ["-jar", tikaconf.tikajar];
-            LOG.info(`Spawning Tika with ${tikaconf.java} ${tikaconf.javaoptions.join(" ")} -cp ${tikaconf.classpath.join(JAVA_CP_JOIN_CHAR)} ${platformDependentArg.join(" ")}  ${tikaoptions.join(" ")} ${finalReadPath}`);    
+            LOG.info(`Spawning Tika with ${tikaconf.java} ${tikaconf.javaoptions.join(" ")} -cp ${tikaconf.classpath.join(JAVA_CP_JOIN_CHAR)} ${tikaconf.tiakexec}  ${tikaoptions.join(" ")} ${finalReadPath}`);    
             try {
                 const execed_process = spawn(`${tikaconf.java}`, [...tikaconf.javaoptions, "-cp", tikaconf.classpath.join(JAVA_CP_JOIN_CHAR), 
-                    ...platformDependentArg, ...tikaoptions, finalReadPath]);
+                    tikaconf.tiakexec, ...tikaoptions, finalReadPath]);
                 execed_process.stdout.on("data", text => {
                     LOG.debug(`Tika plugin added ${text.length} bytes of parsed data from file ${filepath} to temporary file ${workingareaWritePath}.`);
                     outstream.write(text)

@@ -1,7 +1,7 @@
 {
     "classpath": ["{{{__dirname}}}/tika-app-2.9.1.jar", "{{{__dirname}}}/jai_windows-i586.jar",
-        "{{{__dirname}}}/jai-imageio-jpeg2000-1.4.0.jar"],
-    "tikajar": "{{{__dirname}}}/tika-app-2.9.1.jar",
+        "{{{__dirname}}}/jai-imageio-jpeg2000-1.4.0.jar", "jai_linux-i586.jar"],
+    "tiakexec": "org.apache.tika.cli.TikaCLI",
     "java": "{{{java_home}}}",
     "javaoptions": ["-Xms64m", "-Xmx1500m"],
     "max_tika_instances": 5,
