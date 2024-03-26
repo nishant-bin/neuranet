@@ -67,7 +67,7 @@ exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA
         dbmemid = path.resolve(dbPathOrMemID); if (!IN_MEM_DBS[dbmemid]) {    // load the DB from the disk only if needed
             try { await fspromises.access(dbPathOrMemID); } catch (err) {    // check the DB path exists or create it etc.
                 if (err.code == "ENOENT") { 
-                    LOG.warn(`Unable to access the TF.IDF DB store at path ${path}. Creating a new one.`); 
+                    LOG.warn(`Unable to access the TF.IDF DB store at path ${dbPathOrMemID}. Creating a new one.`); 
                     await fspromises.mkdir(dbPathOrMemID, {recursive: true});
                 } else throw err;   // not an issue with the DB folder, something else so throw it
             }

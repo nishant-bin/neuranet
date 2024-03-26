@@ -96,7 +96,7 @@ exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath
 	} 
 
 	if (chunk.length > 0) await _appendOrWrite(temppath, chunk, startOfFile, endOfFile, exports.isZippable(fullpath));
-	LOG.debug(`Added new ${chunk.length} bytes to the file at eventual path ${fullpath} using temp path ${temppath}.`);
+	LOG.info(`Added new ${chunk.length} bytes to the file at eventual path ${fullpath} using temp path ${temppath}.`);
 	if (endOfFile) {
 		await fspromises.rename(temppath, fullpath);
 		LOG.info(`Finished uploading file ${fullpath} successfully.`);

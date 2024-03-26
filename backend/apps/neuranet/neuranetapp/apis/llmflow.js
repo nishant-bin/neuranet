@@ -33,7 +33,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 	LOG.debug(`Got knowledge base chat request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
     const aiappid = await brainhandler.getAppID(jsonReq.id, jsonReq.org, {id: jsonReq.id, org: jsonReq.org, aiappid: jsonReq.aiappid});
-    const result = await llmflowrunner[aiapp.DEFAULT_ENTRIES.llm_flow](
+    const result = await llmflowrunner[aiapp.DEFAULT_ENTRY_FUNCTIONS.llm_flow](
         jsonReq.question, jsonReq.id, jsonReq.org, aiappid, jsonReq);
     return result;
 }

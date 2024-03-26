@@ -15,7 +15,7 @@ const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.j
 const PROMPT_PARAM = "_promptparam";
 
 async function generate(fileindexer, generatorDefinition) {
-    let document = await fileindexer.getContents(generatorDefinition.encoding||"utf8"), 
+    let document = await fileindexer.getTextContents(generatorDefinition.encoding||"utf8"), 
         modelObject = await aiutils.getAIModel(generatorDefinition.model.name, generatorDefinition.model.model_overrides),
         embeddingsModel = await aiutils.getAIModel(modelObject.embeddings_model);
 

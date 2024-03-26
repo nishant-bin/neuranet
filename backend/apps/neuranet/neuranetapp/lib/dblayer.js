@@ -48,7 +48,7 @@ exports.getAIModelUsage = async (id, startTimestamp, endTimestamp, model) => {
 	const usage = await db.getQuery("SELECT sum(usage) AS totaluse FROM usage WHERE timestamp >= ? AND timestamp <= ? AND id=? AND model=?",
 		[startTimestamp, endTimestamp, id, model]);
 	if ((!usage) || (!usage.length) || (!usage[0].totaluse)) {
-		LOG.warn(`No usage found for ID ${id}, model ${model} between the timestamps ${startTimestamp} and ${endTimestamp}.`);
+		LOG.debug(`No usage found for ID ${id}, model ${model} between the timestamps ${startTimestamp} and ${endTimestamp}.`);
 		return 0;
 	} else try { return parseFloat(usage[0].totaluse); } catch (err) {LOG.error(`Error parsing usage ${usage[0].totaluse} for ID ${id}, model ${model} between the timestamps ${startTimestamp} and ${endTimestamp}, returning 0.`); return 0;}
 } 

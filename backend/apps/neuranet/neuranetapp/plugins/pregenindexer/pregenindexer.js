@@ -30,38 +30,41 @@ exports.canHandle = async fileindexer => {
  * @returns true on success or false on failure
  */
 exports.ingest = async function(fileindexer) {
-    const pregenSteps = await _getPregenStepsAIApp(fileindexer); let finalResult = true;
+    await fileindexer.start(); 
+    const pregenSteps = await _getPregenStepsAIApp(fileindexer);
     for (const pregenStep of pregenSteps) {
         if (!await _condition_to_run_met(pregenStep)) continue;    // run only if condition is satisfied
         const pregenResult = await pregenStep.generate(fileindexer);
         if (pregenResult.result) {
-            const indexResult = await fileindexer.addFile(pregenResult.contentBufferOrReadStream(), 
-                pregenStep.cmspath, pregenResult.lang, pregenStep.comment, false, false);
-            if (!indexResult) {LOG.error(`Pregen failed at step ${pregenStep.label} in add generated file.`); finalResult = false;} 
-        } else {LOG.error(`Pregen failed at step ${pregenStep.label} in generate.`); finalResult = false;}
+            const addGeneratedFileToCMSResult = await fileindexer.addFileToCMSRepository(
+                pregenResult.contentBufferOrReadStream(), pregenStep.cmspath, pregenStep.comment, true);
+            const indexResult = addGeneratedFileToCMSResult ? await fileindexer.addFileToAI(pregenStep.cmspath, pregenResult.lang) : false;
+            if (!indexResult.result) LOG.error(`Pregen failed at step ${pregenStep.label} in add generated file.`);
+        } else LOG.error(`Pregen failed at step ${pregenStep.label} in generate.`);
     }
-    const rootIndexerResult = await fileindexer.addFile(null, fileindexer.cmspath, fileindexer.lang, null, false, true); 
+    const rootIndexerResult = await fileindexer.addFileToAI(); 
     await fileindexer.end(); if (!rootIndexerResult.result) LOG.error(`Pregen failed at adding original file (AI DB ingestion failure).`);
-    return rootIndexerResult.result && finalResult;
+    return rootIndexerResult.result;
 }
 
 /**
  * Will uningest the given file and uningest the corresponding pregen (GARAGe) files for it.
- * @param {bject} fileindexer The file indexer object
+ * @param {object} fileindexer The file indexer object
  * @returns true on success or false on failure
  */
 exports.uningest = async function(fileindexer) {
-    const pregenSteps = await _getPregenStepsAIApp(fileindexer); let finalResult = true;
+    await fileindexer.start();
+    const pregenSteps = await _getPregenStepsAIApp(fileindexer); 
     for (const pregenStep of pregenSteps) {
         if (!await _condition_to_run_met(pregenStep)) continue;    // run only if condition is satisfied
-        const stepIndexerResult = await fileindexer.removeFile(pregenStep.cmspath, false, false);
-        if (!stepIndexerResult.result) {LOG.error(`Pregen removal failed at step ${pregenStep.label} in remove generated file.`); 
-            finalResult = false;}
+        const delGeneratedFileFromCMSResult = await fileindexer.deleteFileFromCMSRepository(pregenStep.cmspath, true);
+        const stepIndexerResult = delGeneratedFileFromCMSResult ? await fileindexer.removeFileFromAI(pregenStep.cmspath) : false;
+        if (!stepIndexerResult.result) LOG.error(`Pregen removal failed at step ${pregenStep.label} in remove generated file.`); 
     }
     
-    const rootIndexerResult = await fileindexer.removeFile(fileindexer.cmspath, false, true); await fileindexer.end();
+    const rootIndexerResult = await fileindexer.removeFileFromAI(); await fileindexer.end();
     if (!rootIndexerResult.result) LOG.error(`Pregen failed at removing original file (AI DB uningestion failure).`);
-    return rootIndexerResult.result && finalResult;
+    return rootIndexerResult.result;
 }
 
 /**
@@ -70,18 +73,20 @@ exports.uningest = async function(fileindexer) {
  * @returns true on success or false on failure
  */
 exports.rename = async function(fileindexer) {
-    const pregenSteps = await _getPregenStepsAIApp(fileindexer); let finalResult = true;
+    await fileindexer.start();
+    const pregenSteps = await _getPregenStepsAIApp(fileindexer); 
     for (const pregenStep of pregenSteps) {
         if (!await _condition_to_run_met(pregenStep)) continue;    // run only if condition is satisfied
-        const stepIndexerResult = await fileindexer.renameFile(pregenStep.cmspath, pregenStep.cmspathTo, 
-            pregenStep.commentTo, false, false);
-        if (!stepIndexerResult.result) {
-            LOG.error(`Pregen rename failed at step ${pregenStep.label} in rename generated file.`); finalResult = false;}
-        }
+        const renameGeneratedFileToCMSResult = await fileindexer.renameFileFromCMSRepository(pregenStep.cmspath,
+            pregenStep.cmspathTo, true);
+        const stepIndexerResult = renameGeneratedFileToCMSResult ? 
+            await fileindexer.renameFileToAI(pregenStep.cmspath, pregenStep.cmspathTo) : false;
+        if (!stepIndexerResult.result) LOG.error(`Pregen rename failed at step ${pregenStep.label} in rename generated file.`);
+    }
 
-    const rootIndexerResult = await fileindexer.renameFile(fileindexer.cmspath, fileindexer.cmspathTo, undefined, false, true); 
+    const rootIndexerResult = await fileindexer.renameFileToAI(); 
     await fileindexer.end(); if (!rootIndexerResult.result) LOG.error(`Pregen failed at renaming original file (AI DB rename failure).`);
-    return rootIndexerResult.result && finalResult;
+    return rootIndexerResult.result;
 }
 
 async function _getPregenStepsAIApp(fileindexer) {
@@ -95,7 +100,7 @@ async function _getPregenStepsAIApp(fileindexer) {
         const [command, command_function] = pregenStepObject.command.split(".");
         pregenFunctions.push({
             generate: async fileindexer => (await aiapp.getCommandModule(fileindexer.id, fileindexer.org, 
-                fileindexer.aiappid, command))[command_function||aiapp.DEFAULT_ENTRIES.pregen_flow](fileindexer, pregenStepObject.in),
+                fileindexer.aiappid, command))[command_function||aiapp.DEFAULT_ENTRY_FUNCTIONS.pregen_flow](fileindexer, pregenStepObject.in),
             label: pregenStepObject.in.label,
             cmspath, comment, cmspathTo, commentTo
         });

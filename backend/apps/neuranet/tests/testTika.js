@@ -4,7 +4,6 @@
  * (C) 2023 Tekmonks. All rights reserved.
  */
 
-const path = require("path");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const tika = require(`${NEURANET_CONSTANTS.PLUGINSDIR}/tika/tika.js`);
 

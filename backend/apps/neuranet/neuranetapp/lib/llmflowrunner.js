@@ -51,7 +51,7 @@ exports.answer = async function(query, id, org, aiappid, request) {
                 mustache.render(value.toString(), working_memory) : value;
         }
         working_memory[llmflowCommandDefinition.out||DEFAULT_OUT] = 
-            await llmflowModule[command_function||aiapp.DEFAULT_ENTRIES.llm_flow](callParams, llmflowCommandDefinition);
+            await llmflowModule[command_function||aiapp.DEFAULT_ENTRY_FUNCTIONS.llm_flow](callParams, llmflowCommandDefinition);
         if (working_memory.__error) break;
     }
 

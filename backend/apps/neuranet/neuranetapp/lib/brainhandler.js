@@ -7,14 +7,18 @@
 
 const path = require("path");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const cms = require(`${LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 
 exports.initSync = _ => {
     cms.addCMSPathModifier(async (cmsroot, id, org, extraInfo) => { // we remove user ID from the path
         const brainIDForUser = await exports.getAppID(id, org, extraInfo);
-        const modifiedRootWithNoUserID = path.resolve(cmsroot.replace(encodeURIComponent(id), ""));
-        return `${modifiedRootWithNoUserID}/${brainIDForUser}`;
+
+        if (extraInfo?.mode != NEURANET_CONSTANTS.AIAPPMODES.EDIT) {
+            const modifiedRootWithNoUserID = path.resolve(cmsroot.replace(encodeURIComponent(id), ""));
+            return `${modifiedRootWithNoUserID}/${brainIDForUser}`;
+        } else return aiapp.getAppDir(id, org, brainIDForUser);
     });
 }
 
@@ -33,3 +37,6 @@ exports.getAppID = async function(id, org, extraInfo) {
     // finally failover to default org's default AI app
     return NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP; 
 }
+
+exports.createExtraInfo = (id, org, aiappid, mode) => {return {id, org, aiappid, mode:
+    mode == NEURANET_CONSTANTS.AIAPPMODES.EDIT ? mode : NEURANET_CONSTANTS.AIAPPMODES.NORMAL}};

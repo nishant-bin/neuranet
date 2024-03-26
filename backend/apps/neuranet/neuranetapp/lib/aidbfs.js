@@ -24,12 +24,11 @@ const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
 const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
-const textextractor = require(`${NEURANET_CONSTANTS.LIBDIR}/textextractor.js`);
 const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/../3p/langdetector.js`);
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
-	MODEL_DEFAULT = "embedding-openai-ada002", UNKNOWN_ID = "unknownid", UNKNOWN_ORG = "unknownorg";
+	MODEL_DEFAULT = "embedding-openai-ada002", UNKNOWN_ORG = "unknownorg";
 
 /**
  * Ingests the given file into the AI DBs.
@@ -39,7 +38,7 @@ const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT:
  * @param {string} org The user ORG
  * @param {string} brainid The brain ID
  * @param {string} lang The language to use to ingest. If omitted will be autodetected.
- * @param {object} streamGenerator A read stream generator for this file, if available, else null
+ * @param {object} streamGenerator A read stream generator for this file, if available, else null. Must be a text stream.
  * @param {boolean} dontRebuildDBs If true, the underlying DBs are not rebuilt. If this is used then the
  *                                 DBs must be manually rebuilt later.
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
@@ -65,14 +64,14 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
     const metadata = {id, date_created: Date.now(), fullpath: pathIn, referencelink:encodeURI(referencelink||_getDocID(pathIn))}; 
     metadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(pathIn);
 
-    const _getExtractedTextStream = _ => textextractor.extractTextAsStreams(streamGenerator ?
-        streamGenerator() : fs.createReadStream(pathIn), pathIn);
+    const _getExtractedTextStream = _ => streamGenerator ? streamGenerator() : fs.createReadStream(pathIn);
 
     // ingest into the TF.IDF DB
     const tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid); let fileContents; 
     try {
         LOG.info(`Starting text extraction of file ${pathIn}.`);
-        fileContents = await neuranetutils.readFullFile(await _getExtractedTextStream(), "utf8");
+        fileContents = (await neuranetutils.readFullFile(await _getExtractedTextStream(), "utf8")).trim();
+        if (!fileContents) throw new Error(`Empty file ${pathIn}, skipping AI ingestion`);
         LOG.info(`Ended text extraction, starting TFIDF ingestion of file ${pathIn}.`);
         if (!lang) {lang = langdetector.getISOLang(fileContents); LOG.info(`Autodetected language ${lang} for file ${pathIn}.`);}
         metadata.lang = lang; tfidfDB.create(fileContents, metadata, dontRebuildDBs, lang);

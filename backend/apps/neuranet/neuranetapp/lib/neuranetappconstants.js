@@ -22,14 +22,14 @@ exports.AIDBPATH = path.resolve(`${LOGINAPP_CONSTANTS.DB_DIR}/ai_db`);
 exports.DEFAULT_ORG = "_org_neuranet_defaultorg_";
 exports.DEFAULT_ID = "_default_";
 exports.AIAPPDIR = path.resolve(`${BACKEND_ROOT}/aiapps`);
+exports.AIAPPMODES = {EDIT: 'editaiapp', NORMAL: 'normal'};
 exports.DEFAULT_ORG_DEFAULT_AIAPP = "_org_neuranet_default_aiapp_";
 
 
 exports.NEURANET_DOCID = "aidb_docid";
 exports.NEURANET_LANGID = "aidb_langid";
 
-exports.DYNAMIC_FILES_FOLDER = "dynamic";
-exports.GENERATED_FILES_FOLDER = "_nueranet_generated";
+exports.GENERATED_FILES_FOLDER = "_neuranet_generated";
 
 exports.getPlugin = name => require(`${exports.LIBDIR}/pluginhandler.js`).getPlugin(name);
 

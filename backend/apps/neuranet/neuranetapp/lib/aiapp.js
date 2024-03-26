@@ -12,7 +12,7 @@ const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
 
 const APP_CACHE = {}, PREGENFLOW_CACHE = {}, LLMGENFLOW_CACHE = {}, DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
 
-exports.DEFAULT_ENTRIES = {llm_flow: "answer", pregen_flow: "generate"}
+exports.DEFAULT_ENTRY_FUNCTIONS = {llm_flow: "answer", pregen_flow: "generate"}
 
 /**
  * Returns the pre gen object (pregen_flow) of the YAML file for the given ai application
