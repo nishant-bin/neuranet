@@ -99,7 +99,7 @@ exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath
 	LOG.info(`Added new ${chunk.length} bytes to the file at eventual path ${fullpath} using temp path ${temppath}.`);
 	if (endOfFile) {
 		try {await fspromises.rename(temppath, fullpath)} catch (err) {
-			LOG.error(`Renaming ${temppath} -> ${fullpath} failed. Retrying one more time with a 100ms wait.`)
+			LOG.error(`Renaming ${temppath} -> ${fullpath} failed. Retrying one more time with a 100ms wait.`);
 			const waitAndRetryRenamer = _ => new Promise((resolve, reject) => setTimeout(async _=>{
 				try{await fspromises.rename(temppath, fullpath); resolve();} catch (err) {reject(err)}}, 100));
 			await waitAndRetryRenamer();
