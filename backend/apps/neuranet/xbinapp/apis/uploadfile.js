@@ -217,7 +217,8 @@ exports.createFolder = async function(headersOrLoginIDAndOrg, cmsRelativePathIn,
 	}
 }
 
-exports.isZippable = fullpath => !((XBIN_CONSTANTS.CONF.DONT_GZIP_EXTENSIONS||[]).includes(path.extname(fullpath)));
+exports.isZippable = fullpath => XBIN_CONSTANTS.CONF.DISK_COMPRESSED &&
+	!((XBIN_CONSTANTS.CONF.DONT_GZIP_EXTENSIONS||[]).includes(path.extname(fullpath)));
 
 exports.deleteDiskFileMetadata = async function(fullpath) {
 	await fspromises.unlink(fullpath+XBIN_CONSTANTS.STATS_EXTENSION);
