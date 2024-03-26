@@ -179,7 +179,7 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
         filepath: pathIn, id, org, lang, minimum_success_percent: DEFAULT_MINIMIMUM_SUCCESS_PERCENT, cmspath,
         aiappid: await brainhandler.getAppID(id, org, extraInfo), extrainfo: extraInfo,
         addFileToCMSRepository: (contentBufferOrReadStream, cmspath, comment, noaievent) =>
-            exports.addFileToCMSRepository(id, org, contentBufferOrReadStream, cmspath, comment, noaievent),
+            exports.addFileToCMSRepository(id, org, contentBufferOrReadStream, cmspath, comment, extraInfo, noaievent),
         deleteFileFromCMSRepository: (cmspath, noaievent) => exports.deleteFileFromCMSRepository(id, org, 
             cmspath, extrainfo, noaievent),
         renameFileFromCMSRepository: (cmspath, cmspathTo, noaievent) => exports.renameFileFromCMSRepository(id, org, 
