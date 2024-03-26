@@ -12,3 +12,4 @@ npm install novel-segment
 npm install tinyld
 npm install yaml
 npm install papaparse
+npm install gpt-tokenizer

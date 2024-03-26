@@ -13,11 +13,11 @@
 const fs = require("fs");
 const path = require("path");
 const fspromises = fs.promises;
+const crypto = require("crypto");
 const stream = require("stream");
 const process = require('process');
 const mustache = require("mustache");
 const {spawn} = require('node:child_process');
-const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const {Ticketing} = require(`${CONSTANTS.LIBDIR}/ticketing.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
@@ -77,8 +77,9 @@ exports.getContentStream = async function (inputstream, filepath, forcetika) {
     const extension = path.extname(filepath);
     if (!tikaconf.supported_types.includes(extension)) throw(`Unsupported file ${filepath}`);
 
+    const _md5sum = text => crypto.createHash("md5").update(text).digest("hex");
     const basename = path.basename(filepath), stats = await fspromises.stat(filepath);
-    const tempPrefix = serverutils.stringToBase64(filepath)+"_"+stats.size+"_"+stats.mtimeMs;
+    const tempPrefix = _md5sum(filepath+"_"+stats.size+"_"+stats.mtimeMs);
     const finalReadPath = `${TIKA_TEMP_SUBDIR_READ}/${tempPrefix}_${basename}`;
     const finalWritePath = `${TIKA_TEMP_SUBDIR_WRITE}/${tempPrefix}_${basename}.txt`;
     const _canAccessFile = async filepath => { try{
@@ -100,7 +101,7 @@ exports.getContentStream = async function (inputstream, filepath, forcetika) {
                 const execed_process = spawn(`${tikaconf.java}`, [...tikaconf.javaoptions, "-cp", tikaconf.classpath.join(JAVA_CP_JOIN_CHAR), 
                     ...platformDependentArg, ...tikaoptions, finalReadPath]);
                 execed_process.stdout.on("data", text => {
-                    LOG.info(`Tika plugin added ${text.length} bytes of parsed data from file ${filepath} to temporary file ${workingareaWritePath}.`);
+                    LOG.debug(`Tika plugin added ${text.length} bytes of parsed data from file ${filepath} to temporary file ${workingareaWritePath}.`);
                     outstream.write(text)
                 });
                 execed_process.on("close", _ => outstream.end());
