@@ -10,5 +10,6 @@
     },
     "ja": {
         "split_separators": ["\n", "。", " ", ",", ";"]
-    }
+    },
+    "langdetector_chunk_size": 500
 }

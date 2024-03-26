@@ -18,6 +18,7 @@ const MODEL_DEFAULT = "embedding-openai-ada002", EMBEDDING_PROMPT = `${NEURANET_
     REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", LIMIT: "limit"}
 
 async function createEmbeddingVector(id, org, text, model) {
+	LOG.debug(`Create embedding called for text ${text}`);
     if (!(await quota.checkQuota(id, org))) {
 		LOG.error(`Disallowing the embedding call, as the user ${id} is over their quota.`);
 		return {reason: REASONS.LIMIT, error: "User is over quota limit."};
@@ -32,12 +33,13 @@ async function createEmbeddingVector(id, org, text, model) {
 		return {reason: REASONS.BAD_MODEL, error: err};
 	}
 	
-	const response = await aiLibrary.process({text}, EMBEDDING_PROMPT, aiKey, aiModelObject);
+	const response = await aiLibrary.process({text}, EMBEDDING_PROMPT, aiKey, aiModelObject, false, true);
 
 	if (!response) {
 		LOG.error(`AI library error processing request for embedding ${text}`); 
 		return {reason: REASONS.INTERNAL, error: "AI library error."};
 	} else {
+		LOG.info(`Vector successfully generated for text ${text}`); 
         dblayer.logUsage(id, response.metric_cost||0, aiModelObject.name);
 		return {reason: REASONS.OK, embedding: response.airesponse};
 	}

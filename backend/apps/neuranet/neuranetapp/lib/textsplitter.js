@@ -5,7 +5,7 @@
  * License: See the enclosed LICENSE file.
  */
 
-exports.getSplits = function(document, chunk_size, split_separators, overlap) {
+exports.getSplits = function(document, chunk_size, split_separators, overlap=0) {
     let split_start = 0, split_end = (split_start+chunk_size) < document.length ? 
         _find_split_separator(document, split_start, split_start+chunk_size, split_separators) : document.length;
 
@@ -33,7 +33,8 @@ const _firstIndexOfSplitSeperator = (chunk, split_separators_raw) => {
 
 const _find_split_separator = (document, split_start, raw_split_point, split_separators_raw) => {
     const rawChunk = document.substring(split_start, raw_split_point), 
-        split_separators = Array.isArray(split_separators_raw) ? split_separators_raw : [split_separators_raw];
+        split_separators = split_separators_raw ? 
+            (Array.isArray(split_separators_raw) ? split_separators_raw : [split_separators_raw]) : [];
 
     let split_separator_to_use; for (const split_separator of split_separators) 
         if ((rawChunk.indexOf(split_separator) != -1) && (rawChunk.lastIndexOf(split_separator) != 0)) {

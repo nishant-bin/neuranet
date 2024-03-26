@@ -1,5 +1,6 @@
 /**
- * Calls various GPT models for OpenAI. Uses request/response not streaming.
+ * Calls various GPT models using OpenAI message format. 
+ * Uses request/response not streaming.
  * (C) 2022 TekMonks. All rights reserved.
  */
 
@@ -14,9 +15,19 @@ const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/../3p/langdete
 const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}", SAMPLE_MODULE_PREFIX = "module(", DEFAULT_GPT_CHARS_PER_TOKEN = 4,
     DEFAULT_GPT_TOKENS_PER_WORD = 1.25, INTERNAL_TOKENIZER = "internal", DEFAULT_GPT_TOKENIZER = "gpt-tokenizer", 
     DEFAULT_TOKEN_UPLIFT = 1.05, DEFAULT_AI_API_RETRIES = 5, DEFAULT_AI_API_BACKOFF_WAIT = 150, 
-    DEFAULT_AI_API_BACKOFF_EXPONENT=2, DEFAULT_AI_API_TIMEOUT_WAIT=60000;
+    DEFAULT_AI_API_BACKOFF_EXPONENT=2, DEFAULT_AI_API_TIMEOUT_WAIT=60000, MAX_LOG_NON_VERBOSE_TRUNCATE = 150;
 
-exports.process = async function(data, promptOrPromptFile, apiKey, model, dontInflatePrompt) {
+/**
+ * Runs the AI LLM.
+ * @param {object} data The prompt data
+ * @param {string} promptOrPromptFile The prompt or a file which contains the prompt, as a Mustache template
+ * @param {string} apiKey The API key for the API call
+ * @param {string|object} model The model object or name of the model to load
+ * @param {boolean} dontInflatePrompt If true, then the prompt is not inflated using the data
+ * @param {boolean} nonVerboseLogging If true, then the LLM response logging is truncated
+ * @returns {object} null on errors or an object of format {airesponse: messageContent, metric_cost: LLM_metric_cost}
+ */
+exports.process = async function(data, promptOrPromptFile, apiKey, model, dontInflatePrompt, nonVerboseLogging) {
     const prompt = dontInflatePrompt ? promptOrPromptFile : mustache.render(await aiutils.getPrompt(promptOrPromptFile), data).replace(/\r\n/gm,"\n");   // create the prompt
     const modelObject = typeof model === "object" ? model : await aiutils.getAIModel(model); 
     if (!modelObject) { LOG.error(`Bad model object - ${modelObject}.`); return null; }
@@ -80,7 +91,8 @@ exports.process = async function(data, promptOrPromptFile, apiKey, model, dontIn
         return null;
     }
 
-    LOG.info(`The AI response for request ${JSON.stringify(data)} and prompt object ${JSON.stringify(promptObject)} was ${JSON.stringify(response)}`);
+    if (!nonVerboseLogging) LOG.info(`The AI response for request ${JSON.stringify(data)} and prompt object ${JSON.stringify(promptObject)} was ${JSON.stringify(response)}`);
+    else LOG.info(`The AI response for request ${JSON.stringify(data)} and prompt object ${JSON.stringify(promptObject)} was ${JSON.stringify(response).substring(0, MAX_LOG_NON_VERBOSE_TRUNCATE)}`);
 
     const finishReason = modelObject.response_finishreason ?
             utils.getObjProperty(response, modelObject.response_finishreason) : null,

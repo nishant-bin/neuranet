@@ -39,7 +39,8 @@ exports.ingest = async function(fileindexer) {
             const addGeneratedFileToCMSResult = await fileindexer.addFileToCMSRepository(
                 pregenResult.contentBufferOrReadStream(), pregenStep.cmspath, pregenStep.comment, true);
             const indexResult = addGeneratedFileToCMSResult ? await fileindexer.addFileToAI(pregenStep.cmspath, pregenResult.lang) : false;
-            if (!indexResult.result) LOG.error(`Pregen failed at step ${pregenStep.label} in add generated file.`);
+            if (!indexResult.result) 
+                LOG.error(`Pregen failed at step ${pregenStep.label} in add generated file.`);
         } else LOG.error(`Pregen failed at step ${pregenStep.label} in generate.`);
     }
     const rootIndexerResult = await fileindexer.addFileToAI(); 
