@@ -98,7 +98,12 @@ exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath
 	if (chunk.length > 0) await _appendOrWrite(temppath, chunk, startOfFile, endOfFile, exports.isZippable(fullpath));
 	LOG.info(`Added new ${chunk.length} bytes to the file at eventual path ${fullpath} using temp path ${temppath}.`);
 	if (endOfFile) {
-		await fspromises.rename(temppath, fullpath);
+		try {await fspromises.rename(temppath, fullpath)} catch (err) {
+			LOG.error(`Renaming ${temppath} -> ${fullpath} failed. Retrying one more time with a 100ms wait.`)
+			const waitAndRetryRenamer = _ => new Promise((resolve, reject) => setTimeout(async _=>{
+				try{await fspromises.rename(temppath, fullpath); resolve();} catch (err) {reject(err)}}, 100));
+			await waitAndRetryRenamer();
+		}
 		LOG.info(`Finished uploading file ${fullpath} successfully.`);
 		if (!noevent) blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, 
 			path: fullpath, cmspath, ip: utils.getLocalIPs()[0], id: cms.getID(headersOrLoginIDAndOrg), 
