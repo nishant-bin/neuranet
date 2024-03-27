@@ -28,13 +28,18 @@
  * (C) 2022 TekMonks. All rights reserved.
  * License: See the enclosed LICENSE file.
  */
+
+const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+
 const path = require("path");
 const crypto = require("crypto");
 const natural = require("natural");
 const fspromises = require("fs").promises;
-const jpsegmenter = require(`${__dirname}/../3p/jpsegmenter.js`);
-const zhsegmenter = require(`${__dirname}/../3p/zhsegmenter.js`);
-const langdetector = require(`${__dirname}/../3p/langdetector.js`);
+const jpsegmenter = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR||(__dirname+"/3p")}/jpsegmenter.js`);
+const zhsegmenter = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR||(__dirname+"/3p")}/zhsegmenter.js`);
+const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR||(__dirname+"/3p")}/langdetector.js`);
+const conf = require(`${NEURANET_CONSTANTS.CONFDIR||(__dirname+"/conf")}/aidb.json`);
+
 const LOG = global.LOG || console;  // allow independent operation
 
 const EMPTY_DB = {tfidfDocStore: {}, wordDocCounts: {}, vocabulary: []}, INDEX_FILE = "index.json", 
@@ -54,14 +59,11 @@ const SPLITTERS = new RegExp(/[\s,]+/), JP_SEGMENTER = jpsegmenter.getSegmenter(
  * @param {string} stopwords_path The path to the ISO stopwords file, if available. Format is {"iso_language_code":[array of stop words],...}
  *                                If set to null (not provided) then the DB will try to auto learn stop words.
  * @param {boolean} no_stemming Whether or not to stem the words. Default is to stem. If true stemming won't be used.
- * @param {boolean} autosave Autosave the DB or not. Default is true.
- * @param {number} autosave_frequency The autosave frequency. Default is 500 ms. 
  * @param {boolean} mem_only If true, then the DB is in memory only. Default is false.
  * @return {object} The database object.
  */
 exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY, 
-        metadata_langid_key=METADATA_LANGID_KEY, stopwords_path, no_stemming=false, 
-        autosave=true, autosave_frequency=500, mem_only=false) {
+        metadata_langid_key=METADATA_LANGID_KEY, stopwords_path, no_stemming=false, mem_only=false) {
     
     let dbmemid = dbPathOrMemID; if (!mem_only) {
         dbmemid = path.resolve(dbPathOrMemID); if (!IN_MEM_DBS[dbmemid]) {    // load the DB from the disk only if needed
@@ -78,23 +80,23 @@ exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA
     const db = IN_MEM_DBS[dbmemid]; db.METADATA_DOCID_KEY = metadata_docid_key; db.no_stemming = no_stemming;
     db.METADATA_LANGID_KEY = metadata_langid_key; if (stopwords_path) db._stopwords = require(stopwords_path);
 
-    const _autosaveIfSelected = _ => {if (autosave && (!mem_only)) setTimeout(_=>exports.writeData(dbPathOrMemID, db), autosave_frequency);}
+    let save_timer; if (conf.autosave && (!mem_only)) save_timer = setInterval(_=>exports.writeData(dbPathOrMemID, db), conf.autosave_frequency);
 
     return {    // TODO: add stream ingestion
         create: (document, metadata, dontRebuildDB, lang) => {
             const result = exports.create(document, metadata, dontRebuildDB, db, lang); 
-            _autosaveIfSelected(); return result;
+            return result;
         },
-        update: (oldmetadata, newmetadata) => {const result = exports.update(oldmetadata, newmetadata, db); _autosaveIfSelected(); return result;},
+        update: (oldmetadata, newmetadata) => {const result = exports.update(oldmetadata, newmetadata, db); return result;},
         query: (query, topK, filter_function, cutoff_score, options, lang) => exports.query(query, topK, filter_function, 
             cutoff_score, options, db, lang),
-        delete: metadata => {const result = exports.delete(metadata, db); _autosaveIfSelected(); return result;},
-        defragment: db => {const result = exports.defragment(db); _autosaveIfSelected(); return result;},
+        delete: metadata => {const result = exports.delete(metadata, db); return result;},
+        defragment: db => {const result = exports.defragment(db); return result;},
         rebuild: _ => exports.rebuild(db),
         sortForTF: documents => documents.sort((doc1, doc2) => doc1.tf_score < doc2.tf_score ? 1 : 
             doc1.tf_score > doc2.tf_score ? -1 : 0),
         flush: _ => exports.writeData(dbPathOrMemID, db),      // writeData is async so the caller can await for the flush to complete
-        free_memory: _ => delete IN_MEM_DBS[dbmemid]
+        free_memory: _ => {if (save_timer) clearInterval(save_timer); delete IN_MEM_DBS[dbmemid];}
     }
 }
 
@@ -116,6 +118,7 @@ exports.writeData = async (pathIn, db) => {
 
     await fspromises.writeFile(indexFile, JSON.stringify({tfidfDocStore: db.tfidfDocStore, wordDocCounts: db.wordDocCounts}));
     await fspromises.writeFile(vocabulary, JSON.stringify(db.vocabulary));
+    LOG.info(`TF.IDF DB with path ${pathIn} was flushed to the disk successfully.`)
 }
 
 /**

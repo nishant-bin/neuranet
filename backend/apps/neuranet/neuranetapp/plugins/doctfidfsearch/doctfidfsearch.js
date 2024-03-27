@@ -71,8 +71,7 @@ exports.search = async function(params, _llmstepDefinition) {
 
 	// create an in-memory temporary TF.IDF DB to search for relevant vectors
 	const tfidfDBInMem = await aitfidfdb.get_tfidf_db(TEMP_MEM_TFIDF_ID+Date.now(), NEURANET_CONSTANTS.NEURANET_DOCID, 
-		NEURANET_CONSTANTS.NEURANET_LANGID, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`, undefined, undefined, 
-		undefined, true);
+		NEURANET_CONSTANTS.NEURANET_LANGID, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`, undefined, true);
 	for (const vectorResult of vectorResults) {
 		const uniqueID = Date.now() + Math.random(); vectorResult.metadata.__uniqueid = uniqueID;
 		const temporaryMetadata = {...(vectorResult.metadata)}; temporaryMetadata[NEURANET_CONSTANTS.NEURANET_DOCID]  = uniqueID;

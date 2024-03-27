@@ -53,6 +53,9 @@
  * (C) 2023 TekMonks. All rights reserved.
  * License: See the enclosed LICENSE file.
  */
+
+const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+
 const os = require("os");
 const fs = require("fs");
 const path = require("path");
@@ -62,6 +65,7 @@ const cpucores = os.cpus().length*2;    // assume 2 cpu-threads per core (hypert
 const maxthreads_for_search = cpucores - 1; // leave 1 thread for the main program
 const worker_threads = require("worker_threads");
 const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
+const conf = require(`${NEURANET_CONSTANTS.CONFDIR||(__dirname+"/conf")}/aidb.json`);
 
 const dbs = {}, DB_INDEX_NAME = "dbindex.json", DB_INDEX_OBJECT_TEMPLATE = {index:{}, texthashes:[], dirty: false},
     workers = [];
@@ -114,7 +118,7 @@ exports.save_db = async (db_path_out, force) => {
 
     try {
         await fspromises.writeFile(_get_db_index_file(db_path_out), JSON.stringify(db_to_save));
-        db_to_save.dirty = false;    
+        db_to_save.dirty = false; LOG.info(`Vector DB with path ${db_path_out} was flushed to the disk successfully.`)
     } catch (err) {_log_error("Error saving the database index in save_db call", db_path_out, err);}
 }
 
@@ -318,9 +322,9 @@ exports.ingeststream = async function(metadata, stream, encoding="utf8", chunk_s
 
 exports.free = async db_path => {await flush_db(path); delete dbs[_get_db_index(db_path)];}   // free memory and unload
 
-exports.get_vectordb = async function(path, embedding_generator, isMultithreaded, autosave=true, autosave_frequency=500) {
+exports.get_vectordb = async function(path, embedding_generator, isMultithreaded) {
     await exports.initAsync(path, isMultithreaded); 
-    let save_timer; if (autosave) save_timer = setInterval(_=>exports.save_db(path), autosave_frequency);
+    let save_timer; if (conf.autosave) save_timer = setInterval(_=>exports.save_db(path), conf.autosave_frequency);
     return {
         create: async (vector, metadata, text) => exports.create(vector, metadata, text, embedding_generator, path),
         ingest: async (metadata, document, chunk_size, split_separators, overlap) => exports.ingest(metadata, document, 
