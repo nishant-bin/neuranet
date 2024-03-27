@@ -16,6 +16,7 @@ const textsplitter = require(`${NEURANET_CONSTANTS.LIBDIR}/textsplitter.js`);
  * @returns The dominant language inside the provided text as the language for it.
  */
 exports.getISOLang = function(text) {
+    if(!text) return "en";  // if no text then return english as default
     const langs_detected = {}, splits = textsplitter.getSplits(text, conf.langdetector_chunk_size);
     for (const split of splits) {
         const langThisSplit = detect(split);
