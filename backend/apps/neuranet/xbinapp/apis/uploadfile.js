@@ -210,9 +210,11 @@ exports.createFolder = async function(headersOrLoginIDAndOrg, cmsRelativePathIn,
 		cmsPathSoFar += `/${thisPathSegment}`;
 		const fullpath = await cms.getFullPath(headersOrLoginIDAndOrg, cmsPathSoFar, extraInfo);
 		if (!(await utils.exists(fullpath))) {
-			await fs.promises.mkdir(fullpath);
-			await exports.updateFileStats(fullpath, cmsPathSoFar, undefined, true, XBIN_CONSTANTS.XBIN_FOLDER, 
-				undefined, extraInfo);
+			try {
+				await fs.promises.mkdir(fullpath);
+				await exports.updateFileStats(fullpath, cmsPathSoFar, undefined, true, XBIN_CONSTANTS.XBIN_FOLDER, 
+					undefined, extraInfo);
+			} catch (err) {if (err.code != "EEXIST") throw err;} // ignore as timing syncs can cause this eg if 2 files get uploaded to same path then async wait in checking may return false, but at the same time another request may have created the folder
 		}
 	}
 }

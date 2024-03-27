@@ -24,23 +24,26 @@ exports.runTestsAsync = async function(argv) {
 
     LOG.console(`Test case for AI DB indexing called to index the files ${filesToTest.join(", ")}.\n`);
 
-    let finalResult = true;
+    let finalResult = true; const indexingPromises = [], indexFile = async jsonReq => {
+        const result = await indexdoc.doService(jsonReq);
+        if (result?.result) {
+            const successMsg = `Test indexing of ${jsonReq.filename} succeeded.\n`;
+            LOG.info(successMsg); LOG.console(successMsg);
+        } else {
+            finalResult = false; const errorMsg = `Test indexing of ${jsonReq.filename} failed.\n`;
+            LOG.error(errorMsg); LOG.console(errorMsg);
+        }
+    };
     for (const fileToParse of filesToTest) {
         const base64FileData = (await fspromises.readFile(fileToParse)).toString("base64");
         const jsonReq = {filename: path.basename(fileToParse), 
             data: base64FileData,
             id: TEST_ID, org: TEST_ORG, encoding: "base64", __forceDBFlush: true,
-            aiappid: TEST_APP}
-        const result = await indexdoc.doService(jsonReq);
-
-        if (result?.result) {
-            const successMsg = `Test indexing of ${fileToParse} succeeded.\n`;
-            LOG.info(successMsg); LOG.console(successMsg);
-        } else {
-            finalResult = false; const errorMsg = `Test indexing of ${fileToParse} failed.\n`;
-            LOG.error(errorMsg); LOG.console(errorMsg);
-        }
+            aiappid: TEST_APP}; 
+        indexingPromises.push(indexFile(jsonReq));
     }
+
+    await Promise.all(indexingPromises);    // wait for all files to finish
 
     setInterval(_=>{}, 1000);
     return finalResult;
