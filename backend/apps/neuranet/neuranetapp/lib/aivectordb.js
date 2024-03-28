@@ -22,11 +22,10 @@
  * 
  * Memory calculations (excluding data portion) - each vector with 1500 dimensions
  * would be 6K as 1500*64bits = 6KB. So an index with 30,000 documents (at typically 
- * 3 vectors per document) would be 30000*3*6/1000 MB = 180 MB. 
- * 300,000 such documents would be 1.8 GB and 500,000 (half a million) documents 
- * would be approximately 3 GB of memory. So a 8 GB VM with 2 GB for OS etc should be
- * sufficient for a million typical documents - spread across how many ever indexes 
- * as needed.
+ * 10 vectors per document) would be 30000*10*6/1000 MB = 1800 MB or 1.8GB. 
+ * 300,000 such documents would be 18 GB and 500,000 (half a million) documents 
+ * would be approximately 30 GB of memory. So for approx 100,000 documents we'd need
+ * 6GB of RAM.
  * 
  * Flat indexing takes about 95 ms on a 2 core, 6 GB RAM box with 5,000 documents to
  * search. May be faster on modern processors or GPUs. 
@@ -67,8 +66,8 @@ const worker_threads = require("worker_threads");
 const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const conf = require(`${NEURANET_CONSTANTS.CONFDIR||(__dirname+"/conf")}/aidb.json`);
 
-const dbs = {}, DB_INDEX_NAME = "dbindex.json", DB_INDEX_OBJECT_TEMPLATE = {index:{}, texthashes:[], dirty: false},
-    workers = [];
+const dbs = {}, DB_INDEX_NAME = "dbindex.ndjson", 
+    DB_INDEX_OBJECT_TEMPLATE = {index:{}, modifiedts:Date.now(), savedts: 0, multithreaded: false}, workers = [];
 
 let dbs_worker, workers_initialized = false;
 
@@ -97,15 +96,21 @@ exports.initAsync = async (db_path_in, multithreaded) => {
         return;
     }
 
-    try {
-        if (!dbs[_get_db_index(db_path_in)]) {  // read DB from disk only if not currently loaded
-            dbs[_get_db_index(db_path_in)] = JSON.parse(await fspromises.readFile(_get_db_index_file(db_path_in), "utf8"));
-            await _update_db_for_worker_threads();
-        }
-    } catch (err) {
+    try {if (!dbs[_get_db_index(db_path_in)]) await exports.read_db(db_path_in, multithreaded);} catch (err) { // read if not in memory already
         _log_error("Vector DB index does not exist, or read error. Initializing to an empty DB", db_path_in, err); 
         dbs[_get_db_index(db_path_in)] = {...(serverutils.clone(DB_INDEX_OBJECT_TEMPLATE)), multithreaded}; // init to an empty db
     }
+}
+
+exports.read_db = async (db_path_in, multithreaded) => {
+    const ndjson_index = await fspromises.readFile(_get_db_index_file(db_path_in), "utf8"), 
+        dbToFill = {...(serverutils.clone(DB_INDEX_OBJECT_TEMPLATE)), multithreaded};
+    for (const vector of ndjson_index.split("\n")) { 
+        if (vector.trim() == "") continue;  // ignore blank lines
+        const vectorObject = JSON.parse(vector); 
+        dbToFill.index[vectorObject.hash] = vectorObject; 
+    }
+    await _update_db_for_worker_threads();
 }
 
 exports.save_db = async (db_path_out, force) => {
@@ -114,11 +119,16 @@ exports.save_db = async (db_path_out, force) => {
         return;
     }
 
-    if ((!db_to_save.dirty) && (!force)) return;  // no need
+    if ((db_to_save.modifiedts < db_to_save.savedts) && (!force)) return;  // no need
 
-    try {
-        await fspromises.writeFile(_get_db_index_file(db_path_out), JSON.stringify(db_to_save));
-        db_to_save.dirty = false; LOG.info(`Vector DB with path ${db_path_out} was flushed to the disk successfully.`)
+    let firstSave = true; try {
+        for (const vector of Object.values(db_to_save.index)) {
+            const ndjsonLine = JSON.stringify(vector) + "\n";
+            if (firstSave) try{await fspromises.unlink(_get_db_index_file(db_path_out));} catch(err) {  // ignore ENOENT
+                if (err.code != "ENOENT") throw err;} finally {firstSave = false;}
+            await fspromises.appendFile(_get_db_index_file(db_path_out), ndjsonLine);
+        }
+        db_to_save.savedts = Date.now();    
     } catch (err) {_log_error("Error saving the database index in save_db call", db_path_out, err);}
 }
 
@@ -134,9 +144,8 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
 
     const dbToUse = dbs[_get_db_index(db_path)]; 
     const vectorHash = _get_vector_hash(vector), texthash = _get_text_hash(text); 
-    if ((!dbToUse.texthashes.includes(texthash)) && (!dbToUse.index[vectorHash])) {  // need to change this as we lose vectors
+    if (!dbToUse.index[vectorHash]) {  
         dbToUse.index[vectorHash] = {vector, hash: vectorHash, metadata, length: _getVectorLength(vector), texthash}; 
-        dbToUse.texthashes.push(texthash);
         
         try {await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");}
         catch (err) {
@@ -144,7 +153,7 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
             _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be saved`, db_path, err);
             return false;
         }
-        dbToUse.dirty = true; if (dbToUse.multithreaded) await _update_db_for_worker_threads();
+        dbToUse.modifiedts = Date.now(); if (dbToUse.multithreaded) await _update_db_for_worker_threads();
     } 
     
     LOG.debug(`Added vector ${vector} with hash ${vectorHash} to DB at index ${_get_db_index(db_path)}.`);
@@ -181,8 +190,8 @@ exports.delete = async (vector, db_path) => {
     }
 
     try {
-        dbToUse.texthashes.splice(dbToUse.texthashes.indexOf(dbToUse.index[hash].texthash),1); delete dbToUse.index[hash];
-        dbToUse.dirty = true; if (dbToUse.multithreaded) await _update_db_for_worker_threads();
+        delete dbToUse.index[hash]; dbToUse.modifiedts = Date.now();
+        if (dbToUse.multithreaded) await _update_db_for_worker_threads();
         await fspromises.unlink(_get_db_index_text_file(vector, db_path));
         return true;
     } catch (err) {
@@ -367,7 +376,7 @@ function _search_singlethreaded(dbToUse, vectorToFindSimilarTo, metadata_filter_
     const similarities = [], lengthOfVectorToFindSimilarTo = vectorToFindSimilarTo?
         _getVectorLength(vectorToFindSimilarTo):undefined;
     for (const dbEntry of Object.values(dbToUse.index)) {
-        const entryToCompareTo = serverutils.clone(dbEntry);
+        const entryToCompareTo = serverutils.clone(dbEntry); 
         if ((!metadata_filter_function) || metadata_filter_function(entryToCompareTo.metadata)) similarities.push({   // calculate cosine similarities
             vector: entryToCompareTo.vector, 
             similarity: vectorToFindSimilarTo ? _cosine_similarity(entryToCompareTo.vector, vectorToFindSimilarTo, 
@@ -411,7 +420,7 @@ async function _callWorker(worker, functionToCall, argumentsToSend) {
 function _worker_calculate_cosine_similarity(dbPath, startIndex, endIndex, vectorToFindSimilarTo, lengthOfVectorToFindSimilarTo, metadata_filter_function) {
     const db = dbs_worker[_get_db_index(dbPath)], arrayToCompareTo = Object.values(db.index).slice(startIndex, endIndex);
     const similarities = []; for (const dbEntry of arrayToCompareTo) {
-        const entryToCompareTo = serverutils.clone(dbEntry);
+        const entryToCompareTo = serverutils.clone(dbEntry); 
         if ((!metadata_filter_function) || metadata_filter_function(entryToCompareTo.metadata)) similarities.push({   // calculate cosine similarities
             vector: entryToCompareTo.vector, 
             similarity: vectorToFindSimilarTo ? _cosine_similarity(entryToCompareTo.vector, vectorToFindSimilarTo, 

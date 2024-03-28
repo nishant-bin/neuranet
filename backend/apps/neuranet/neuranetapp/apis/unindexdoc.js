@@ -35,8 +35,7 @@ const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT:
 exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
 
-	const {id, org, aiappid, filename, cmspath, start_transaction, continue_transaction, 
-		end_transaction, __forceDBFlush} = jsonReq;
+	const {id, org, aiappid, filename, cmspath, __forceDBFlush} = jsonReq;
 	LOG.debug(`Got unindex document request from ID ${jsonReq.id}. Incoming filename is ${jsonReq.filename}.`);
 
 	const _areCMSPathsSame = (cmspath1, cmspath2) => 
@@ -47,9 +46,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 		const aidbFileProcessedPromise = new Promise(resolve => blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, 
 			message => { if (message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED && 
 				_areCMSPathsSame(message.cmspath, finalCMSPath)) resolve(message); }));
-		const extrainfo = {...brainhandler.createExtraInfo(id, org, aiappid), 
-			db_no_stop: start_transaction||continue_transaction?true:false, 
-			db_no_start: end_transaction||continue_transaction?true:false};
+		const extrainfo = brainhandler.createExtraInfo(id, org, aiappid);
 		if (!(await fileindexer.deleteFileFromCMSRepository(id, org, finalCMSPath, extrainfo)).result) {
 			LOG.error(`CMS error deleting document for request ${JSON.stringify(jsonReq)}`); 
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
