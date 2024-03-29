@@ -110,6 +110,7 @@ exports.read_db = async (db_path_in, multithreaded) => {
         const vectorObject = JSON.parse(vector); 
         dbToFill.index[vectorObject.hash] = vectorObject; 
     }
+    dbs[_get_db_index(db_path_in)] = dbToFill;
     await _update_db_for_worker_threads();
 }
 

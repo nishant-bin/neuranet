@@ -24,5 +24,8 @@ exports.runTestsAsync = async function(argv) {
         if ((!queryResult) || (!queryResult.result)) {_testFailed("Search failed."); return false;}
         const output = JSON.stringify(queryResult, null, 2); 
         LOG.info(output); LOG.console(output);
-    } catch (err) {_testFailed(err); return false;}
+        return true;
+    } catch (err) {
+        _testFailed(err); return false;
+    }
 }
