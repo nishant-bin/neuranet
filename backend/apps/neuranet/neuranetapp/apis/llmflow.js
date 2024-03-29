@@ -34,7 +34,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 
     const aiappid = await brainhandler.getAppID(jsonReq.id, jsonReq.org, {id: jsonReq.id, org: jsonReq.org, aiappid: jsonReq.aiappid});
     const result = await llmflowrunner[aiapp.DEFAULT_ENTRY_FUNCTIONS.llm_flow](
-        jsonReq.question, jsonReq.id, jsonReq.org, aiappid, jsonReq);
+        jsonReq.question, jsonReq.id, jsonReq.org, aiappid, jsonReq, jsonReq.flow||"llm_flow");
     return result;
 }
 

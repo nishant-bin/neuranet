@@ -3,6 +3,7 @@
     "ai_model_default": "chat-gpt35-turbo",
     "debug_mode": true,
     "multithreaded": false,
+    "verbose_log": false,
 
     "ai_models": {
         "sql-code-gen35": {

@@ -114,13 +114,13 @@ function _unmarshallAIResponse(response, userPrompt) {
 	try {
 		const summaryRE = /\{["]*user["]*:\s*["]*(.*?)["]*,\s*["]*ai["]*:\s*["]*(.*?)["]*\}/g;
 		const jsonSummaries = summaryRE.exec(response.trim());
-		if (!jsonSummaries) throw new Error(`Error can't parse this response ${response} for summaries.`);
+		if (!jsonSummaries) throw new Error(`Error can't parse this response for summaries.\n ${response} `);
 		const realResponse = response.replace(summaryRE, "");
 
 		return {aiResponse: realResponse, promptSummary: jsonSummaries[1].trim(), 
 			responseSummary: jsonSummaries[2].trim()};
 	} catch (err) {
-		LOG.error(`Returning unsummaried conversation as error parsing the AI response summaries, the error is ${err}, the response is ${response}`);
+		LOG.error(`Returning unsummaried conversation as error parsing the AI response summaries, the error is ${err}, the response is\n ${response}`);
 		return {aiResponse: response, promptSummary: userPrompt, responseSummary: response};
 	}	
 }

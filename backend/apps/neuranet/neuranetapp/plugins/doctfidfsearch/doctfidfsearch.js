@@ -47,8 +47,11 @@ exports.search = async function(params, _llmstepDefinition) {
 
     const tfidfDBs = await aidbfs.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainid);
 	let tfidfScoredDocuments = []; 
-	for (const tfidfDB of tfidfDBs) tfidfScoredDocuments.push(
-		...tfidfDB.query(query, aiModelObjectForSearch.topK_tfidf, null, aiModelObjectForSearch.cutoff_score_tfidf));	
+	for (const tfidfDB of tfidfDBs) { 
+		const searchResults = await tfidfDB.query(query, aiModelObjectForSearch.topK_tfidf, null, aiModelObjectForSearch.cutoff_score_tfidf);
+		if (searchResults && searchResults.length) tfidfScoredDocuments.push(...searchResults);
+		else LOG.warn(`No TF.IDF search documents found for query ${query} for id ${id} org ${org} and brainid ${brainid}.`);
+	}
 	if (tfidfScoredDocuments.length == 0) return [];	// no knowledge
 
 	// now we need to rerank these documents according to their TF score only (IDF is not material for this collection)

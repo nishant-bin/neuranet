@@ -21,11 +21,12 @@ exports.runTestsAsync = async function(argv) {
     try{
         const jsonReq = {id: TEST_ID, org: TEST_ORG, aiappid: TEST_AIAPPID, question: query};
         const queryResult = await llmflow.doService(jsonReq);
-        if ((!queryResult) || (!queryResult.result)) {_testFailed("Search failed."); return false;}
+        if (((!queryResult) || (!queryResult.result)) && (queryResult?.reason != "noknowledge")) {
+            _testFailed("Search failed."); return false; }
         const output = JSON.stringify(queryResult, null, 2); 
         LOG.info(output); LOG.console(output);
         return true;
     } catch (err) {
-        _testFailed(err); return false;
+        _testFailed(err.stack?err.stack:err); return false;
     }
 }

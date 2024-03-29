@@ -10,29 +10,30 @@ const fspromises = require("fs").promises;
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
 
-const APP_CACHE = {}, PREGENFLOW_CACHE = {}, LLMGENFLOW_CACHE = {}, DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
+const APP_CACHE = {}, FLOWSECTION_CACHE = {}, DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
 
 exports.DEFAULT_ENTRY_FUNCTIONS = {llm_flow: "answer", pregen_flow: "generate"}
 
 /**
- * Returns the pre gen object (pregen_flow) of the YAML file for the given ai application
+ * Returns the flow object of the YAML file for the given ai application
  * @param {string} id The ID
  * @param {string} org The org
  * @param {string} aiappid The AI app ID
- * @returns The pre-gen (pregen_flow) object of the YAML file for the given ai application
+ * @param {string} flow_section The flow section name
+ * @returns The flow object of the YAML file for the given ai application
  */
-exports.getPregenObject = async function(id, org, aiappid) {
-    const app = await exports.getAIApp(id, org, aiappid), pregenFlowCacheKey = `${id}_${org}_${aiappid}`;
+exports.getAIAppObject = async function(id, org, aiappid, flow_section) {
+    const app = await exports.getAIApp(id, org, aiappid), flowCacheKey = `${id}_${org}_${aiappid}_${flow_section}`;
 
-    if (!app.pregen_flow) return [];
+    if (!app[flow_section]) return [];
 
-    if (typeof app.pregen_flow === "string") {  // pregen flow is in an external file
-        if (PREGENFLOW_CACHE[pregenFlowCacheKey] && (!DEBUG_MODE)) return PREGENFLOW_CACHE[pregenFlowCacheKey];
-        else PREGENFLOW_CACHE[pregenFlowCacheKey] = app.pregen_flow.toLowerCase().endsWith("yaml") ?
-            yaml.parse(await fspromises.readFile(`${_getAppDir(id, org, aiappid)}/${app.pregen_flow}`, "utf8")) :
-            JSON.parse(await fspromises.readFile(`${_getAppDir(id, org, aiappid)}/${app.pregen_flow}`, "utf8"));
-        return PREGENFLOW_CACHE[pregenFlowCacheKey];
-    } else return app.pregen_flow;  // pregen flow is inline
+    if (typeof app[flow_section] === "string") {  // flow is in an external file
+        if (FLOWSECTION_CACHE[flowCacheKey] && (!DEBUG_MODE)) return FLOWSECTION_CACHE[flowCacheKey];
+        else FLOWSECTION_CACHE[flowCacheKey] = app[flow_section].toLowerCase().endsWith("yaml") ?
+            yaml.parse(await fspromises.readFile(`${_getAppDir(id, org, aiappid)}/${app[flow_section]}`, "utf8")) :
+            JSON.parse(await fspromises.readFile(`${_getAppDir(id, org, aiappid)}/${app[flow_section]}`, "utf8"));
+        return FLOWSECTION_CACHE[flowCacheKey];
+    } else return app[flow_section];  // flow is inline
 }
 
 /**
@@ -42,17 +43,16 @@ exports.getPregenObject = async function(id, org, aiappid) {
  * @param {string} aiappid The AI app ID
  * @returns The LLM gen object (llm_flow) of the YAML file for the given ai application
  */
-exports.getLLMGenObject = async function(id, org, aiappid) {
-    const app = await exports.getAIApp(id, org, aiappid), llmgenFlowCacheKey = `${id}_${org}_${aiappid}`;
+exports.getLLMGenObject = (id, org, aiappid) => exports.getAIAppObject(id, org, aiappid, "llm_flow");
 
-    if (typeof app.llm_flow === "string") {  // llm flow is in an external file
-        if (LLMGENFLOW_CACHE[llmgenFlowCacheKey] && (!DEBUG_MODE)) return LLMGENFLOW_CACHE[llmgenFlowCacheKey];
-        else LLMGENFLOW_CACHE[llmgenFlowCacheKey] = app.llm_flow.toLowerCase().endsWith("yaml") ?
-            yaml.parse(await fspromises.readFile(`${_getAppDir(id, org, aiappid)}/${app.llm_flow}`, "utf8")) :
-            JSON.parse(await fspromises.readFile(`${_getAppDir(id, org, aiappid)}/${app.llm_flow}`, "utf8"));
-        return LLMGENFLOW_CACHE[llmgenFlowCacheKey];
-    } else return app.llm_flow;  // llm flow is inline
-}
+/**
+ * Returns the pre gen object (pregen_flow) of the YAML file for the given ai application
+ * @param {string} id The ID
+ * @param {string} org The org
+ * @param {string} aiappid The AI app ID
+ * @returns The pre-gen (pregen_flow) object of the YAML file for the given ai application
+ */
+exports.getPregenObject = (id, org, aiappid) => exports.getAIAppObject(id, org, aiappid, "pregen_flow");
 
 /**
  * Returns the AI app object itself - the overall AI app object.

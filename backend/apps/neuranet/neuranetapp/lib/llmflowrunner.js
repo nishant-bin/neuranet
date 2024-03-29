@@ -6,7 +6,7 @@
  */
 
 const mustache = require("mustache");
-const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
+const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 
@@ -25,13 +25,13 @@ exports.REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDA
  * @param {Object} request The incoming request params
  * @returns {Object} Final answer as {result: true|false,  response: set if result is true,error: set if result is false}. 
  */
-exports.answer = async function(query, id, org, aiappid, request) {
+exports.answer = async function(query, id, org, aiappid, request, flow_section="llm_flow") {
     const working_memory = {
         __error: false, __error_message: "", query, id, org, aiappid, request,
         return_error: message => {this.__error = true; __error_message = message; LOG.error(message);}
     };
 
-    const llmflowCommands = await aiapp.getLLMGenObject(id, org, aiappid); 
+    const llmflowCommands = await aiapp.getAIAppObject(id, org, aiappid, flow_section); 
     for (const llmflowCommandDefinition of llmflowCommands) {
         const condition_code = llmflowCommandDefinition[CONDITION_JS] ? mustache.render(
             llmflowCommandDefinition[CONDITION_JS], working_memory) : undefined;
@@ -50,8 +50,9 @@ exports.answer = async function(query, id, org, aiappid, request) {
                 mustache.render(JSON.stringify(value), working_memory)) : typeof value === "string" ? 
                 mustache.render(value.toString(), working_memory) : value;
         }
-        working_memory[llmflowCommandDefinition.out||DEFAULT_OUT] = 
-            await llmflowModule[command_function||aiapp.DEFAULT_ENTRY_FUNCTIONS.llm_flow](callParams, llmflowCommandDefinition);
+
+        const flow_response = await llmflowModule[command_function||aiapp.DEFAULT_ENTRY_FUNCTIONS.llm_flow](callParams, llmflowCommandDefinition);
+        serverutils.setObjProperty(working_memory, (llmflowCommandDefinition.out||DEFAULT_OUT), flow_response);
         if (working_memory.__error) break;
     }
 
@@ -60,7 +61,7 @@ exports.answer = async function(query, id, org, aiappid, request) {
 }   
 
 async function _runJSCode(code, context) {
-    try {return await (utils.createAsyncFunction(code)(context))} catch (err) {
+    try {return await (serverutils.createAsyncFunction(code)(context))} catch (err) {
         LOG.error(`Error running custom JS code error is: ${err}`); return false;
     }
 }

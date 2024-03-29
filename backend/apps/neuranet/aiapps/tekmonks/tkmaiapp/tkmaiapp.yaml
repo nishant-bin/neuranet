@@ -116,6 +116,37 @@ llm_flow:
           read_ai_response_from_samples: true
     out: airesponse                         # the final response must output to this property - airesponse for LLM flows
 
+docsearch_flow:
+  - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
+    condition_js: |
+      const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
+      const lang = langdetector.getISOLang("{{{query}}}"); if ((lang == "zh") || (lang == "ja")) return true; else return false;
+    in: 
+      query: "{{{query}}}"                  # inbuilt variable contains the user's query
+      metadata: null
+      topK_tfidf: 3
+      cutoff_score_tfidf: 0.75
+      topK_vectors: 3
+      min_distance_vectors: 0
+      brainid: "{{{aiappid}}}"              # inbuilt variable contains the ai app ID
+    out: airesponse.documents
+
+  - command: docvectorsearch.search         # for all languages except Chinese and Japanese, the condition below 
+    condition_js: |
+      const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
+      const lang = langdetector.getISOLang("{{{query}}}"); if ((lang == "zh") || (lang == "ja")) return false; else return true;
+    in: 
+      query: "{{{query}}}"
+      topK_tfidf: 3
+      cutoff_score_tfidf: 0.75
+      topK_vectors: 3
+      min_distance_vectors: 0
+      embeddings_model: 
+        name: embedding-openai-ada002
+        model_overrides:                    
+          read_ai_response_from_samples: false
+      brainid: "{{{aiappid}}}"
+    out: airesponse.documents
 
 modules: 
   llm_history_chat: llm_history_chat.js

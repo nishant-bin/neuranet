@@ -10,10 +10,10 @@ const zlib = require("zlib");
 const csvparser = require("papaparse");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
-const aivectordb_test_path = `${__dirname}/vector_db/test`;
+const aivectordb_test_path = `${__dirname}/vector_db/test@tekmonks.com_Tekmonks`;
 
 exports.runTestsAsync = async function(argv) {
-    if ((!argv[0]) || (argv[0].toLowerCase() != "ingest")) {
+    if ((!argv[0]) || (argv[0].toLowerCase() != "vectoringest")) {
         LOG.console(`Skipping vector DB ingestion test case, not called.\n`)
         return;
     }
@@ -41,12 +41,12 @@ function _ingestCVSFile(vectorDB, fileToParse) {
 
             let vectorThisResult; if (csvLine.combined_info_search) 
                 try {vectorThisResult = JSON.parse(csvLine.combined_info_search)} catch (err) {};
-            if (vectorThisResult && csvLine.overview && (await vectorDB.create(vectorThisResult, 
-                    {link: csvLine.homepage, title: csvLine.title}, csvLine.overview)) == vectorThisResult) {
+            if (vectorThisResult && csvLine.overview && csvLine.id && (await vectorDB.create(vectorThisResult, 
+                    {link: csvLine.homepage, title: csvLine.title, neuranet_docid: csvLine.id}, csvLine.overview)) == vectorThisResult) {
                 const message = `${++numRecordsProcessed} --- ${csvLine.title} - Ingested.`; numRecordsIngested++;
                 LOG.console(`${message}\n`); LOG.info(message)
             } else {
-                const message = `${++numRecordsProcessed} --- ${csvLine.title} - Not Ingested As ${vectorThisResult?"Overview missing":"Vector Parse Failed"}.`;
+                const message = `${++numRecordsProcessed} --- ${csvLine.title} - Not Ingested As ${vectorThisResult?"Overview or ID missing":"Vector Parse Failed"}.`;
                 LOG.console(`${message}\n`); LOG.error(message);
             }
             waiting_ingestions--;
