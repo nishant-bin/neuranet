@@ -23,9 +23,14 @@ pregen_flow:
         Summarize the document below in simple langauage in no more than {{{words}}} words.
         {{{fragment}}}
         The summary is
-      model: 
-        name: simplellm-gpt35-turbo
-        model_overrides:                    # this allows us to override model params on a per AI app basis, can be a nested path e.g. driver.host if we are calling API at a different host name etc
+      models: 
+        - name: simplellm-gpt35-turbo
+          type: chat
+          model_overrides:                  # this allows us to override model params on a per AI app basis, can be a nested path e.g. driver.host if we are calling API at a different host name etc          
+            read_ai_response_from_samples: true
+        - name: embedding-openai-ada002
+          type: embeddings
+          model_overrides:                      
             read_ai_response_from_samples: true
       words_promptparam: 700
       pathid: summary
@@ -38,9 +43,14 @@ pregen_flow:
         Rephrase the content based on the below instructions 
         ---infer the contents and rephrase it in a more generic context that most people without expertise or knowledge can understand 
         {{{fragment}}}
-      model: 
-        name: simplellm-gpt35-turbo
-        model_overrides:                      
+      models:
+        - name: simplellm-gpt35-turbo
+          type: chat
+          model_overrides:                      
+            read_ai_response_from_samples: true
+        - name: embedding-openai-ada002
+          type: embedding
+          model_overrides:                      
             read_ai_response_from_samples: true
       pathid: reworded
       encoding: utf8
@@ -116,6 +126,7 @@ llm_flow:
           read_ai_response_from_samples: true
     out: airesponse                         # the final response must output to this property - airesponse for LLM flows
 
+
 docsearch_flow:
   - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
     condition_js: |
@@ -147,6 +158,7 @@ docsearch_flow:
           read_ai_response_from_samples: false
       brainid: "{{{aiappid}}}"
     out: airesponse.documents
+
 
 modules: 
   llm_history_chat: llm_history_chat.js

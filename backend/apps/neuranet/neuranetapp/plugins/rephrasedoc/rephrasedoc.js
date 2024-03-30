@@ -12,15 +12,24 @@ const simplellm = require(`${NEURANET_CONSTANTS.LIBDIR}/simplellm.js`);
 const textsplitter = require(`${NEURANET_CONSTANTS.LIBDIR}/textsplitter.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
 
-const PROMPT_PARAM = "_promptparam";
+const PROMPT_PARAM = "_promptparam", CHAT_MODEL = "chat", EMBEDDINGS_MODEL = "embeddings";
 
 async function generate(fileindexer, generatorDefinition) {
-    let document = await fileindexer.getTextContents(generatorDefinition.encoding||"utf8"), 
-        modelObject = await aiutils.getAIModel(generatorDefinition.model.name, generatorDefinition.model.model_overrides),
-        embeddingsModel = await aiutils.getAIModel(modelObject.embeddings_model);
+    let chatModelDefinition, embeddingsModelDefinition; for (const model of (generatorDefinition.models||[])) {
+        if (model.type == CHAT_MODEL) chatModelDefinition = model;
+        if (model.type == EMBEDDINGS_MODEL) embeddingsModelDefinition = model;
+    }
+    if ((!chatModelDefinition) || (!embeddingsModelDefinition)) {
+        LOG.error(`Generation failed for ${fileindexer.filepath} due to bad model definitions in the AI application.`) ; 
+        return {result: false};
+    }
 
+    let document = await fileindexer.getTextContents(generatorDefinition.encoding||"utf8");
     if (!document) {LOG.error(`File content extraction failed for ${fileindexer.filepath}.`); return {result: false};}
     document = document.replace(/\s*\n\s*/g, "\n").replace(/[ \t]+/g, " ");
+
+    const modelObject = await aiutils.getAIModel(chatModelDefinition.name, chatModelDefinition.model_overrides),
+        embeddingsModel = await aiutils.getAIModel(embeddingsModelDefinition.name, embeddingsModelDefinition.model_overrides);
 
     const langDetected = langdetector.getISOLang(document),
         split_separators = embeddingsModel.split_separators[langDetected] || embeddingsModel.split_separators["*"],

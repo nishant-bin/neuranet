@@ -23,8 +23,8 @@ exports.runTestsAsync = async function(argv) {
         const queryResult = await llmflow.doService(jsonReq);
         if (((!queryResult) || (!queryResult.result)) && (queryResult?.reason != "noknowledge")) {
             _testFailed("Search failed."); return false; }
-        const output = JSON.stringify(queryResult, null, 2); 
-        LOG.info(output); LOG.console(output);
+        const output = "Results\n"+JSON.stringify(queryResult, null, 2); 
+        LOG.info(output); LOG.console(output+"\n");
         return true;
     } catch (err) {
         _testFailed(err.stack?err.stack:err); return false;
