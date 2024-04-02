@@ -79,7 +79,7 @@ exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA
             }
             IN_MEM_DBS[dbmemid] = await exports.loadData(path.resolve(dbPathOrMemID), lowmem);
         }
-    } else if (!IN_MEM_DBS[dbmemid]) IN_MEM_DBS[dbmemid] = exports.emptydb();
+    } else if (!IN_MEM_DBS[dbmemid]) IN_MEM_DBS[dbmemid] = await exports.emptydb();
     
     const db = IN_MEM_DBS[dbmemid]; db.METADATA_DOCID_KEY = metadata_docid_key; db.no_stemming = no_stemming;
     db.METADATA_LANGID_KEY = metadata_langid_key; if (stopwords_path) db._stopwords = require(stopwords_path);
@@ -113,7 +113,7 @@ exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA
  * Creates an empty DB.
  * @returns An empty DB.
  */
-exports.emptydb = _ => exports.loadData();
+exports.emptydb = async _ => await exports.loadData();
 
 /**
  * Loads the given database into memory and returns the DB object.
@@ -187,8 +187,8 @@ exports.writeData = async (pathIn, db) => {
  * @return {object} metadata The document's metadata.
  * @throws {Error} If the document's metadata is missing the document ID field. 
  */
-exports.ingest = exports.create = function(document, metadata, dontRecalculate=false, db=exports.emptydb(), lang) {
-    return exports.ingestStream(Readable.from(document), metadata, dontRecalculate, db, lang);
+exports.ingest = exports.create = async function(document, metadata, dontRecalculate=false, db=exports.emptydb(), lang) {
+    return await exports.ingestStream(Readable.from(document), metadata, dontRecalculate, db, lang);
 }
 
 /**
@@ -356,7 +356,7 @@ exports.defragment = async function(db) {
         if (db.wordDocCounts[wordIndex]) newVocabulary.push(word);  // rebuild by unsparsing the new vocabulary
     if (newVocabulary.length == db.vocabulary.length) return;   //nothing to do
 
-    db = exports.emptydb();
+    db = await exports.emptydb();
     for (const documentHash of db.tfidfDocStore.entries()) {
         const document = await db.tfidfDocStore.data(documentHash);
         const newDocument = _deepclone(document); newDocument.scores = {};
