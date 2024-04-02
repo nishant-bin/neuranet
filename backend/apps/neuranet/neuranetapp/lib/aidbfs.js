@@ -74,7 +74,7 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
         if (!fileContents) throw new Error(`Empty file ${pathIn}, skipping AI ingestion`);
         LOG.info(`Ended text extraction, starting TFIDF ingestion of file ${pathIn}.`);
         if (!lang) {lang = langdetector.getISOLang(fileContents); LOG.info(`Autodetected language ${lang} for file ${pathIn}.`);}
-        metadata.lang = lang; tfidfDB.create(fileContents, metadata, dontRebuildDBs, lang);
+        metadata.lang = lang; await tfidfDB.create(fileContents, metadata, dontRebuildDBs, lang);
     } catch (err) {
         LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
         return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
