@@ -382,6 +382,64 @@
             "token_approximation_uplift": 1.10,
             "tokenizer": "gpt-tokenizer",
             "price_per_unit": "0.000002"
+        },
+
+        "qwen/qwen1.5-4B-Chat": {
+            "name": "qwen/qwen1.5-4B-Chat",
+            "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, 
+                "path":"/tekmonks.com/v2/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]},
+            "ai_key" :"c75173574d160cae6031f197cf480c17e476fa32b544838fa01d173ee4ce82fc648dbfbedf125e4d",
+            "x_api_key" :"2bb396dd-16b6-48fb-b3e1-3f65fd40b01a",
+            "isBasicAuth":"false",
+            "request":{ 
+                "model": "Qwen/Qwen1.5-4B-Chat", "temperature": 0.7, "stream": false, "max_tokens":4096 , 
+                "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
+            },
+            "embeddings_model": "embedding-openai-ada002",
+            "request_contentpath": "messages",
+            "response_contentpath": "data.choices[0].message.content",
+            "response_finishreason": "data.choices[0].finish_reason",
+            "response_ok_finish_reasons": ["stop", "eos"],
+            "response_cost_of_query_path": "data.usage.total_tokens",
+            "user_role": "user",
+            "assistant_role": "assistant",
+            "system_message": "You are a helpful assistant",
+            "system_role": "system",
+            "sample_ai_response": "chat_ai_response.json",
+            "read_ai_response_from_samples": true,
+            "token_approximation_uplift": 1.10,
+            "tokenizer": "gpt-tokenizer",
+            "price_per_unit": "0.000002"
+        },
+
+        "qwen/qwen1.5-7B-Chat": {
+            "name": "qwen/qwen1.5-7B-Chat",
+            "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, 
+                "path":"/tekmonks.com/v2/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+                "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "http_retry_codes": ["*"]},
+            "ai_key" :"c75173574d160cae6031f197cf480c17e476fa32b544838fa01d173ee4ce82fc648dbfbedf125e4d",
+            "x_api_key" :"2bb396dd-16b6-48fb-b3e1-3f65fd40b01a",
+            "isBasicAuth":"false",
+            "request":{ 
+                "model": "Qwen/Qwen1.5-7B-Chat", "temperature": 0.7, "stream": false, "max_tokens":4096 , 
+                "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
+            },
+            "embeddings_model": "embedding-openai-ada002",
+            "request_contentpath": "messages",
+            "response_contentpath": "data.choices[0].message.content",
+            "response_finishreason": "data.choices[0].finish_reason",
+            "response_ok_finish_reasons": ["stop", "eos"],
+            "response_cost_of_query_path": "data.usage.total_tokens",
+            "user_role": "user",
+            "assistant_role": "assistant",
+            "system_message": "You are a helpful assistant",
+            "system_role": "system",
+            "sample_ai_response": "chat_ai_response.json",
+            "read_ai_response_from_samples": true,
+            "token_approximation_uplift": 1.10,
+            "tokenizer": "gpt-tokenizer",
+            "price_per_unit": "0.000002"
         }
 
 
