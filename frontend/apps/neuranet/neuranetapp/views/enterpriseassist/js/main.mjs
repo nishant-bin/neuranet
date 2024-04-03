@@ -53,11 +53,10 @@ async function processAssistantResponse(result, _chatboxid, _aiappid) {
 
     if (!result.result) return {error: await i18n.get("ChatAIError"), ok: false};
     
-    result.metadatas.forEach(obj => {
-        obj.referencelink=decodeURI(obj.referencelink)
-    });
+    const references=[]; for (const metadata of result.metadatas) if (!references.includes(
+        decodeURIComponent(metadata.referencelink))) references.push(decodeURIComponent(metadata.referencelink));
     const resultFinal = (await router.getMustache()).render(await i18n.get("EnterpriseAssist_ResponseTemplate"), 
-        {response: result.response, metadatas: result.metadatas});
+        {response: result.response, references});
 
     return {ok: true, response: resultFinal};
 }

@@ -38,5 +38,5 @@ export const i18n = {
 "EnterpriseAssist_KnowledgeBase": "AI Training",
 "EnterpriseAssist_ErrorNoKnowledge": "Sorry I have no knowledge of this topic.",
 "EnterpriseAssist_AIError": "AI error in processing. Please reload the page to start a new assistant request.",
-"EnterpriseAssist_ResponseTemplate": "{{response}}\nReferences\n{{#metadatas}}{{referencelink}}{{/metadatas}}"
+"EnterpriseAssist_ResponseTemplate": "{{response}}\n\nReferences\n{{#references}}{{.}}\n{{/references}}"
 }

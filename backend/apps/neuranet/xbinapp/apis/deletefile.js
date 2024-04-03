@@ -44,7 +44,13 @@ exports.deleteFile = async (headersOrIDAndOrg, cmsPath, extraInfo, noevent) => {
 	const fullpath = await cms.getFullPath(headersOrIDAndOrg, cmsPath, extraInfo);
 	if (!await cms.isSecure(headersOrIDAndOrg, fullpath)) {LOG.error(`Path security validation failure: ${fullpath}`); return CONSTANTS.FALSE_RESULT;}
 
-	await rmrf(fullpath, id, org, ip, extraInfo, noevent);
+	try {fspromises.access(fullpath, fs.constants.W_OK | fs.constants.R_OK)} catch (err) {
+		if (err.code == "ENOENT") return CONSTANTS.TRUE_RESULT;	// doesn't exist already
+		else {LOG.error(`Unable to access ${fullpath} to delete.`); return CONSTANTS.FALSE_RESULT;}
+	}
+	try {await rmrf(fullpath, id, org, ip, extraInfo, noevent);} catch (err) {
+		LOG.error(`Unable to delete ${fullpath} due to filesystem error ${err}.`); return CONSTANTS.FALSE_RESULT;
+	}
 	return CONSTANTS.TRUE_RESULT;
 }
 

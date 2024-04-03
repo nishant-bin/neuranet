@@ -91,7 +91,7 @@ function submit(element) {
         const ret = {}; 
         for (const retValId of memory.retValIDs) ret[retValId] = shadowRoot.querySelector(`#${retValId}`)?shadowRoot.querySelector(`#${retValId}`).value:null;
         memory.callback(ret);
-    } else if (memory.callback) memory.callback();
+    } else if (memory.callback) memory.callback(); else hideDialog(element);
 } 
 
 /**
