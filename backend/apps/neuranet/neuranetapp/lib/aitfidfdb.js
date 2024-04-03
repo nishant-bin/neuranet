@@ -39,8 +39,8 @@ const jpsegmenter = require(`${__dirname}/../3p/jpsegmenter.js`);
 const zhsegmenter = require(`${__dirname}/../3p/zhsegmenter.js`);
 const langdetector = require(`${__dirname}/../3p/langdetector.js`);
 const LOG = global.LOG || console;  // allow independent operation
-const memfs = CONSTANTS.LIBDIR?require(`${CONSTANTS.LIBDIR}/memfs.js`):fspromises;  // use uncached fs if not under monkshu
-const conf = require(`${NEURANET_CONSTANTS.CONFDIR||(__dirname+"/conf")}/aidb.json`);
+const memfs = CONSTANTS?.LIBDIR ? require(`${CONSTANTS.LIBDIR}/memfs.js`) : fspromises;  // use uncached fs if not under monkshu
+const conf = require(`${NEURANET_CONSTANTS?.CONFDIR||(__dirname+"/conf")}/aidb.json`);
 
 const WORDDOCCOUNTS_FILE = "worddoccounts", VOCABULARY_FILE = "vocabulary", METADATA_DOCID_KEY="aidb_docid", 
     MIN_STOP_WORD_IDENTIFICATION_LENGTH = 5, MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95, 
