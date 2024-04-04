@@ -99,6 +99,10 @@ async function _getPregenStepsAIApp(fileindexer) {
             comment = `${pregenStepObject.in.label}: ${path.basename(fileindexer.cmspath)}`,
             commentTo = fileindexer.cmspathTo ? `${pregenStepObject.in.label}: ${path.basename(fileindexer.cmspathTo)}` : undefined;
         const [command, command_function] = pregenStepObject.command.split(".");
+        if (path.dirname(fileindexer.cmspath).trim().endsWith(genfilesDir)) {
+            LOG.info(`Skipping pregen for file ${fileindexer.cmspath} for org ${fileindexer.org} and ID ${fileindexer.id} as it is already an automatically pregenerated file.`);
+            continue;   // do not recursively generate based on an already pregen file
+        }
         pregenFunctions.push({
             generate: async fileindexer => (await aiapp.getCommandModule(fileindexer.id, fileindexer.org, 
                 fileindexer.aiappid, command))[command_function||aiapp.DEFAULT_ENTRY_FUNCTIONS.pregen_flow](fileindexer, pregenStepObject.in),

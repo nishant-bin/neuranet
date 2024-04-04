@@ -19,6 +19,7 @@ let user, mouseX, mouseY, menuOpen, timer, selectedPath, currentlyActiveFolder, 
    filesAndPercents = {}, selectedCutPath, selectedCopyPath, selectedCutCopyElement, shareDuration, showNotification, 
    currentWriteBufferSize, uploadTransferIDs = {}, MIMES;
 
+const DIALOG_ID = "dialogfm";
 const API_GETFILES = APP_CONSTANTS.BACKEND+"/apps/"+APP_CONSTANTS.APP_NAME+"/getfiles";
 const API_COPYFILE = APP_CONSTANTS.BACKEND+"/apps/"+APP_CONSTANTS.APP_NAME+"/copyfile";
 const API_SHAREFILE = APP_CONSTANTS.BACKEND+"/apps/"+APP_CONSTANTS.APP_NAME+"/sharefile";
@@ -170,13 +171,13 @@ function upload(containedElement, files) {
 }
 
 async function create(element) {
-   const result = await dialog(element).showDialog(`${DIALOGS_PATH}/createfile.html`, true, true, {}, "dialog", ["createType", "path"]);
+   const result = await dialog(element).showDialog(`${DIALOGS_PATH}/createfile.html`, true, true, {}, DIALOG_ID, ["createType", "path"]);
    const path = `${selectedPath}/${result.path}`, isDirectory = result.createType == "file" ? false: true
    if ((await apiman.rest(API_CHECKFILEEXISTS, "GET", {path}, true))?.result) {   // don't overwrite an existing file
-      dialog(element).error("dialog", await i18n.get("FileAlreadyExists")); LOG.error(`Create failed as ${path} already exists.`); return;
+      dialog(element).error(DIALOG_ID, await i18n.get("FileAlreadyExists")); LOG.error(`Create failed as ${path} already exists.`); return;
    }
    const resp = await apiman.rest(API_CREATEFILE, "GET", {path, isDirectory}, true), hostID = file_manager.getHostElementID(element);
-   if (resp?.result) {dialog(element).hideDialog("dialog"); file_manager.reload(hostID);} else dialog(element).error("dialog", await i18n.get("Error"));
+   if (resp?.result) {dialog(element).hideDialog(DIALOG_ID); file_manager.reload(hostID);} else dialog(element).error(DIALOG_ID, await i18n.get("Error"));
 }
 
 const uploadFiles = async (element, files) => {
@@ -192,13 +193,13 @@ const uploadFiles = async (element, files) => {
       const checkFileExists = await apiman.rest(API_CHECKFILEEXISTS, "GET", {path: normalizedName}, true); 
       if (checkFileExists.result) {
          const cancelRenameRewrite = await dialog(element).showDialog(`${DIALOGS_PATH}/cancel_rename_overwrite.html`, true, false, 
-            {fileexistswarning: await i18n.getRendered("FileExistsWarning", {name: file.name})}, "dialog", ["result"]);
+            {fileexistswarning: await i18n.getRendered("FileExistsWarning", {name: file.name})}, DIALOG_ID, ["result"]);
          switch (cancelRenameRewrite.result) {
             case "cancel": {LOG.info(`User selected to skip existing file ${file.name}, skipping.`); continue;}
             case "rename": file.renameto = checkFileExists.suggestedNewName; break;
             case "overwrite": {
                const deleteResult = await apiman.rest(API_DELETEFILE, "GET", {path: normalizedName}, true);
-               if (!deleteResult.result) {dialog(element).showMessage(`${await i18n.get("OverwriteFailed")}${file.name}`, "dialog"); continue;}
+               if (!deleteResult.result) {dialog(element).showMessage(`${await i18n.get("OverwriteFailed")}${file.name}`, DIALOG_ID); continue;}
                else break;
             }
             default: {LOG.info(`Invalid choice so skipping existing file ${file.name}, skipping.`); continue;}
@@ -404,16 +405,16 @@ async function editFileLoadData(element) {
    const resp = await apiman.rest(API_OPERATEFILE, "POST", {path: selectedPath, op: "read"}, true);
    screenFocusUnfocus(file_manager.getHostElement(element));
    if (resp?.result) dialog(element).showDialog(`${DIALOGS_PATH}/editfile.html`, true, true, {fileContents: resp.data}, 
-         "dialog", ["filecontents"], async result => {
+         DIALOG_ID, ["filecontents"], async result => {
       
-      dialog(element).hideDialog("dialog"); screenFocusUnfocus(file_manager.getHostElement(element, true));
+      dialog(element).hideDialog(DIALOG_ID); screenFocusUnfocus(file_manager.getHostElement(element, true));
       const resp = await apiman.rest(API_OPERATEFILE, "POST", {path: selectedPath, op: "write", data: result.filecontents}, true);
       if (!resp.result) _showErrordialog();
    }); else _showErrordialog();
 }
 
 function editFileVisible() {
-   const shadowRootDialog = dialog().getShadowRootByHostId("dialog");
+   const shadowRootDialog = dialog().getShadowRootByHostId(DIALOG_ID);
    const elementTextArea = shadowRootDialog.querySelector("textarea#filecontents"); elementTextArea.focus();
 }
 
@@ -462,7 +463,7 @@ async function paste(element) {
    
    if (checkFileExists.result) {
       const cancelRenameRewrite = await dialog(element).showDialog(`${DIALOGS_PATH}/cancel_rename_overwrite.html`, true, 
-         false, {fileexistswarning: await i18n.getRendered("FileExistsWarning", {name: to})}, "dialog", ["result"]);
+         false, {fileexistswarning: await i18n.getRendered("FileExistsWarning", {name: to})}, DIALOG_ID, ["result"]);
       switch (cancelRenameRewrite.result) {
          case "cancel": {LOG.info(`User selected to skip existing file ${to}, skipping.`); _nullOutSelectedCutCopyPathsAndElements(true); return;}
          case "rename": to = checkFileExists.suggestedRemotePath; break;
@@ -492,7 +493,7 @@ function _showDownloadProgress(element, path, reqid) {
       }
       else if (!done) {
          markDoneAndClearInterval();
-         dialog(element).showMessage(await i18n.get("DownloadFailed"), "dialog"); 
+         dialog(element).showMessage(await i18n.get("DownloadFailed"), DIALOG_ID); 
       }
    }
 
@@ -531,9 +532,9 @@ async function _updateProgress(hostID, currentBlock, totalBlocks, fileName, icon
 
 function renameFile(element) {
    const oldName = selectedPath?selectedPath.substring(selectedPath.lastIndexOf("/")+1):null;
-   dialog(element).showDialog(`${DIALOGS_PATH}/renamefile.html`, true, true, {oldName}, "dialog", ["renamepath"], async result => {
+   dialog(element).showDialog(`${DIALOGS_PATH}/renamefile.html`, true, true, {oldName}, DIALOG_ID, ["renamepath"], async result => {
       
-      dialog(element).hideDialog("dialog"); 
+      dialog(element).hideDialog(DIALOG_ID); 
       const subpaths = selectedPath.split("/"); subpaths.splice(subpaths.length-1, 1, result.renamepath);
       const newPath = subpaths.join("/");
       if (_normalizedPath(selectedPath) == _normalizedPath(newPath)) {_showErrorDialog(null, await i18n.get("ErrorSameFiles")); return;}
@@ -547,8 +548,8 @@ async function shareFile(element) {
    if (!resp || !resp.result) _showErrordialog(); else {
       dialog(element).showDialog( `${DIALOGS_PATH}/sharefile.html`, true, true, 
       {link: router.encodeURL(`${PAGE_DOWNLOADFILE_SHARED}?id=${resp.id}&name=${name}`), id: resp.id, shareDuration, dialogpath: DIALOGS_PATH}, 
-      "dialog", ["expiry"], async result => {
-         dialog(element).hideDialog("dialog"); 
+      DIALOG_ID, ["expiry"], async result => {
+         dialog(element).hideDialog(DIALOG_ID); 
 
          if (result.expiry != shareDuration) apiman.rest(API_SHAREFILE, "GET", {id: resp.id, expiry: result.expiry}, true); 
       }, async _ => apiman.rest(API_SHAREFILE, "GET", {id: resp.id, expiry: 0}, true));
@@ -560,7 +561,7 @@ async function getInfoOnFile(containedElement) {
    shadowRoot.querySelector("div#informationbox").classList.add("visible");
 }
 
-const _showErrorDialog = async (hideAction, message) => dialog().showMessage(message||await i18n.get("Error"), "dialog", hideAction||undefined);
+const _showErrorDialog = async (hideAction, message) => dialog().showMessage(message||await i18n.get("Error"), DIALOG_ID, hideAction||undefined);
 
 async function _showNotification(hostID, dialogTemplateID, templateData) {
    showNotification = true;
