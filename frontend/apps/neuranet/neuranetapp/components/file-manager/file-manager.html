@@ -363,6 +363,7 @@ span.button {
     {{/operations}}
     </div>
     {{#entries}}
+    {{^skip}}
     <div tabindex="0" class="filemanagerentries"
         onkeyup='event.preventDefault(); event.stopPropagation(); if (event.key == "Enter" || event.keyCode == 13) {
                 monkshu_env.components["file-manager"].handleClick(this, "{{path}}", "{{#stats.directory}}true{{/stats.directory}}{{#stats.home}}true{{/stats.home}}{{#stats.back}}true{{/stats.back}}", true, true);
@@ -376,6 +377,7 @@ span.button {
             ondragend="monkshu_env.components['file-manager'].showDownloadProgress('{{path}}', this)">
         <span>{{name}}</span>
     </div>
+    {{/skip}}
     {{/entries}}
     <input id="upload" type="file" multiple onchange='monkshu_env.components["file-manager"].uploadFiles(this, this.files)' onclick="event.stopPropagation(); this.value = null;">
 </div>
