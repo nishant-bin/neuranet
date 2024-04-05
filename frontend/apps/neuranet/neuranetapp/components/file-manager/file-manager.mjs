@@ -68,7 +68,7 @@ async function elementConnected(host) {
    i18n.addPath(COMPONENT_PATH); // add our i18n bundle
 
    const path = host.getAttribute("path") || (file_manager.getSessionMemory(host.id))["__lastPath"] || "/",
-      hiddenFolders = host.getAttribute("hidefolders")?host.getAttribute("hidefolders").toLowerCase().split(","):[];
+      hiddenFolders = (host.getAttribute("hidefolders")?host.getAttribute("hidefolders").toLowerCase().split(","):[]).map(value => value.trim());
    selectedPath = path.replace(/[\/]+/g,"/"); selectedIsDirectory = true; currentlyActiveFolder = selectedPath;
    const resp = await apiman.rest(API_GETFILES, "GET", {path}, true); if (!resp || !resp.result) return; 
    for (const entry of resp.entries) {
