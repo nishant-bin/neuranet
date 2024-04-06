@@ -14,7 +14,7 @@ const db = require(`${CONSTANTS.LIBDIR}/db.js`).getDBDriver("sqlite", DB_PATH, D
 
 const DEFAULT_VIEWS_ORG = NEURANET_CONSTANTS.DEFAULT_ORG, DB_CACHE = {};
 
-exports.initDB = async _ => await db.init();
+exports.initDBAsync = async _ => await db.init();
 
 exports.getViewsForOrg = async org => {
 	const query = "SELECT view FROM views WHERE org=? COLLATE NOCASE";

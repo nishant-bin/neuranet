@@ -66,7 +66,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 			LOG.error(`AI library error indexing document for request id ${id} org ${org} and file ${finalCMSPath}/${filename}.`); 
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 		} else {
-			LOG.error(`Successful indexing document for request id ${id} org ${org} and file ${finalCMSPath}/${filename}`); 
+			LOG.info(`Successful indexing document for request id ${id} org ${org} and file ${finalCMSPath}/${filename}`); 
 			if (__forceDBFlush) await aidbfs.flush(id, org, await brainhandler.getAppID(id, org, extrainfo));
 			return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
 		}

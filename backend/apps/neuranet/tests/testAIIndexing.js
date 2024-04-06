@@ -7,6 +7,7 @@
 const path = require("path");
 const fspromises = require("fs").promises;
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const indexdoc = require(`${NEURANET_CONSTANTS.APIDIR}/indexdoc.js`);
 
 const TEST_ID = "test@tekmonks.com", TEST_ORG = "Tekmonks", TEST_APP = "tkmaiapp";
@@ -24,6 +25,7 @@ exports.runTestsAsync = async function(argv) {
 
     LOG.console(`Test case for AI DB indexing called to index the files ${filesToTest.join(", ")}.\n`);
 
+    await dblayer.initDBAsync();    // we need DB before anything else happens
     let finalResult = true; const indexingPromises = [], indexFile = async jsonReq => {
         const result = await indexdoc.doService(jsonReq);
         if (result?.result) {

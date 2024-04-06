@@ -43,13 +43,13 @@ pregen_flow:
         Rephrase the content based on the below instructions 
         ---infer the contents and rephrase it in a more generic context that most people without expertise or knowledge can understand 
         {{{fragment}}}
-      models:
+      models: 
         - name: simplellm-gpt35-turbo
           type: chat
-          model_overrides:                      
+          model_overrides:                  # this allows us to override model params on a per AI app basis, can be a nested path e.g. driver.host if we are calling API at a different host name etc          
             read_ai_response_from_samples: true
         - name: embedding-openai-ada002
-          type: embedding
+          type: embeddings
           model_overrides:                      
             read_ai_response_from_samples: true
       pathid: reworded

@@ -11,11 +11,13 @@ exports.initSync = _ => {
     _readConfSync();    // the files below need constants to be setup properly so require them after conf is setup
 
     const events = require(`${NEURANET_CONSTANTS.APIDIR}/events.js`);
+    const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
     const fileindexer = require(`${NEURANET_CONSTANTS.LIBDIR}/fileindexer.js`);
     const loginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`);
     const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
     const textextractor = require(`${NEURANET_CONSTANTS.LIBDIR}/textextractor.js`);
 
+    dblayer.initDBAsync(); // yes this is async so there is a slim chance by the first call it is still loading
     loginhandler.initSync(); 
     fileindexer.initSync();
     events.initSync();

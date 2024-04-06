@@ -124,7 +124,7 @@ exports.emptydb = async _ => await exports.loadData();
 exports.loadData = async function(pathIn, lowmem) {
     const EMPTY_DB = {tfidfDocStore: {}, wordDocCounts: {}, vocabulary: []}; 
     const _readFileFromMemFSOrNullOnError = async hashOrPath => {
-        try {return JSON.parse(await memfs.readFile(EMPTY_DB.tfidfDocStore[hashOrPath]||hashOrPath, "utf8"));} 
+        try {return JSON.parse(await memfs.readFile(EMPTY_DB.tfidfDocStore[hashOrPath], "utf8"));} 
         catch(err) {LOG.error(`TF.IDF error reading document with hash or path ${hashOrPath}, due to ${err} returning null.`); return null;}
     }
     EMPTY_DB.tfidfDocStore.entries = _ => Object.keys(EMPTY_DB.tfidfDocStore).filter(key => 
@@ -133,9 +133,9 @@ exports.loadData = async function(pathIn, lowmem) {
     EMPTY_DB.tfidfDocStore.delete = async hash => { delete EMPTY_DB.tfidfDocStore[hash]; 
         try {await fspromises.rm(`${pathIn}/${hash}`)} catch (err) {LOG.warn(`Error deleting file ${pathIn}/${hash} for TD.IDF hash ${hash} due to ${err}.`)} };
     EMPTY_DB.tfidfDocStore.add = (hash, document) => EMPTY_DB.tfidfDocStore[hash] = document; 
-    EMPTY_DB.tfidfDocStore.data = async hashOrData => typeof EMPTY_DB.tfidfDocStore[hashOrData] === "object" ? 
-        EMPTY_DB.tfidfDocStore[hashOrData] : EMPTY_DB.tfidfDocStore.doclength() ? 
-            _readFileFromMemFSOrNullOnError(hashOrData) : null;    // if parsed then returns object, if doc hash then the doc is read or if path, then file doc is read and returned
+    EMPTY_DB.tfidfDocStore.data = async documentHash => typeof EMPTY_DB.tfidfDocStore[documentHash] === "object" ? 
+        EMPTY_DB.tfidfDocStore[documentHash] : EMPTY_DB.tfidfDocStore.entries().includes(documentHash) ? 
+            _readFileFromMemFSOrNullOnError(documentHash) : null;    // if parsed then returns object, if doc hash then the doc is read or if path, then file doc is read and returned
 
     if (!pathIn) return EMPTY_DB;
     const dbLoaded = EMPTY_DB; 
@@ -317,8 +317,8 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
     const queryWords = _getLangNormalizedWords(query, lang||langdetector.getISOLang(query), db, autocorrect), 
         scoredDocs = []; 
     let highestScore = 0; 
-    for (const documentIndex of db.tfidfDocStore.entries()) {
-        const document = await db.tfidfDocStore.data(documentIndex);
+    for (const documentHash of db.tfidfDocStore.entries()) {
+        const document = await db.tfidfDocStore.data(documentHash);
         if (filter_function && (!options.filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
         let scoreThisDoc = 0, tfScoreThisDoc = 0, queryWordsFoundInThisDoc = 0; if (query) for (const queryWord of queryWords) {
             const wordIndex = _getWordIndex(queryWord, db); if (wordIndex == null) continue;  // query word not found in the vocabulary
@@ -415,7 +415,7 @@ function _getLangNormalizedWords(document, lang, db, autocorrect=false, fastSpli
         if (word.trim() == "") return true; // emptry words are useless
         const dbDocCount = db.tfidfDocStore.doclength(), dbHasStopWords = db._stopwords?.[lang] && db._stopwords[lang].length > 0;
         if ((!dbHasStopWords) && (dbDocCount > MIN_STOP_WORD_IDENTIFICATION_LENGTH)) {   // auto learn stop words if possible
-            if (!db._stopwords) db._stopwords = {}; db._stopwords.lang = [];
+            if (!db._stopwords) db._stopwords = {}; db._stopwords[lang] = [];
             for (const [thisWordIndex, thisWordDocCount] of Object.entries(db.wordDocCounts)) 
                 if ((thisWordDocCount/dbDocCount) > MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS) 
                     db._stopwords[lang].push(_getDocWordFromIndex(thisWordIndex, db));

@@ -10,8 +10,6 @@ const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 
 exports.initSync = _ => {
-    dblayer.initDB(); 
-
     login.addLoginListener(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`, "viewInjector");
     register.addNewUserListener(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`, "viewInjector");
 }
