@@ -185,8 +185,9 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
         renameFileFromCMSRepository: (cmspath, cmspathTo, noaievent) => exports.renameFileFromCMSRepository(id, org, 
             cmspath, cmspathTo, extraInfo, noaievent),
         getTextReadstream: async function(overridePath) {
-            const inputStream = downloadfile.getReadStream(overridePath||pathIn, false);
-            const readStream = await textextractor.extractTextAsStreams(inputStream, this.filepath);
+            const pathToRead = overridePath||pathIn;
+            const inputStream = downloadfile.getReadStream(pathToRead, false);
+            const readStream = await textextractor.extractTextAsStreams(inputStream, pathToRead);
             return readStream;
         },
         getReadstream: overridePath => this.getTextReadstream(overridePath),

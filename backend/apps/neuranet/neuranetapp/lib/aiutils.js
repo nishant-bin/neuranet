@@ -36,7 +36,7 @@ exports.getAIModel = async function(model_name, overrides) {
     if (!DEBUG_RUN) return _overrideModel(serverutils.clone(NEURANET_CONSTANTS.CONF.ai_models[model_name]));
 
     const confFile = await fspromises.readFile(`${NEURANET_CONSTANTS.CONFDIR}/neuranet.json`, "utf8");
-    const renderedFile = mustache.render(confFile, NEURANET_CONSTANTS).replace(/\\/g, "\\\\");  // escape windows paths
+    const renderedFile = mustache.render(confFile, NEURANET_CONSTANTS);
     const jsonConf = JSON.parse(renderedFile);
     NEURANET_CONSTANTS.CONF.ai_models[model_name] = jsonConf.ai_models[model_name];   // update cached models
 

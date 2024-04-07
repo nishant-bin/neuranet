@@ -54,7 +54,7 @@ pregen_flow:
     in: 
       label: Rephrased
 
-      prompt: |
+      prompt: |                             # these can be prompt, prompt_docISOLanguage, prompt_fragment_fragmentISOLanguage
         Infer the document and rephrase it in a more generic context that most people without expertise or knowledge can understand.
         {{{fragment}}}
       prompt_zh: |

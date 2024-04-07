@@ -37,26 +37,22 @@ async function generate(fileindexer, generatorDefinition) {
         split_size = embeddingsModel.request_chunk_size[langDetected] || embeddingsModel.request_chunk_size["*"],
         splits = textsplitter.getSplits(document, split_size, split_separators, 0);
 
-    const promptData = {}; for (const [key,value] of Object.entries(generatorDefinition)) {
+    const promptData = {lang: langDetected}; for (const [key,value] of Object.entries(generatorDefinition)) {
         const keyNormalized = key.toLowerCase().trim();
         if (keyNormalized.endsWith(PROMPT_PARAM)) promptData[aiapp.extractRawKeyName(key)] = value;
     }
 
-    const langArr = splits.map(part => langdetector.getISOLang(part)),
-        langSelected = (langArr.includes('zh') && langArr.includes('ja') && generatorDefinition?.defaultlanguage) ?
-            generatorDefinition.defaultlanguage : (langArr.includes('zh') ? 'zh' : (langArr.includes('ja') ? 'ja' : langDetected)),
-        promptToUse = generatorDefinition[`prompt_${langSelected}`] || generatorDefinition.prompt;
-
     const rephrasedSplits = []; for (const split of splits) {
-        promptData.fragment = split;
-        promptData.lang = langSelected; 
+        const lang_fragment = langdetector.getISOLang(split);
+        promptData.fragment = split; promptData.lang_fragment = lang_fragment;
+        const promptToUse = generatorDefinition[`prompt_fragment_${lang_fragment}`] || generatorDefinition[`prompt_${langDetected}`] || generatorDefinition.prompt;
         const rephrasedSplit = await simplellm.prompt_answer(promptToUse, fileindexer.id, fileindexer.org, promptData, modelObject);
         if (!rephrasedSplit) continue;
         rephrasedSplits.push(rephrasedSplit);
     }
+    const joinedConent = rephrasedSplits.join(split_joiners[0]);
 
-    return {result: true, contentBufferOrReadStream: _ => Buffer.from(rephrasedSplits.join(split_joiners[0]), 
-        generatorDefinition.encoding||"utf8"), lang: langDetected};
+    return {result: true, contentBufferOrReadStream: _ => Buffer.from(joinedConent, generatorDefinition.encoding||"utf8"), lang: langDetected};
 }
 
 module.exports = {generate}
