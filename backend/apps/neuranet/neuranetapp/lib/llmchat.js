@@ -1,14 +1,14 @@
 /**
- * LLM based chat API. 
+ * LLM based chat module. Can use any LLM.
  * 
- * API Request
+ * Request params
  * 	id - the user ID
  *  org - the user org
  *  session - Array of [{"role":"user||assistant", "content":"[chat content]"}]
  *  maintain_session - If set to false, then session is not maintained
- *  session_id - The session ID for a previous session if this is a continuation
+ *  session_id - The session ID for a previous session if this is a continuation else null
  * 
- * API Response
+ * Response object
  *  result - true or false
  *  reason - set to one of the reasons if result is false
  *  response - the AI response, as a plain text
@@ -34,7 +34,7 @@ exports.chat = async params => {
 	LOG.debug(`Got chat request from ID ${params.id}. Incoming request is ${JSON.stringify(params)}`);
 
 	if (!(await quota.checkQuota(params.id, params.org))) {
-		LOG.error(`Disallowing the API call, as the user ${params.id} is over their quota.`);
+		LOG.error(`Disallowing the LLM chat call, as the user ${params.id} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
 

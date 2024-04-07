@@ -78,7 +78,6 @@ exports.answer = async (params) => {
 	const languageDetectedForQuestion =  langdetector.getISOLang(params.question)
 
 	if (params.rephrasequestion && finalSessionObject.length > 0) {
-
 		const standaloneQuestionResult = await simplellm.prompt_answer(params[`prompt_for_question_rephrasing_${languageDetectedForQuestion}`] || params.prompt_for_question_rephrasing, id, org, 
 			{session: finalSessionObject, question: params.question},aiModelObjectForChat);
 		if (!standaloneQuestionResult) {
@@ -88,17 +87,16 @@ exports.answer = async (params) => {
 		else params.question = standaloneQuestionResult;
 	}
 
-	const documentResultsForPrompt = params.documents;
+	const documentResultsForPrompt = params.documents;	// if no documents found, shortcircuit with no knowledge error
 	if ((!documentResultsForPrompt) || (!documentResultsForPrompt.length)) return {reason: REASONS.NOKNOWLEDGE, ...CONSTANTS.FALSE_RESULT};
+	
 	const documentsForPrompt = [], metadatasForResponse = []; for (const [i,documentResult] of documentResultsForPrompt.entries()) {
 		documentsForPrompt.push({content: documentResult.text, document_index: i+1}); metadatasForResponse.push(documentResult.metadata) };
-
-		const knowledgebasePromptTemplate =  params[`prompt_${languageDetectedForQuestion}`] || params.prompt;
-		const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, 
-        {...params, documents: documentsForPrompt});
+	const knowledgebasePromptTemplate =  params[`prompt_${languageDetectedForQuestion}`] || params.prompt;
+	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, {...params, documents: documentsForPrompt});
 
 	const paramsChat = { id, org, maintain_session: true, session_id, model: aiModelObjectForChat,
-            session: [{"role": aiModelObjectForChat.user_role, "content": knowledegebaseWithQuestion}] };
+        session: [{"role": aiModelObjectForChat.user_role, "content": knowledegebaseWithQuestion}] };
 	const response = await llmchat.chat(paramsChat);
 
 	return {...response, metadatas: metadatasForResponse};

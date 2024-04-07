@@ -19,10 +19,24 @@ pregen_flow:
   - command: rephrasedoc.generate           # module and entry function can be used using module.entry
     in: 
       label: Summary
+
       prompt: |
         Summarize the document below in simple langauage in no more than {{{words}}} words.
         {{{fragment}}}
         The summary is
+      prompt_zh: |
+        用不超过 {{{words}}} 个单词的简单语言总结下面的文档。
+        {{{fragment}}}
+        总结是
+      prompt_ja: |
+        以下の文書を簡単な言語で {{{words}}} 語以内に要約してください。
+        {{{fragment}}}
+        概要は次のとおりです
+      prompt_hi: |
+        नीचे दिए गए दस्तावेज़ को सरल भाषा में {{{words}}} से कम शब्दों में सारांशित करें।
+        {{{टुकड़ा}}}
+        सारांश है
+
       models: 
         - name: simplellm-gpt35-turbo
           type: chat
@@ -39,10 +53,20 @@ pregen_flow:
   - command: rephrasedoc                    # entry function name is skipped as the default is generate anyways
     in: 
       label: Rephrased
+
       prompt: |
-        Rephrase the content based on the below instructions 
-        ---infer the contents and rephrase it in a more generic context that most people without expertise or knowledge can understand 
+        Infer the document and rephrase it in a more generic context that most people without expertise or knowledge can understand.
         {{{fragment}}}
+      prompt_zh: |
+        文書を推測し、専門知識や知識を持たないほとんどの人が理解できる、より一般的な文脈で言い換えます。
+        {{{fragment}}}
+      prompt_ja: |
+        文書を推測し、専門知識や知識を持たないほとんどの人が理解できる、より一般的な文脈で言い換えます。
+        {{{fragment}}}
+      prompt_hi: |
+        दस्तावेज़ का अनुमान लगाएं और इसे अधिक सामान्य संदर्भ में दोबारा लिखें जिसे विशेषज्ञता या ज्ञान के बिना अधिकांश लोग समझ सकें।
+        {{{fragment}}}
+
       models: 
         - name: simplellm-gpt35-turbo
           type: chat
@@ -102,6 +126,36 @@ llm_flow:
         Question: {{{question}}}
 
         The standalone question is:
+      prompt_for_question_rephrasing_zh_noinflate: |
+        给定以下对话和问题，重新表述问题以包含对话中的所有相关关键字和上下文。
+        对话：
+        {{#session}}
+        {{{role}}}: {{{content}}}
+        {{/session}}
+
+        问题：{{{question}}}
+
+        独立的问题是：
+      prompt_for_question_rephrasing_ja_noinflate: |
+        次の会話と質問がある場合、会話の関連するキーワードとコンテキストをすべて含めて質問を言い換えます。
+        会話：
+        {{#session}}
+        {{{role}}}: {{{content}}}
+        {{/session}}
+
+        質問: {{{question}}}
+
+        独立した質問は次のとおりです:
+      prompt_for_question_rephrasing_hi_noinflate: |
+        निम्नलिखित वार्तालाप और एक प्रश्न को देखते हुए, वार्तालाप से सभी प्रासंगिक कीवर्ड और संदर्भ को शामिल करने के लिए प्रश्न को दोबारा लिखें।
+        बातचीत:
+        {{#session}}
+        {{{role}}}: {{{content}}}
+        {{/session}}
+
+        प्रश्न: {{{question}}
+
+        स्टैंडअलोन प्रश्न यह है:
       question: "{{{query}}}"
       rephrasequestion: true
 
@@ -118,7 +172,43 @@ llm_flow:
 
         {{/documents}}
 
-        The answer in the same language as the question is:
+        The answer is:
+      prompt_zh_noinflate: |                   # means do not inflate this at the flow engine - the calling command will use it as is
+        仅使用下面提供的文件回答以下问题。
+        问题：
+        {{{question}}}
+
+        文件：
+        {{#documents}}
+        {{{content}}}
+
+        {{/documents}}
+
+        答案是：
+      prompt_ja_noinflate: |                   
+        以下に提供される文書のみを使用して、次の質問に答えてください。
+        質問：
+        {{{question}}}
+
+        書類:
+        {{#documents}}
+        {{{content}}}
+
+        {{/documents}}
+
+        答えは次のとおりです:
+      prompt_hi_noinflate: |                   # means do not inflate this at the flow engine - the calling command will use it as is
+        निम्नलिखित प्रश्न का उत्तर केवल नीचे दिए गए दस्तावेज़ों का उपयोग करके दें।
+        सवाल:
+        {{{question}}}
+
+        दस्तावेज़:
+        {{#documents}}
+        {{{content}}}
+
+        {{/documents}}
+
+        जवाब है:
 
       model: 
         name: chat-knowledgebase-gpt35-turbo
