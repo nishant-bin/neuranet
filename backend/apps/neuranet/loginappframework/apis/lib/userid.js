@@ -280,11 +280,11 @@ exports.deleteSuborg = async (suborg, migrateUsersToMainOrg, mainOrg) => {
 	const suborgDeletionResult = await db.runCmd("DELETE FROM suborgs WHERE name = ?", [suborg]);
 
 	if (suborgDeletionResult) {
-		if (usersForSuborg.users.length) LOG.warn(
+		if ((usersForSuborg.users||[]).length) LOG.warn(
 			`${migrateUsersToMainOrg?'Migrating':'Dropping'} these users to the main org ${mainOrg} as the suborg ${suborg} which they belonged to was deleted. User list -> ${JSON.stringify(usersForSuborg.users)}.`);
 		
 		if (!migrateUsersToMainOrg) {
-			for (const user of usersForSuborg.users) if (!(await exports.deleteUser(user.id)).result)
+			for (const user of (usersForSuborg.users||[])) if (!(await exports.deleteUser(user.id)).result)
 				LOG.warn(`Deletion of suborg ${suborg} orphaned user ${user.id} as deletion of this user failed. Database is inconsistent.`);
 		} else if (!(await db.runCmd("UPDATE USERS SET suborg=? WHERE suborg=?", [mainOrg, suborg])))
 			LOG.warn(`Deletion of suborg ${suborg} orphaned users as migration failed. Database is inconsistent. User list -> ${JSON.stringify(usersForSuborg.users)}.`);
@@ -325,11 +325,11 @@ exports.deleteDomain = async (domain, migrateUsersToMainDomain, mainDomain) => {
 	const domainDeletionResult = await db.runCmd("DELETE FROM domains WHERE domain = ?", [domain]);
 
 	if (domainDeletionResult) {
-		if (usersForDomain.users.length) LOG.warn(
+		if ((usersForDomain.users||[]).length) LOG.warn(
 			`${migrateUsersToMainDomain?'Migrating':'Dropping'} these users to the main domain ${mainDomain} as the domain ${domain} which they belonged to was deleted. User list -> ${JSON.stringify(usersForDomain.users)}.`);
 		
 		if (!migrateUsersToMainDomain) {
-			for (const user of usersForDomain.users) if (!(await exports.deleteUser(user.id)).result)
+			for (const user of (usersForDomain.users||[])) if (!(await exports.deleteUser(user.id)).result)
 				LOG.warn(`Deletion of domain ${domain} orphaned user ${user.id} as deletion of this user failed. Database is inconsistent.`);
 		} else if (!(await db.runCmd("UPDATE USERS SET domain=? WHERE domain=?", [mainDomain, domain]))) 
 			LOG.warn(`Deletion of domain ${domain} orphaned users as migration failed. Database is inconsistent. User list -> ${JSON.stringify(usersForDomain.users)}.`);
