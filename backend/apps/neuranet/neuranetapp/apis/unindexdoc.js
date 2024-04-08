@@ -29,6 +29,7 @@ const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
 const indexdoc = require(`${NEURANET_CONSTANTS.APIDIR}/indexdoc.js`);
 const fileindexer = require(`${NEURANET_CONSTANTS.LIBDIR}/fileindexer.js`);
+const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"};
 
