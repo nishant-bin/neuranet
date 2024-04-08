@@ -68,7 +68,7 @@ exports.search = async function(params, _llmstepDefinition) {
 	const aiModelObjectToUseForEmbeddings = await aiutils.getAIModel(aiModelObjectForSearch.embeddings_model.name,
 		params.embeddings_model.model_overrides);
 	const embeddingsGenerator = async text => {
-		const response = await embedding.createEmbeddingVector(id, text, aiModelObjectToUseForEmbeddings); 
+		const response = await embedding.createEmbeddingVector(id, org, text, aiModelObjectToUseForEmbeddings); 
 		if (response.reason != embedding.REASONS.OK) return null;
 		else return response.embedding;
 	}
