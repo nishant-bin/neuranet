@@ -1,7 +1,0 @@
----- Translate this SQL from {{{dbfrom}}} to {{{dbto}}}
----- Only respond with SQL code and no other text.
---- {{{dbfrom}}}
-
-{{{request}}}
-
---- {{{dbto}}}

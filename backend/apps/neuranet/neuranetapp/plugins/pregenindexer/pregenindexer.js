@@ -38,13 +38,14 @@ exports.ingest = async function(fileindexer) {
         if (pregenResult.result) {
             const addGeneratedFileToCMSResult = await fileindexer.addFileToCMSRepository(
                 pregenResult.contentBufferOrReadStream(), pregenStep.cmspath, pregenStep.comment, true);
-            const indexResult = addGeneratedFileToCMSResult ? await fileindexer.addFileToAI(pregenStep.cmspath, pregenResult.lang) : false;
-            if (!indexResult.result) 
-                LOG.error(`Pregen failed at step ${pregenStep.label} in add generated file.`);
-        } else LOG.error(`Pregen failed at step ${pregenStep.label} in generate.`);
+            const indexResult = addGeneratedFileToCMSResult ? await fileindexer.addFileToAI(pregenStep.cmspath, pregenResult.lang) : {result: false};
+            if (!indexResult.result) LOG.error(`Pregen failed at step ${pregenStep.label} in adding generated file ${pregenStep.cmspath}.`);
+            else LOG.info(`Pregen succeeded at step ${pregenStep.label} in adding generated file ${pregenStep.cmspath}.`);
+        } else LOG.error(`Pregen failed at step ${pregenStep.label} in generate for file ${pregenStep.cmspath}.`);
     }
-    const rootIndexerResult = await fileindexer.addFileToAI(); 
-    await fileindexer.end(); if (!rootIndexerResult.result) LOG.error(`Pregen failed at adding original file (AI DB ingestion failure).`);
+    const rootIndexerResult = await fileindexer.addFileToAI(); await fileindexer.end(); 
+    if (!rootIndexerResult.result) LOG.error(`Pregen failed at adding original file (AI DB ingestion failure) for file ${fileindexer.cmspath}.`);
+    else LOG.info(`Pregen succeeded at adding original file (AI DB ingestion) for file ${fileindexer.cmspath}.`);
     return rootIndexerResult.result;
 }
 
@@ -59,12 +60,14 @@ exports.uningest = async function(fileindexer) {
     for (const pregenStep of pregenSteps) {
         if (!await _condition_to_run_met(pregenStep)) continue;    // run only if condition is satisfied
         const delGeneratedFileFromCMSResult = await fileindexer.deleteFileFromCMSRepository(pregenStep.cmspath, true);
-        const stepIndexerResult = delGeneratedFileFromCMSResult ? await fileindexer.removeFileFromAI(pregenStep.cmspath) : false;
-        if (!stepIndexerResult.result) LOG.error(`Pregen removal failed at step ${pregenStep.label} in remove generated file.`); 
+        const stepIndexerResult = delGeneratedFileFromCMSResult ? await fileindexer.removeFileFromAI(pregenStep.cmspath) : {result: false};
+        if (!stepIndexerResult.result) LOG.error(`Pregen removal failed at step ${pregenStep.label} in removing generated file ${pregenStep.cmspath}.`); 
+        else LOG.error(`Pregen removal succeeded at step ${pregenStep.label} in removing generated file ${pregenStep.cmspath}.`); 
     }
     
     const rootIndexerResult = await fileindexer.removeFileFromAI(); await fileindexer.end();
-    if (!rootIndexerResult.result) LOG.error(`Pregen failed at removing original file (AI DB uningestion failure).`);
+    if (!rootIndexerResult.result) LOG.error(`Pregen failed at removing original file (AI DB uningestion failure) ${fileindexer.cmspath}.`);
+    else LOG.info(`Pregen succeeded at removing original file (AI DB uningestion) ${fileindexer.cmspath}.`);
     return rootIndexerResult.result;
 }
 

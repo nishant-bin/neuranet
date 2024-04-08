@@ -15,8 +15,8 @@
  */
 
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
-const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 
 const REASONS = {INTERNAL: "internal"};
@@ -65,8 +65,8 @@ exports.search = async function(params, _llmstepDefinition) {
 	const documentsToUseDocIDs = []; for (const tfidfScoredDoc of tfidfScoredDocuments) 
 		documentsToUseDocIDs.push(tfidfScoredDoc.metadata[NEURANET_CONSTANTS.NEURANET_DOCID]);
 	
-	const aiModelObjectToUseForEmbeddings = await aiutils.getAIModel(aiModelObjectForSearch.embeddings_model.name,
-		params.embeddings_model.model_overrides);
+	const aiModelObjectToUseForEmbeddings = await aiapp.getAIModel(aiModelObjectForSearch.embeddings_model.name,
+		aiModelObjectForSearch.embeddings_model.model_overrides, id, org, brainid);
 	const embeddingsGenerator = async text => {
 		const response = await embedding.createEmbeddingVector(id, org, text, aiModelObjectToUseForEmbeddings); 
 		if (response.reason != embedding.REASONS.OK) return null;
@@ -84,9 +84,9 @@ exports.search = async function(params, _llmstepDefinition) {
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
 	}
 	let vectorResults = [];
-	for (const vectordb of vectordbs) vectorResults.push(...await vectordb.query(
+	for (const vectordb of vectordbs) vectorResults.push(...(await vectordb.query(
 		vectorForUserPrompts, aiModelObjectForSearch.topK_vectors, aiModelObjectForSearch.min_distance_vectors, 
-			metadata => documentsToUseDocIDs.includes(metadata[NEURANET_CONSTANTS.NEURANET_DOCID])));
+			metadata => documentsToUseDocIDs.includes(metadata[NEURANET_CONSTANTS.NEURANET_DOCID]))));
 	if ((!vectorResults) || (!vectorResults.length)) return [];
 
 	// slice the vectors after resorting as we combined DBs

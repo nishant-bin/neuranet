@@ -8,6 +8,7 @@
 const yaml = require("yaml");
 const fspromises = require("fs").promises;
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
 
 const APP_CACHE = {}, FLOWSECTION_CACHE = {}, DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
@@ -68,6 +69,23 @@ exports.getAIApp = async function(id, org, aiappid) {
         yaml.parse(await fspromises.readFile(_getAppFile(id, org, aiappid), "utf8"));
     if (!APP_CACHE[appCacheKey]) APP_CACHE[appCacheKey] = app;
     return app;
+}
+
+/**
+ * Returns AI model taking into account app's global overrides.
+ * @param {string} model_name The model name
+ * @param {object} model_overrides The overrides for this model, or undefined if none
+ * @param {string} id The ID - if not provided then global overrides don't take effect
+ * @param {string} org The org - if not provided then global overrides don't take effect
+ * @param {string} aiappid The AI app ID - if not provided then global overrides don't take effect
+ * @returns The AI model taking into account app's global overrides.
+ */
+exports.getAIModel = async function(model_name, model_overrides={}, id, org, aiappid) {
+    const aiapp = (id && org && aiappid) ? await exports.getAIApp(id, org, aiappid) : {global_models: []};
+    let globalOverrides = {}; for (const globalModel of aiapp.global_models) if (globalModel.name == model_name) {
+        globalOverrides = globalModel.model_overrides; break; }
+    const final_overrides = {...globalOverrides, ...model_overrides};
+    return await aiutils.getAIModel(model_name, final_overrides);
 }
 
 /**

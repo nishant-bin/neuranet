@@ -105,7 +105,7 @@ exports.initAsync = async (db_path_in, multithreaded) => {
 exports.read_db = async (db_path_in, multithreaded) => {
     const ndjson_index = await fspromises.readFile(_get_db_index_file(db_path_in), "utf8"), 
         dbToFill = {...(serverutils.clone(DB_INDEX_OBJECT_TEMPLATE)), multithreaded};
-    for (const vector of ndjson_index.split("\n")) { 
+    for (const vector of ndjson_index.trim().split("\n")) { 
         if (vector.trim() == "") continue;  // ignore blank lines
         const vectorObject = JSON.parse(vector); 
         dbToFill.index[vectorObject.hash] = vectorObject; 
@@ -122,15 +122,26 @@ exports.save_db = async (db_path_out, force) => {
 
     if ((db_to_save.modifiedts < db_to_save.savedts) && (!force)) return;  // no need
 
-    let firstSave = true; try {
+    async function _safeFSOp() { 
+        const op = arguments[arguments.length-1], opArgs = [...arguments].slice(0, arguments.length-1);
+        try {await fspromises[op](...opArgs)} catch (err) {if (err.code != "ENOENT") throw err;}
+    }
+    const dbIndexPath = _get_db_index_file(db_path_out), savedIndexPath = _get_db_index_file(db_path_out)+Date.now().toString();   // save current index first
+    await _safeFSOp(dbIndexPath, savedIndexPath, "rename");
+    try {
+        await fspromises.appendFile(dbIndexPath, '');   // touch the file first as we may not have any other data (empty DB scenario)
         for (const vector of Object.values(db_to_save.index)) {
             const ndjsonLine = JSON.stringify(vector) + "\n";
-            if (firstSave) try{await fspromises.unlink(_get_db_index_file(db_path_out));} catch(err) {  // ignore ENOENT
-                if (err.code != "ENOENT") throw err;} finally {firstSave = false;}
-            await fspromises.appendFile(_get_db_index_file(db_path_out), ndjsonLine);
+            await fspromises.appendFile(dbIndexPath, ndjsonLine);
         }
-        db_to_save.savedts = Date.now();    
-    } catch (err) {_log_error("Error saving the database index in save_db call", db_path_out, err);}
+        db_to_save.savedts = Date.now(); await _safeFSOp(savedIndexPath, "unlink");
+    } catch (err) {
+        _log_error("Error saving the database index in save_db call, trying to restore old state", db_path_out, err);
+        try {
+            await _safeFSOp(savedIndexPath, "unlink");
+            await _safeFSOp(savedIndexPath, dbIndexPath, "rename");
+        } catch(err) {_log_error("Error restoring Vector DB. It is possibly horribly corrupted now.", db_path_out, err);} 
+    }
 }
 
 exports.create = exports.add = async (vector, metadata, text, embedding_generator, db_path) => {

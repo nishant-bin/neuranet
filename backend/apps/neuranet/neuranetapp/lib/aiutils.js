@@ -29,8 +29,8 @@ exports.getPrompt = async function(promptFile) {
 }
 
 exports.getAIModel = async function(model_name, overrides) {
-    const _overrideModel = model => { if (overrides) for (const [key, value] of Object.entries(overrides)) 
-        serverutils.setObjProperty(model, key, value);
+    const _overrideModel = model => { 
+        if (overrides) for (const [key, value] of Object.entries(overrides)) serverutils.setObjProperty(model, key, value);
         return model;
     }
     if (!DEBUG_RUN) return _overrideModel(serverutils.clone(NEURANET_CONSTANTS.CONF.ai_models[model_name]));

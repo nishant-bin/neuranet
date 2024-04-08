@@ -37,7 +37,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
 
 	const {id, org, aiappid, filename, cmspath, __forceDBFlush} = jsonReq;
-	LOG.debug(`Got unindex document request from ID ${jsonReq.id}. Incoming filename is ${jsonReq.filename}.`);
+	LOG.debug(`Got unindex document request from ID ${id}. Incoming filename is ${filename}.`);
 
 	const _areCMSPathsSame = (cmspath1, cmspath2) => 
 		(utils.convertToUnixPathEndings("/"+cmspath1, true) == utils.convertToUnixPathEndings("/"+cmspath2, true));
@@ -48,7 +48,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 			message => { if (message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED && 
 				_areCMSPathsSame(message.cmspath, finalCMSPath)) resolve(message); }));
 		const extrainfo = brainhandler.createExtraInfo(id, org, aiappid);
-		if (!(await fileindexer.deleteFileFromCMSRepository(id, org, finalCMSPath, extrainfo)).result) {
+		if (!(await fileindexer.deleteFileFromCMSRepository(id, org, finalCMSPath, extrainfo))) {
 			LOG.error(`CMS error deleting document for request ${JSON.stringify(jsonReq)}`); 
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 		}
@@ -57,7 +57,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 			LOG.error(`AI library error unindexing document for request ${JSON.stringify(jsonReq)}`); 
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 		} else {
-			if (__forceDBFlush) await aidbfs.flush(jsonReq.id, jsonReq.org);
+			if (__forceDBFlush) await aidbfs.flush(id, org, aiappid);
 			return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
 		}
 	} catch (err) {

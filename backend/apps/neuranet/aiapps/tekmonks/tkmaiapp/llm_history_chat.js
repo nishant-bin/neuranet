@@ -6,6 +6,7 @@
  *  org - User's Org
  *  session_id - The session ID for a previous session if this is a continuation
  *  prompt - The chat prompt
+ *  brainid - The brain ID
  *  <anything else> - Used to expand the prompt, including user's queries
  * 
  * The Response is an object

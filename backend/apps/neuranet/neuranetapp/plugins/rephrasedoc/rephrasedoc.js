@@ -7,29 +7,27 @@
 
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
-const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const simplellm = require(`${NEURANET_CONSTANTS.LIBDIR}/simplellm.js`);
 const textsplitter = require(`${NEURANET_CONSTANTS.LIBDIR}/textsplitter.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
 
-const PROMPT_PARAM = "_promptparam", CHAT_MODEL = "chat", EMBEDDINGS_MODEL = "embeddings";
+const PROMPT_PARAM = "_promptparam", CHAT_MODEL = "chat", EMBEDDINGS_MODEL = "embeddings", 
+    CHAT_MODEL_DEFAULT = "simplellm-gpt35-turbo", EMBEDDINGS_MODEL_DEFAULT = "embedding-openai-ada002";
 
 async function generate(fileindexer, generatorDefinition) {
     let chatModelDefinition, embeddingsModelDefinition; for (const model of (generatorDefinition.models||[])) {
         if (model.type == CHAT_MODEL) chatModelDefinition = model;
         if (model.type == EMBEDDINGS_MODEL) embeddingsModelDefinition = model;
-    }
-    if ((!chatModelDefinition) || (!embeddingsModelDefinition)) {
-        LOG.error(`Generation failed for ${fileindexer.filepath} due to bad model definitions in the AI application.`) ; 
-        return {result: false};
-    }
+    }; 
+    chatModelDefinition = chatModelDefinition || {name: CHAT_MODEL_DEFAULT, model_overrides: {}};
+    embeddingsModelDefinition = embeddingsModelDefinition || {name: EMBEDDINGS_MODEL_DEFAULT, model_overrides: {}};
 
     let document = await fileindexer.getTextContents(generatorDefinition.encoding||"utf8");
     if (!document) {LOG.error(`File content extraction failed for ${fileindexer.filepath}.`); return {result: false};}
     document = document.replace(/\s*\n\s*/g, "\n").replace(/[ \t]+/g, " ");
 
-    const modelObject = await aiutils.getAIModel(chatModelDefinition.name, chatModelDefinition.model_overrides),
-        embeddingsModel = await aiutils.getAIModel(embeddingsModelDefinition.name, embeddingsModelDefinition.model_overrides);
+    const modelObject = await aiapp.getAIModel(chatModelDefinition.name, chatModelDefinition.model_overrides, fileindexer.id, fileindexer.org, fileindexer.aiappid),
+        embeddingsModel = await aiapp.getAIModel(embeddingsModelDefinition.name, embeddingsModelDefinition.model_overrides, fileindexer.id, fileindexer.org, fileindexer.aiappid);
 
     const langDetected = langdetector.getISOLang(document),
         split_separators = embeddingsModel.split_separators[langDetected] || embeddingsModel.split_separators["*"],

@@ -73,7 +73,7 @@ exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA
         dbmemid = path.resolve(dbPathOrMemID); if (!IN_MEM_DBS[dbmemid]) {    // load the DB from the disk only if needed
             try { await fspromises.access(dbPathOrMemID); } catch (err) {    // check the DB path exists or create it etc.
                 if (err.code == "ENOENT") { 
-                    LOG.warn(`Unable to access the TF.IDF DB store at path ${path}. Creating a new one.`); 
+                    LOG.warn(`Unable to access the TF.IDF DB store at path ${dbPathOrMemID}. Creating a new one.`); 
                     await fspromises.mkdir(dbPathOrMemID, {recursive: true});
                 } else throw err;   // not an issue with the DB folder, something else so throw it
             }
@@ -270,8 +270,8 @@ exports.delete = async function(metadata, db=exports.emptydb()) {
             wordCounts[wordIndex] = wordCounts[wordIndex]-1;
             if (wordCounts[wordIndex] == 0) delete wordCounts[wordIndex];   // this makes the vocabulary a sparse index potentially but is needed otherwise word-index mapping will change breaking the entire DB
         }
-        await db.tfidfDocStore.delete(_getDocumentHashIndex(metadata, db));
         db.wordDocCounts = wordCounts;
+        db.tfidfDocStore.delete(_getDocumentHashIndex(metadata, db));       // we don't await as it causes multi-threading for cascading deletes, the await is only to delete the text file which doesn't matter much
     }
 }
 

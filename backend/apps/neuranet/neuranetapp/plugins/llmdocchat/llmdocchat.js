@@ -6,6 +6,7 @@
  *  org - User's Org
  *  session_id - The session ID for a previous session if this is a continuation
  *  prompt - The chat prompt
+ *  brainid - The brain ID
  *  <anything else> - Used to expand the prompt, including user's queries
  * 
  * The Response is an object
@@ -23,8 +24,8 @@ const mustache = require("mustache");
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
+const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const llmchat = require(`${NEURANET_CONSTANTS.LIBDIR}/llmchat.js`);
-const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const llmflowrunner = require(`${NEURANET_CONSTANTS.LIBDIR}/llmflowrunner.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
 const simplellm = require(`${NEURANET_CONSTANTS.LIBDIR}/simplellm.js`);
@@ -40,6 +41,7 @@ const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-
  *                            org - User's Org
  *                            session_id - The session ID for a previous session if this is a continuation
  *                            prompt - The chat prompt
+ * 							  brainid - The brain ID
  *                            <anything else> - Used to expand the prompt, including user's queries
  * @param {Object} _llmstepDefinition Not used.
  * 
@@ -63,7 +65,8 @@ exports.answer = async (params) => {
 
 	const chatsession = llmchat.getUsersChatSession(id, session_id).chatsession;
 	const aiModelToUseForChat = params.model.name||CHAT_MODEL_DEFAULT, 
-		aiModelObjectForChat = await aiutils.getAIModel(aiModelToUseForChat, params.model.model_overrides);
+		aiModelObjectForChat = await aiapp.getAIModel(aiModelToUseForChat, params.model.model_overrides, 
+			params.id, params.org, params.brainid);
 	const aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObjectForChat.driver.module}`
 	let aiLibrary; try{aiLibrary = utils.requireWithDebug(aiModuleToUse, DEBUG_MODE);} catch (err) {
 		LOG.error("Bad AI Library or model - "+aiModuleToUse); 
@@ -79,7 +82,7 @@ exports.answer = async (params) => {
 
 	if (params.rephrasequestion && finalSessionObject.length > 0) {
 		const standaloneQuestionResult = await simplellm.prompt_answer(params[`prompt_for_question_rephrasing_${languageDetectedForQuestion}`] || params.prompt_for_question_rephrasing, id, org, 
-			{session: finalSessionObject, question: params.question},aiModelObjectForChat);
+			{session: finalSessionObject, question: params.question}, aiModelObjectForChat);
 		if (!standaloneQuestionResult) {
 			LOG.error("Couldn't create a stand alone version of the user's question.");
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};

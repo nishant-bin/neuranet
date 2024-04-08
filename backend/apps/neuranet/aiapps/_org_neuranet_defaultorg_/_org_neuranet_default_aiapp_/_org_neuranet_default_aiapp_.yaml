@@ -115,6 +115,7 @@ llm_flow:
   - command: llm_history_chat               # default function entry is answer so entry function name is skipped
     in: 
       session_id: "{{{request.session_id}}}" # request is inbuilt variable contains user's request params
+      brainid: "{{{aiappid}}}"              
 
       prompt_for_question_rephrasing_noinflate: |
         Given the following conversation and a question, rephrase the question to include all relevant keywords and context from the conversation.
@@ -173,7 +174,7 @@ llm_flow:
         {{/documents}}
 
         The answer is:
-      prompt_zh_noinflate: |                   # means do not inflate this at the flow engine - the calling command will use it as is
+      prompt_zh_noinflate: |                # means do not inflate this at the flow engine - the calling command will use it as is
         仅使用下面提供的文件回答以下问题。
         问题：
         {{{question}}}
@@ -245,9 +246,23 @@ docsearch_flow:
       embeddings_model: 
         name: embedding-openai-ada002
         model_overrides:                    
-          read_ai_response_from_samples: false
+          read_ai_response_from_samples: true
       brainid: "{{{aiappid}}}"
     out: airesponse.documents
+
+
+global_models:
+  - name: embedding-openai-ada002
+    model_overrides:                    
+      read_ai_response_from_samples: true
+
+  - name: chat-knowledgebase-gpt35-turbo
+    model_overrides:                    
+      read_ai_response_from_samples: true
+
+  - name: simplellm-gpt35-turbo
+    model_overrides:                    
+      read_ai_response_from_samples: true
 
 
 modules: 

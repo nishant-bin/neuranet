@@ -20,7 +20,7 @@ const stream = require("stream");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
-const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
+const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
 const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
@@ -50,7 +50,8 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
     
-    const aiModelToUseForEmbeddings = MODEL_DEFAULT, aiModelObjectForEmbeddings = await aiutils.getAIModel(aiModelToUseForEmbeddings), 
+    const aiModelToUseForEmbeddings = MODEL_DEFAULT, 
+        aiModelObjectForEmbeddings = await aiapp.getAIModel(aiModelToUseForEmbeddings, undefined, id, org, brainid), 
         embeddingsGenerator = async text => {
 			const response = await embedding.createEmbeddingVector(id, org, text, aiModelToUseForEmbeddings); 
 			if (response.reason != embedding.REASONS.OK) return null;
@@ -71,7 +72,7 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
     try {
         LOG.info(`Starting text extraction of file ${pathIn}.`);
         fileContents = (await neuranetutils.readFullFile(await _getExtractedTextStream(), "utf8")).trim();
-        if (!fileContents) throw new Error(`Empty file ${pathIn}, skipping AI ingestion`);
+        if ((!fileContents) || (!fileContents.length)) throw new Error(`Empty file ${pathIn}, skipping AI ingestion`);
         LOG.info(`Ended text extraction, starting TFIDF ingestion of file ${pathIn}.`);
         if (!lang) {lang = langdetector.getISOLang(fileContents); LOG.info(`Autodetected language ${lang} for file ${pathIn}.`);}
         metadata.lang = lang; await tfidfDB.create(fileContents, metadata, dontRebuildDBs, lang);
@@ -142,28 +143,28 @@ async function uningestfile(pathIn, id, org, brainid) {
 
     // delete from the TF.IDF DB
     const docID = _getDocID(pathIn), tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid), 
-        docsFound = tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
+        docsFound = await tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
         metadata = docsFound.length > 0 ? docsFound[0].metadata : null;
     if (!metadata) {
         LOG.error(`Document to uningest at path ${pathIn} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
         return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
     } else tfidfDB.delete(metadata);
-    
+    LOG.info(`TF.IDF DB uningestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
+
     // delete from the Vector DB
     const queryResults = await vectordb.query(undefined, -1, undefined, 
         metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID, true);
-    if (queryResults) for (const result of queryResults) {
-        try {await vectordb.delete(result.vector);} catch (err) {
-            LOG.error(`Error dropping vector for file ${pathIn} for ID ${id} and org ${org} failed. Some vectors were dropped. Database needs recovery for this file.`);
-            LOG.debug(`The vector which failed was ${result.vector}.`);
-            return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
+    if (queryResults) {
+        for (const result of queryResults) {
+            try {await vectordb.delete(result.vector);} catch (err) {
+                LOG.error(`Error dropping vector for file ${pathIn} for ID ${id} and org ${org} failed. Some vectors were dropped. Database needs recovery for this file.`);
+                LOG.debug(`The vector which failed was ${result.vector}.`);
+                return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
+            }
         }
-    } else {
-        LOG.error(`Queyring vector DB for file ${pathIn} for ID ${id} and org ${org} failed.`);
-        return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
-    }
-
+    } else LOG.error(`Queyring vector DB for file ${pathIn} for ID ${id} and org ${org} produced no matching vectors.`);
     LOG.info(`Vector DB uningestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
+
     return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
 }
 
@@ -180,7 +181,7 @@ async function uningestfile(pathIn, id, org, brainid) {
 async function renamefile(from, to, new_referencelink, id, org, brainid) {
     // update TF.IDF DB 
     const docID = _getDocID(from), tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid), 
-        docsFound = tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
+        docsFound = await tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
         metadata = docsFound.length > 0 ? docsFound[0].metadata : null, 
         new_referencelink_encoded = encodeURI(new_referencelink||_getDocID(to)),
         newmetadata = {...(metadata||{}), referencelink: new_referencelink_encoded, fullpath: to}; 
@@ -239,16 +240,6 @@ async function getVectorDBsForIDAndOrgAndBrainID(id, org, brainid, embeddingsGen
     return [await _getVectorDBForIDAndOrgAndBrainID(id, org, brainid, embeddingsGenerator, multithreaded)];
 }
 
-/**
- * Returns the AI model to use for file handling. 
- * @param {string} modelName The model name, optional. Default is used otherwise.
- */
-async function getAIModelForFiles(modelName) {
-    const aiModelToUseForEmbeddings = modelName||MODEL_DEFAULT;
-    const aiModelObjectForEmbeddings = await aiutils.getAIModel(aiModelToUseForEmbeddings);
-    return aiModelObjectForEmbeddings;
-}
-
 async function _getVectorDBForIDAndOrgAndBrainID(id, org, brainid, embeddingsGenerator, multithreaded) {
     // TODO: ensure the brainid which is same as aiappid is mapped to the user here as a security check
     const vectordb = await aivectordb.get_vectordb(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org, brainid)}/vectordb`, 
@@ -267,5 +258,5 @@ const _getDBID = (_id, org, brainid) => `${(org||UNKNOWN_ORG).toLowerCase()}/${b
 
 const _getDocID = pathIn => crypto.createHash("md5").update(path.resolve(pathIn)).digest("hex");
 
-module.exports = {ingestfile, uningestfile, renamefile, getAIModelForFiles, rebuild, flush, 
-    getVectorDBsForIDAndOrgAndBrainID, getTFIDFDBsForIDAndOrgAndBrainID};
+module.exports = {ingestfile, uningestfile, renamefile, rebuild, flush, getVectorDBsForIDAndOrgAndBrainID, 
+    getTFIDFDBsForIDAndOrgAndBrainID};
