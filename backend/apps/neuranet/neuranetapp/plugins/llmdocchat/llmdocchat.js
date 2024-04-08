@@ -83,10 +83,7 @@ exports.answer = async (params) => {
 	if (params.rephrasequestion && finalSessionObject.length > 0) {
 		const standaloneQuestionResult = await simplellm.prompt_answer(params[`prompt_for_question_rephrasing_${languageDetectedForQuestion}`] || params.prompt_for_question_rephrasing, id, org, 
 			{session: finalSessionObject, question: params.question}, aiModelObjectForChat);
-		if (!standaloneQuestionResult) {
-			LOG.error("Couldn't create a stand alone version of the user's question.");
-			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
-		}
+		if (!standaloneQuestionResult) LOG.error("Couldn't create a stand alone version of the user's question, continuing with the originial question.");
 		else params.question = standaloneQuestionResult;
 	}
 

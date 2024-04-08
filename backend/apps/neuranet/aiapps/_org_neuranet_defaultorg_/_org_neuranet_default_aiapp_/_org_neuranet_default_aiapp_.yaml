@@ -18,24 +18,20 @@ api_uploads_cms_path: uploads               # where files are uploaded by index,
 pregen_flow: 
   - command: rephrasedoc.generate           # module and entry function can be used using module.entry
     in: 
-      label: Summary
+      label: Simplified
 
       prompt: |
-        Summarize the document below in simple langauage in no more than {{{words}}} words.
+        Rephrase the document below in simple language in less than {{{words}}} words.
         {{{fragment}}}
-        The summary is
       prompt_zh: |
-        用不超过 {{{words}}} 个单词的简单语言总结下面的文档。
+        用少于 {{{words}}} 个单词的简单语言重新表述以下文档。
         {{{fragment}}}
-        总结是
       prompt_ja: |
-        以下の文書を簡単な言語で {{{words}}} 語以内に要約してください。
+        以下の文書を {{{words}}} 語以内で簡単な言葉で言い換えてください。
         {{{fragment}}}
-        概要は次のとおりです
       prompt_hi: |
-        नीचे दिए गए दस्तावेज़ को सरल भाषा में {{{words}}} से कम शब्दों में सारांशित करें।
-        {{{टुकड़ा}}}
-        सारांश है
+        नीचे दिए गए दस्तावेज़ को सरल भाषा में {{{words}}} से कम शब्दों में दोबारा लिखें।
+        {{{fragment}}}
 
       models: 
         - name: simplellm-gpt35-turbo

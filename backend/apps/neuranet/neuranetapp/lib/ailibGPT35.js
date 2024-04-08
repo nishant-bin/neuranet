@@ -77,7 +77,7 @@ exports.process = async function(data, promptOrPromptFile, apiKey, model, dontIn
                 _getSampleResponse(modelObject.sample_ai_response) : 
                 _callFunctionWithWaitAndTimeout(_postAIRequest, backoffwait, modelObject.driver.api_wait_timeout||DEFAULT_AI_API_TIMEOUT_WAIT));
         } catch (error) {
-            LOG.error(`The AI engine failed to provide a response due to ${error}`);
+            LOG.error(`The AI engine failed to provide a response due to ${JSON.stringify(error)}`);
             response = {status: "unknown"}
         }
     } while (response && (modelObject.driver.http_retry_codes && 
