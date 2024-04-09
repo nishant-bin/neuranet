@@ -111,7 +111,8 @@ llm_flow:
   - command: llm_history_chat               # default function entry is answer so entry function name is skipped
     in: 
       session_id: "{{{request.session_id}}}" # request is inbuilt variable contains user's request params
-      brainid: "{{{aiappid}}}"              
+      brainid: "{{{aiappid}}}" 
+      auto_summary: true             
 
       prompt_for_question_rephrasing_noinflate: |
         Given the following conversation and a question, rephrase the question to include all relevant keywords and context from the conversation.

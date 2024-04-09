@@ -1,0 +1,11 @@
+[
+{"role": "system", "content": "You are a helpful assistant."},
+{{#session}}
+{{^last}}
+{"role":"{{{role}}}", "content":"{{{content}}}"},
+{{/last}}
+{{#last}}
+{"role":"{{{role}}}", "content":"{{{content}}}"}
+{{/last}}
+{{/session}}
+]

@@ -7,6 +7,7 @@
  *  session - Array of [{"role":"user||assistant", "content":"[chat content]"}]
  *  maintain_session - If set to false, then session is not maintained
  *  session_id - The session ID for a previous session if this is a continuation else null
+ *  auto_chat_summary_enabled - Optional, if true, LLM auto summarization is enabled to reduce session size
  * 
  * Response object
  *  result - true or false
@@ -25,7 +26,8 @@ const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
 	MODEL_DEFAULT = "chat-gpt35-turbo", CHAT_SESSION_UPDATE_TIMESTAMP_KEY = "__last_update",
-	CHAT_SESSION_MEMORY_KEY_PREFIX = "__org_monkshu_neuranet_chatsession", PROMPT_FILE = "chat_prompt.txt",
+	CHAT_SESSION_MEMORY_KEY_PREFIX = "__org_monkshu_neuranet_chatsession", 
+	PROMPT_FILE_WITH_AUTO_SUMMARY = "chat_prompt_auto_summary.txt", PROMPT_FILE_NO_SUMMARY = "chat_prompt_no_summmary.txt",
 	DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode, DEFAULT_MAX_MEMORY_TOKENS = 1000;
 
 exports.chat = async params => {
@@ -55,8 +57,8 @@ exports.chat = async params => {
 	if (!finalSessionObject.length) finalSessionObject = [jsonifiedSession[jsonifiedSession.length-1]];	// at least send the latest question
 	finalSessionObject[finalSessionObject.length-1].last = true;
 	
-	const response = await aiLibrary.process({session: finalSessionObject}, 
-		`${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${PROMPT_FILE}`, aiKey, aiModelToUse);
+	const promptFile = `${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${params.auto_chat_summary_enabled?PROMPT_FILE_WITH_AUTO_SUMMARY:PROMPT_FILE_NO_SUMMARY}`;
+	const response = await aiLibrary.process({session: finalSessionObject}, promptFile, aiKey, aiModelToUse);
 
 	if (!response) {
 		LOG.error(`AI library error processing request ${JSON.stringify(params)}`); 
@@ -64,7 +66,7 @@ exports.chat = async params => {
 	} else {
 		dblayer.logUsage(params.id, response.metric_cost, aiModelToUse);
 		const {aiResponse, promptSummary, responseSummary} = _unmarshallAIResponse(response.airesponse, 
-			params.session.at(-1).content);
+			params.raw_question||params.session.at(-1).content, params.auto_chat_summary_enabled);
 		if (params.maintain_session != false) {
 			chatsession.push({"role": aiModelObject.user_role, "content": promptSummary}, 
 				{"role": aiModelObject.assistant_role, "content": responseSummary});
@@ -110,7 +112,12 @@ exports.jsonifyContentsInThisSession = session => {
 	return session;
 }
 
-function _unmarshallAIResponse(response, userPrompt) {
+function _unmarshallAIResponse(response, userPrompt, chatAutoSummaryEnabled) {
+	if (!chatAutoSummaryEnabled) {
+		LOG.info(`_unmarshallAIResponse is returning unsummaried conversation as chat auto summarization is disabled.`);
+		return {aiResponse: response, promptSummary: userPrompt, responseSummary: response};
+	}
+
 	try {
 		const summaryRE = /\{["]*user["]*:\s*["]*(.*?)["]*,\s*["]*ai["]*:\s*["]*(.*?)["]*\}/g;
 		const jsonSummaries = summaryRE.exec(response.trim());
@@ -120,7 +127,7 @@ function _unmarshallAIResponse(response, userPrompt) {
 		return {aiResponse: realResponse, promptSummary: jsonSummaries[1].trim(), 
 			responseSummary: jsonSummaries[2].trim()};
 	} catch (err) {
-		LOG.error(`Returning unsummaried conversation as error parsing the AI response summaries, the error is ${err}, the response is\n ${response}`);
+		LOG.error(`_unmarshallAIResponse is returning unsummaried conversation as error parsing the AI response summaries, the error is ${err}, the response is\n ${response}`);
 		return {aiResponse: response, promptSummary: userPrompt, responseSummary: response};
 	}	
 }

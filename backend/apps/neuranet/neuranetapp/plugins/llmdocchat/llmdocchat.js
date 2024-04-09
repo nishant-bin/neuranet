@@ -7,6 +7,7 @@
  *  session_id - The session ID for a previous session if this is a continuation
  *  prompt - The chat prompt
  *  brainid - The brain ID
+ *  auto_summary - Set to true to reduce session size but can cause response errors
  *  <anything else> - Used to expand the prompt, including user's queries
  * 
  * The Response is an object
@@ -42,6 +43,7 @@ const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-
  *                            session_id - The session ID for a previous session if this is a continuation
  *                            prompt - The chat prompt
  * 							  brainid - The brain ID
+ * 							  auto_summary - Set to true to reduce session size but can cause response errors
  *                            <anything else> - Used to expand the prompt, including user's queries
  * @param {Object} _llmstepDefinition Not used.
  * 
@@ -96,7 +98,8 @@ exports.answer = async (params) => {
 	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, {...params, documents: documentsForPrompt});
 
 	const paramsChat = { id, org, maintain_session: true, session_id, model: aiModelObjectForChat,
-        session: [{"role": aiModelObjectForChat.user_role, "content": knowledegebaseWithQuestion}] };
+        session: [{"role": aiModelObjectForChat.user_role, "content": knowledegebaseWithQuestion}],
+		auto_chat_summary_enabled: params.auto_summary||false, raw_question: params.question };
 	const response = await llmchat.chat(paramsChat);
 
 	return {...response, metadatas: metadatasForResponse};
