@@ -112,7 +112,7 @@ llm_flow:
     in: 
       session_id: "{{{request.session_id}}}" # request is inbuilt variable contains user's request params
       brainid: "{{{aiappid}}}" 
-      auto_summary: true             
+      auto_summary: true                    # controls session auto-summary, setting to true will lead to random errors but shorter sessions        
 
       prompt_for_question_rephrasing_noinflate: |
         Given the following conversation and a question, rephrase the question to include all relevant keywords and context from the conversation.
