@@ -40,15 +40,19 @@ async function generate(fileindexer, generatorDefinition) {
         if (keyNormalized.endsWith(PROMPT_PARAM)) promptData[aiapp.extractRawKeyName(key)] = value;
     }
 
-    const rephrasedSplits = []; for (const split of splits) {
+    const queueAnswer = async (promptToUse, promptData, sequence) => {
+        const rephrasedSplit = await simplellm.prompt_answer(promptToUse, fileindexer.id, fileindexer.org, promptData, modelObject);
+        rephrasedSplits.push({content: rephrasedSplit||"", sequence}) ;
+    }
+    let rephrasedSplits = [], promisesToWaitFor = []; for (const [index, split] of splits.entries()) {
         const lang_fragment = langdetector.getISOLang(split);
         promptData.fragment = split; promptData.lang_fragment = lang_fragment;
         const promptToUse = generatorDefinition[`prompt_fragment_${lang_fragment}`] || generatorDefinition[`prompt_${langDetected}`] || generatorDefinition.prompt;
-        const rephrasedSplit = await simplellm.prompt_answer(promptToUse, fileindexer.id, fileindexer.org, promptData, modelObject);
-        if (!rephrasedSplit) continue;
-        rephrasedSplits.push(rephrasedSplit);
+        promisesToWaitFor.push(queueAnswer(promptToUse, promptData, index));
     }
-    const joinedConent = rephrasedSplits.join(split_joiners[0]);
+    await Promise.all(promisesToWaitFor); 
+    rephrasedSplits.sort((v1, v2) => v1.sequence < v2.sequence ? -1 : v1.sequence > v2.sequence ? 1 : 0);
+    let joinedConent=""; for (const rephrasedSplit of rephrasedSplits) joinedConent += rephrasedSplit.content+split_joiners[0];
 
     return {result: true, contentBufferOrReadStream: _ => Buffer.from(joinedConent, generatorDefinition.encoding||"utf8"), lang: langDetected};
 }

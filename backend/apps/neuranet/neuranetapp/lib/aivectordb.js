@@ -315,16 +315,20 @@ exports.ingeststream = async function(metadata, stream, encoding="utf8", chunk_s
             }
         }
 
+        const chunkIngestionsWaitingPromises = [];
         const executionQueue = [], _executionQueueFunction = async chunk => {
-            await _chunkIngestionFunction(chunk); executionQueue.pop(); // remove this function from the queue
-            if (executionQueue.length) await (executionQueue[executionQueue.length-1])(); 
-            _processStreamEnding();
+            chunkIngestionsWaitingPromises.push(_chunkIngestionFunction(chunk)); executionQueue.pop(); // remove this function from the queue
+            if (executionQueue.length) (executionQueue[executionQueue.length-1])(); // process the next function
+            else _processStreamEnding();
         };
 
         let _endingProcessed = false; const _processStreamEnding = async _ => {
             if (stream_ended && (executionQueue.length == 0) && (!_endingProcessed)) {
-                _endingProcessed = true; if (!ingestion_error) await _chunkIngestionFunction(null, true); 
-                if (!ingestion_error) resolve(vectors_ingested); else reject("Ingestion error in chunk ingestion stream."); } }
+                await Promise.all(chunkIngestionsWaitingPromises);  // wait for all ingestions to end
+                _endingProcessed = true; if (!ingestion_error) await _chunkIngestionFunction(null, true); // tail ingested
+                if (!ingestion_error) resolve(vectors_ingested); else reject("Ingestion error in chunk ingestion stream."); 
+            } 
+        }
 
         stream.on("data", async chunk => {
             executionQueue.unshift(async _=> await _executionQueueFunction(chunk));

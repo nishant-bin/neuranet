@@ -61,8 +61,8 @@ exports.answer = async (params) => {
 	LOG.debug(`Got LLM_History chat request from ID ${id} of org ${org}. Incoming params are ${JSON.stringify(params)}`);
 
 	if (!(await quota.checkQuota(id, org))) {
-		LOG.error(`Disallowing the API call, as the user ${id} of org ${org} is over their quota.`);
-		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
+		const errMsg = `Disallowing the doc chat call, as the user ${id} of org ${org} is over their quota.`;
+		LOG.error(errMsg); params.return_error(errMsg); return;
 	}
 
 	const chatsession = llmchat.getUsersChatSession(id, session_id).chatsession;
@@ -71,8 +71,8 @@ exports.answer = async (params) => {
 			params.id, params.org, params.brainid);
 	const aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObjectForChat.driver.module}`
 	let aiLibrary; try{aiLibrary = utils.requireWithDebug(aiModuleToUse, DEBUG_MODE);} catch (err) {
-		LOG.error("Bad AI Library or model - "+aiModuleToUse); 
-		return {reason: REASONS.BAD_MODEL, ...CONSTANTS.FALSE_RESULT};
+		const errMsg = "Bad AI Library or model - "+aiModuleToUse+", error: "+err;
+        LOG.error(errMsg); params.return_error(errMsg, REASONS.INTERNAL); return;
 	}
 	const finalSessionObject = chatsession.length ? await llmchat.trimSession(
 		aiModelObjectForChat.max_memory_tokens||DEFAULT_MAX_MEMORY_TOKENS,
@@ -90,7 +90,10 @@ exports.answer = async (params) => {
 	}
 
 	const documentResultsForPrompt = params.documents;	// if no documents found, shortcircuit with no knowledge error
-	if ((!documentResultsForPrompt) || (!documentResultsForPrompt.length)) return {reason: REASONS.NOKNOWLEDGE, ...CONSTANTS.FALSE_RESULT};
+	if ((!documentResultsForPrompt) || (!documentResultsForPrompt.length)) {
+		const errMsg = "No knowledge of this topic."; LOG.error(errMsg); 
+		params.return_error(errMsg, REASONS.NOKNOWLEDGE); return;
+	}
 	
 	const documentsForPrompt = [], metadatasForResponse = []; for (const [i,documentResult] of documentResultsForPrompt.entries()) {
 		documentsForPrompt.push({content: documentResult.text, document_index: i+1}); metadatasForResponse.push(documentResult.metadata) };

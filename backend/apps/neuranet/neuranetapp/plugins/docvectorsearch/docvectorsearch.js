@@ -18,8 +18,9 @@ const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
+const llmflowrunner = require(`${NEURANET_CONSTANTS.LIBDIR}/llmflowrunner.js`);
 
-const REASONS = {INTERNAL: "internal"};
+const REASONS = llmflowrunner.REASONS;
 
 /**
  * Searches the AI DBs for the given query. Strategy is documents are searched
@@ -74,20 +75,23 @@ exports.search = async function(params, _llmstepDefinition) {
 	}
 	const vectorForUserPrompts = await embeddingsGenerator(query);
 	if (!vectorForUserPrompts) {
-		LOG.error(`Embedding vector generation failed for ${query}. Can't continue.`);
-		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
+		const err = `Embedding vector generation failed for ${query}. Can't continue.`;
+		LOG.error(err); params.return_error(err, REASONS.INTERNAL); return;
 	}
 
 	let vectordbs; try { vectordbs = await aidbfs.getVectorDBsForIDAndOrgAndBrainID(id, org, brainid, 
 			embeddingsGenerator, NEURANET_CONSTANTS.CONF.multithreaded) } catch(err) { 
-		LOG.error(`Can't instantiate the vector DB for ID ${id}. Unable to continue.`); 
-		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
+		const errMsg = `Vector DB lookup failed due to ${err}. Can't continue.`;
+		LOG.error(errMsg); params.return_error(errMsg, REASONS.INTERNAL); return;
 	}
 	let vectorResults = [];
 	for (const vectordb of vectordbs) vectorResults.push(...(await vectordb.query(
 		vectorForUserPrompts, aiModelObjectForSearch.topK_vectors, aiModelObjectForSearch.min_distance_vectors, 
 			metadata => documentsToUseDocIDs.includes(metadata[NEURANET_CONSTANTS.NEURANET_DOCID]))));
-	if ((!vectorResults) || (!vectorResults.length)) return [];
+	if ((!vectorResults) || (!vectorResults.length)) {
+		LOG.warn(`No vector search documents found for query ${query} for id ${id} org ${org} and brainid ${brainid}.`);
+		return [];
+	}
 
 	// slice the vectors after resorting as we combined DBs
 	vectordbs[0].sort(vectorResults); vectorResults = vectorResults.slice(0, 

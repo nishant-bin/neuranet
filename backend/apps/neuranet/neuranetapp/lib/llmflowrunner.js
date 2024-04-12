@@ -27,8 +27,9 @@ exports.REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDA
  */
 exports.answer = async function(query, id, org, aiappid, request, flow_section="llm_flow") {
     const working_memory = {
-        __error: false, __error_message: "", query, id, org, aiappid, request,
-        return_error: message => {this.__error = true; __error_message = message; LOG.error(message);}
+        __error: false, __error_message: "", __error_reason: exports.REASONS.OK, query, id, org, 
+        aiappid, request, return_error: function(message, reason) {
+            this.__error = true; this.__error_message = message; LOG.error(message); this.__error_reason = reason;}
     };
 
     const llmflowCommands = await aiapp.getAIAppObject(id, org, aiappid, flow_section); 
@@ -40,7 +41,7 @@ exports.answer = async function(query, id, org, aiappid, request, flow_section="
 
         const [command, command_function] = llmflowCommandDefinition.command.split(".");
         const llmflowModule = await aiapp.getCommandModule(id, org, aiappid, command);
-        const callParams = {id, org, query, aiappid, request}; 
+        const callParams = {id, org, query, aiappid, request, return_error: working_memory.return_error}; 
         for (const [key, value] of Object.entries(llmflowCommandDefinition.in)) {
             if (key.endsWith(NOINFLATE)) callParams[aiapp.extractRawKeyName(key)] = value;
             else if (key.endsWith(JSCODE)) {
@@ -51,13 +52,18 @@ exports.answer = async function(query, id, org, aiappid, request, flow_section="
                 mustache.render(value.toString(), working_memory) : value;
         }
 
-        const flow_response = await llmflowModule[command_function||aiapp.DEFAULT_ENTRY_FUNCTIONS.llm_flow](callParams, llmflowCommandDefinition);
-        serverutils.setObjProperty(working_memory, (llmflowCommandDefinition.out||DEFAULT_OUT), flow_response);
-        if (working_memory.__error) break;
+        try {
+            const flow_response = await llmflowModule[command_function||aiapp.DEFAULT_ENTRY_FUNCTIONS.llm_flow](callParams, llmflowCommandDefinition);
+            if (working_memory.__error) break;
+            serverutils.setObjProperty(working_memory, (llmflowCommandDefinition.out||DEFAULT_OUT), flow_response);
+        } catch (err) {
+            working_memory.return_error(`Error running flow command ${command} for id ${id} and org ${org} and ai app ${aiappid}. The error is ${err}`, exports.REASONS.INTERNAL);
+            break;
+        }
     }
 
     if (!working_memory.__error) return {...CONSTANTS.TRUE_RESULT, ...(working_memory.airesponse||[])};
-    else return {...CONSTANTS.FALSE_RESULT, error: __error_message};
+    else return {...CONSTANTS.FALSE_RESULT, error: working_memory.__error_message, reason: working_memory.__error_reason};
 }   
 
 async function _runJSCode(code, context) {

@@ -40,7 +40,7 @@ exports.initAsync = async _ => {
         tikaconf = JSON.parse(jsonConfParsed); 
     } catch (err) { LOG.error(`Can't read Tika configuration. The error was ${err}.`); throw err; }
 
-    ticketing = new Ticketing(tikaconf.max_tika_instances);
+    if (!ticketing) ticketing = new Ticketing(tikaconf.max_tika_instances);
 
     try { await fspromises.access(TIKA_TEMP_SUBDIR_READ); } catch (err) {
         if (err.code == "ENOENT") await fspromises.mkdir(TIKA_TEMP_SUBDIR_READ, {recursive: true});

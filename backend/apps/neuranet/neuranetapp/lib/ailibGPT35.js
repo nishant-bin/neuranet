@@ -1,6 +1,12 @@
 /**
  * Calls various GPT models using OpenAI message format. 
  * Uses request/response not streaming.
+ * 
+ * Implements rate controls, retries with backoffs and timeouts.
+ * 
+ * Default timeout - 10 minutes, starting backoff = 150 ms,
+ * default requests per second - 50, Default retries - 5
+ * 
  * (C) 2022 TekMonks. All rights reserved.
  */
 
@@ -9,13 +15,15 @@ const fspromises = require("fs").promises;
 const rest = require(`${CONSTANTS.LIBDIR}/rest.js`);
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const {Ticketing} = require(`${CONSTANTS.LIBDIR}/ticketing.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/../3p/langdetector.js`);
 
 const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}", SAMPLE_MODULE_PREFIX = "module(", DEFAULT_GPT_CHARS_PER_TOKEN = 4,
     DEFAULT_GPT_TOKENS_PER_WORD = 1.25, INTERNAL_TOKENIZER = "internal", DEFAULT_GPT_TOKENIZER = "gpt-tokenizer", 
     DEFAULT_TOKEN_UPLIFT = 1.05, DEFAULT_AI_API_RETRIES = 5, DEFAULT_AI_API_BACKOFF_WAIT = 150, 
-    DEFAULT_AI_API_BACKOFF_EXPONENT=2, DEFAULT_AI_API_TIMEOUT_WAIT=60000, MAX_LOG_NON_VERBOSE_TRUNCATE = 250;
+    DEFAULT_AI_API_BACKOFF_EXPONENT=2, DEFAULT_AI_API_TIMEOUT_WAIT=60000, MAX_LOG_NON_VERBOSE_TRUNCATE = 250,
+    DEFAULT_REQUESTS_PER_SECOND=50, TICKETING_BOOTH = {};
 
 /**
  * Runs the AI LLM.
@@ -66,6 +74,8 @@ exports.process = async function(data, promptOrPromptFile, apiKey, model, dontIn
             ...(modelObject.x_api_key ? {"x-api-key": modelObject.x_api_key} : {})}, promptObject);
     const _is200ResponseStatus = status => typeof status !== "number" ? false : 
         Math.trunc(status / 200) == 1 && status % 200 < 100;
+    if (!TICKETING_BOOTH[modelObject.name]) TICKETING_BOOTH[modelObject.name] = new Ticketing(modelObject.max_requests_per_second||DEFAULT_REQUESTS_PER_SECOND);
+    const ticketing = TICKETING_BOOTH[modelObject.name], apiWaitTimeout = modelObject.driver.api_wait_timeout||DEFAULT_AI_API_TIMEOUT_WAIT;
     do {    // auto retry if API is overloaded (eg 503 error)
         let backoffwait = 0; if (retries > 0) {
             backoffwait = Math.pow(modelObject.driver.backoffexponent||DEFAULT_AI_API_BACKOFF_EXPONENT, retries-1) * 
@@ -73,16 +83,16 @@ exports.process = async function(data, promptOrPromptFile, apiKey, model, dontIn
             LOG.warn(`Retrying with backoff wait of ${(modelObject.driver.backoffwait||DEFAULT_AI_API_BACKOFF_WAIT)*retries} ms.`);
         }
         try {
-            retries++; response = await (modelObject.read_ai_response_from_samples ? 
-                _getSampleResponse(modelObject.sample_ai_response) : 
-                _callFunctionWithWaitAndTimeout(_postAIRequest, backoffwait, modelObject.driver.api_wait_timeout||DEFAULT_AI_API_TIMEOUT_WAIT));
+            retries++; response = await ticketing.getTicket(_ => modelObject.read_ai_response_from_samples ? 
+                _getSampleResponse(modelObject.sample_ai_response) : _callAsyncFunctionWithWaitAndTimeout(_postAIRequest, 
+                    backoffwait, apiWaitTimeout), true, 'AILibGPT35 is waiting for execution ticket.');
         } catch (error) {
             LOG.error(`The AI engine failed to provide a response due to ${JSON.stringify(error)}`);
             response = {status: "unknown"}
         }
-    } while (response && (modelObject.driver.http_retry_codes && 
+    } while (response && (!_is200ResponseStatus(response.status)) && (modelObject.driver.http_retry_codes && 
             (modelObject.driver.http_retry_codes.includes(response.status)||modelObject.driver.http_retry_codes.includes("*")))
-        && (retries <= (modelObject.driver.api_overloaded_max_retries||DEFAULT_AI_API_RETRIES)) && (!_is200ResponseStatus(response.status)))
+        && (retries <= (modelObject.driver.api_overloaded_max_retries||DEFAULT_AI_API_RETRIES)))
 
     if ((!response) || (!response.data) || (response.error)) {
         LOG.error(`Error: AI engine call error.`);
@@ -146,7 +156,7 @@ async function _getSampleResponse(sampleAIReponseDirective) {
     }
 }
 
-async function _callFunctionWithWaitAndTimeout(callee, wait, timeout) {
+async function _callAsyncFunctionWithWaitAndTimeout(callee, wait, timeout) {
     return new Promise(async (resolve, reject) => {
         const callAndResolve = async _ => {
             let resolved = false; let timeoutID; 

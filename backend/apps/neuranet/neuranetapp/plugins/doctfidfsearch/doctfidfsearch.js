@@ -15,8 +15,9 @@
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
 const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
+const llmflowrunner = require(`${NEURANET_CONSTANTS.LIBDIR}/llmflowrunner.js`);
 
-const REASONS = {INTERNAL: "internal"}, TEMP_MEM_TFIDF_ID = "_com_tekmonks_neuranet_tempmem_tfidfdb_id_";
+const REASONS = llmflowrunner.REASONS, TEMP_MEM_TFIDF_ID = "_com_tekmonks_neuranet_tempmem_tfidfdb_id_";
 
 /**
  * Searches the AI DBs for the given query. Strategy is documents are searched
@@ -63,8 +64,8 @@ exports.search = async function(params, _llmstepDefinition) {
 	
 	let vectordbs; try { vectordbs = await aidbfs.getVectorDBsForIDAndOrgAndBrainID(id, org, brainid, 
 			NEURANET_CONSTANTS.CONF.multithreaded) } catch(err) { 
-		LOG.error(`Can't instantiate the vector DB for ID ${id}. Unable to continue.`); 
-		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
+		const errMsg = `Can't instantiate the vector DB for ID ${id} due to ${err}. Unable to continue.`;
+		LOG.error(errMsg); params.return_error(errMsg, REASONS.INTERNAL); return;
 	}
 	let vectorResults = [];
 	for (const vectordb of vectordbs) vectorResults.push(...await vectordb.query(	// just get all the vectors for these documents
@@ -72,7 +73,7 @@ exports.search = async function(params, _llmstepDefinition) {
 			metadata[NEURANET_CONSTANTS.NEURANET_DOCID])));
 	if ((!vectorResults) || (!vectorResults.length)) return [];
 
-	// create an in-memory temporary TF.IDF DB to search for relevant vectors
+	// create an in-memory temporary TF.IDF DB to search for relevant document fragments
 	const tfidfDBInMem = await aitfidfdb.get_tfidf_db(TEMP_MEM_TFIDF_ID+Date.now(), NEURANET_CONSTANTS.NEURANET_DOCID, 
 		NEURANET_CONSTANTS.NEURANET_LANGID, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`, undefined, true, false);
 	for (const vectorResult of vectorResults) {

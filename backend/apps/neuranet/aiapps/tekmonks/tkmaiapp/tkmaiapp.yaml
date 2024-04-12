@@ -37,11 +37,11 @@ pregen_flow:
         - name: simplellm-gpt35-turbo
           type: chat
           model_overrides:                  # this allows us to override model params on a per AI app basis, can be a nested path e.g. driver.host if we are calling API at a different host name etc          
-            read_ai_response_from_samples: true
+            read_ai_response_from_samples: false
         - name: embedding-openai-ada002
           type: embeddings
           model_overrides:                      
-            read_ai_response_from_samples: true
+            read_ai_response_from_samples: false
       words_promptparam: 700
       pathid: summary
       encoding: utf8
@@ -67,16 +67,67 @@ pregen_flow:
         - name: simplellm-gpt35-turbo
           type: chat
           model_overrides:                  # this allows us to override model params on a per AI app basis, can be a nested path e.g. driver.host if we are calling API at a different host name etc          
-            read_ai_response_from_samples: true
+            read_ai_response_from_samples: false
         - name: embedding-openai-ada002
           type: embeddings
           model_overrides:                      
-            read_ai_response_from_samples: true
+            read_ai_response_from_samples: false
       pathid: reworded
       encoding: utf8
 
 
 llm_flow:   
+  - command: expandquery.expand             # expands the query from session, built-in plugin
+    in: 
+      query: "{{{query}}}"
+      session_id: "{{{request.session_id}}}" # request is inbuilt variable contains user's request params
+      brainid: "{{{aiappid}}}"              # inbuilt variable contains the ai app ID
+      model: 
+        name: simplellm-gpt35-turbo
+        model_overrides: 
+          read_ai_response_from_samples: false
+      prompt_noinflate: |
+        Given the following conversation and a question, rephrase the question to include all relevant keywords and context from the conversation.
+        Conversation:
+        {{#session}}
+        {{{role}}}: {{{content}}}
+        {{/session}}
+
+        Question: {{{question}}}
+
+        The standalone question is:
+      prompt_zh_noinflate: |
+        给定以下对话和问题，重新表述问题以包含对话中的所有相关关键字和上下文。
+        对话：
+        {{#session}}
+        {{{role}}}: {{{content}}}
+        {{/session}}
+
+        问题：{{{question}}}
+
+        独立的问题是：
+      prompt_ja_noinflate: |
+        次の会話と質問がある場合、会話の関連するキーワードとコンテキストをすべて含めて質問を言い換えます。
+        会話：
+        {{#session}}
+        {{{role}}}: {{{content}}}
+        {{/session}}
+
+        質問: {{{question}}}
+
+        独立した質問は次のとおりです:
+      prompt_hi_noinflate: |
+        निम्नलिखित वार्तालाप और एक प्रश्न को देखते हुए, वार्तालाप से सभी प्रासंगिक कीवर्ड और संदर्भ को शामिल करने के लिए प्रश्न को दोबारा लिखें।
+        बातचीत:
+        {{#session}}
+        {{{role}}}: {{{content}}}
+        {{/session}}
+
+        प्रश्न: {{{question}}
+
+        स्टैंडअलोन प्रश्न यह है:
+    out: query
+
   - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
     condition_js: |
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
@@ -88,7 +139,7 @@ llm_flow:
       cutoff_score_tfidf: 0.75
       topK_vectors: 3
       min_distance_vectors: 0
-      brainid: "{{{aiappid}}}"              # inbuilt variable contains the ai app ID
+      brainid: "{{{aiappid}}}"              
     out: documentsfound
 
   - command: docvectorsearch.search         # for all languages except Chinese and Japanese, the condition below 
@@ -104,61 +155,16 @@ llm_flow:
       embeddings_model: 
         name: embedding-openai-ada002
         model_overrides:                    
-          read_ai_response_from_samples: true
+          read_ai_response_from_samples: false
       brainid: "{{{aiappid}}}"
     out: documentsfound
 
   - command: llm_history_chat               # default function entry is answer so entry function name is skipped
     in: 
-      session_id: "{{{request.session_id}}}" # request is inbuilt variable contains user's request params
-      brainid: "{{{aiappid}}}" 
+      session_id: "{{{request.session_id}}}" 
       auto_summary: true                    # controls session auto-summary, setting to true will lead to random errors but shorter sessions        
-
-      prompt_for_question_rephrasing_noinflate: |
-        Given the following conversation and a question, rephrase the question to include all relevant keywords and context from the conversation.
-        Conversation:
-        {{#session}}
-        {{{role}}}: {{{content}}}
-        {{/session}}
-
-        Question: {{{question}}}
-
-        The standalone question is:
-      prompt_for_question_rephrasing_zh_noinflate: |
-        给定以下对话和问题，重新表述问题以包含对话中的所有相关关键字和上下文。
-        对话：
-        {{#session}}
-        {{{role}}}: {{{content}}}
-        {{/session}}
-
-        问题：{{{question}}}
-
-        独立的问题是：
-      prompt_for_question_rephrasing_ja_noinflate: |
-        次の会話と質問がある場合、会話の関連するキーワードとコンテキストをすべて含めて質問を言い換えます。
-        会話：
-        {{#session}}
-        {{{role}}}: {{{content}}}
-        {{/session}}
-
-        質問: {{{question}}}
-
-        独立した質問は次のとおりです:
-      prompt_for_question_rephrasing_hi_noinflate: |
-        निम्नलिखित वार्तालाप और एक प्रश्न को देखते हुए, वार्तालाप से सभी प्रासंगिक कीवर्ड और संदर्भ को शामिल करने के लिए प्रश्न को दोबारा लिखें।
-        बातचीत:
-        {{#session}}
-        {{{role}}}: {{{content}}}
-        {{/session}}
-
-        प्रश्न: {{{question}}
-
-        स्टैंडअलोन प्रश्न यह है:
       question: "{{{query}}}"
-      rephrasequestion: true
-
       documents_js: return documentsfound   # the _js means the value of this property is the inline JS code
-
       prompt_noinflate: |                   # means do not inflate this at the flow engine - the calling command will use it as is
         Answer the following question only using the documents provided below.
         Question:
@@ -207,11 +213,10 @@ llm_flow:
         {{/documents}}
 
         जवाब है:
-
       model: 
         name: chat-knowledgebase-gpt35-turbo
         model_overrides: 
-          read_ai_response_from_samples: true
+          read_ai_response_from_samples: false
     out: airesponse                         # the final response must output to this property - airesponse for LLM flows
 
 
@@ -243,7 +248,7 @@ docsearch_flow:
       embeddings_model: 
         name: embedding-openai-ada002
         model_overrides:                    
-          read_ai_response_from_samples: true
+          read_ai_response_from_samples: false
       brainid: "{{{aiappid}}}"
     out: airesponse.documents
 
@@ -251,15 +256,15 @@ docsearch_flow:
 global_models:
   - name: embedding-openai-ada002
     model_overrides:                    
-      read_ai_response_from_samples: true
+      read_ai_response_from_samples: false
 
   - name: chat-knowledgebase-gpt35-turbo
     model_overrides:                    
-      read_ai_response_from_samples: true
+      read_ai_response_from_samples: false
 
   - name: simplellm-gpt35-turbo
     model_overrides:                    
-      read_ai_response_from_samples: true
+      read_ai_response_from_samples: false
 
 
 modules: 
