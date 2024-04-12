@@ -239,9 +239,9 @@ exports.getFileForMetaDataFile = path => {
 }
 
 exports.renameDiskFileMetadata = async function (oldpath, newpath, newRemotePath) {
-	exports.copyDiskFileMetadata(oldpath, newpath, newRemotePath);
+	await exports.copyDiskFileMetadata(oldpath, newpath, newRemotePath);
 	if (path.resolve(oldpath) != path.resolve(newpath)) {
-		fspromises.unlink(oldpath+XBIN_CONSTANTS.STATS_EXTENSION);
+		await fspromises.unlink(oldpath+XBIN_CONSTANTS.STATS_EXTENSION);
 		const clusterMemory = CLUSTER_MEMORY.get(XBIN_CONSTANTS.MEM_KEY_UPLOADFILE, {});
 		if (clusterMemory && clusterMemory.files_stats && clusterMemory.files_stats[oldpath]) delete clusterMemory.files_stats[oldpath];
 	}
