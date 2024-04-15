@@ -25,7 +25,6 @@ exports.AIAPPDIR = path.resolve(`${BACKEND_ROOT}/aiapps`);
 exports.AIAPPMODES = {EDIT: 'editaiapp', NORMAL: 'normal'};
 exports.DEFAULT_ORG_DEFAULT_AIAPP = "_org_neuranet_default_aiapp_";
 
-
 exports.NEURANET_DOCID = "aidb_docid";
 exports.NEURANET_LANGID = "aidb_langid";
 
@@ -38,4 +37,4 @@ exports.EVENTS = Object.freeze({AIDB_FILE_PROCESSING: "aidb_file_processing",
     AIDB_FILE_PROCESSED: "aidb_file_processed", FILE_CREATED: "filecreated",
     FILE_DELETED: "filedeleted", FILE_RENAMED: "filerenamed", FILE_MODIFIED: "filemodified"});
 exports.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES = Object.freeze({INGESTED: "ingest_process",
-    UNINGESTED: "uningest_process", RENAMED: "rename_process", MODIFIED: "modified_process"});
+    UNINGESTED: "uningest_process", RENAMED: "rename_process", MODIFIED: "modified_process", FILE_PROGRESS: "file_progress"});
