@@ -50,8 +50,10 @@ async function processAssistantResponse(result, _chatboxid, _aiappid) {
 
     // in case of no knowledge, allow the assistant to continue still, with the message that we have no knowledge to answer this particular prompt
     if ((!result.result) && (result.reason == "noknowledge")) return {ok: true, response: await i18n.get("EnterpriseAssist_ErrorNoKnowledge")};
-
+    // bad result means chat failed
     if (!result.result) return {error: await i18n.get("ChatAIError"), ok: false};
+    // result ok but no metadata means response is not from our data, reject it as well with no knowledge
+    if (!result.metadatas) return {ok: true, response: await i18n.get("EnterpriseAssist_ErrorNoKnowledge")};
     
     const references=[]; for (const metadata of result.metadatas) if (!references.includes(
         decodeURIComponent(metadata.referencelink))) references.push(decodeURIComponent(metadata.referencelink));

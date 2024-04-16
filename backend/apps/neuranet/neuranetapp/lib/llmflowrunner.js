@@ -28,8 +28,9 @@ exports.REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDA
 exports.answer = async function(query, id, org, aiappid, request, flow_section="llm_flow") {
     const working_memory = {
         __error: false, __error_message: "", __error_reason: exports.REASONS.OK, query, id, org, 
-        aiappid, request, return_error: function(message, reason) {
-            this.__error = true; this.__error_message = message; LOG.error(message); this.__error_reason = reason;}
+        aiappid, request, return_error: function(message, reason, working_memory) {
+            working_memory.__error = true; working_memory.__error_message = message; LOG.error(message); 
+            working_memory.__error_reason = reason; }
     };
 
     const llmflowCommands = await aiapp.getAIAppObject(id, org, aiappid, flow_section); 
@@ -41,7 +42,7 @@ exports.answer = async function(query, id, org, aiappid, request, flow_section="
 
         const [command, command_function] = llmflowCommandDefinition.command.split(".");
         const llmflowModule = await aiapp.getCommandModule(id, org, aiappid, command);
-        const callParams = {id, org, query, aiappid, request, return_error: working_memory.return_error}; 
+        const callParams = {id, org, query, aiappid, request, return_error: function(){working_memory.return_error(...arguments, working_memory)}}; 
         for (const [key, value] of Object.entries(llmflowCommandDefinition.in)) {
             if (key.endsWith(NOINFLATE)) callParams[aiapp.extractRawKeyName(key)] = value;
             else if (key.endsWith(JSCODE)) {
