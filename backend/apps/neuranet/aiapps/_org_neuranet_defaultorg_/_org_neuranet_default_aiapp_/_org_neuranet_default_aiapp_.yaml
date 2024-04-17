@@ -131,7 +131,7 @@ llm_flow:
   - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
     condition_js: |
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang("{{{query}}}"); if ((lang == "zh") || (lang == "ja")) return true; else return false;
+      const lang = langdetector.getISOLang({{{queryJSON}}}); if ((lang == "zh") || (lang == "ja")) return true; else return false;
     in: 
       query: "{{{query}}}"                  # inbuilt variable contains the user's query
       metadata: null
@@ -145,7 +145,7 @@ llm_flow:
   - command: docvectorsearch.search         # for all languages except Chinese and Japanese, the condition below 
     condition_js: |
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang("{{{query}}}"); if ((lang == "zh") || (lang == "ja")) return false; else return true;
+      const lang = langdetector.getISOLang({{{queryJSON}}}); if ((lang == "zh") || (lang == "ja")) return false; else return true;
     in: 
       query: "{{{query}}}"
       topK_tfidf: 3
@@ -224,7 +224,7 @@ docsearch_flow:
   - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
     condition_js: |
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang("{{{query}}}"); if ((lang == "zh") || (lang == "ja")) return true; else return false;
+      const lang = langdetector.getISOLang("{{{queryJSON}}}"); if ((lang == "zh") || (lang == "ja")) return true; else return false;
     in: 
       query: "{{{query}}}"                  # inbuilt variable contains the user's query
       metadata: null
@@ -238,7 +238,7 @@ docsearch_flow:
   - command: docvectorsearch.search         # for all languages except Chinese and Japanese, the condition below 
     condition_js: |
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang("{{{query}}}"); if ((lang == "zh") || (lang == "ja")) return false; else return true;
+      const lang = langdetector.getISOLang("{{{queryJSON}}}"); if ((lang == "zh") || (lang == "ja")) return false; else return true;
     in: 
       query: "{{{query}}}"
       topK_tfidf: 3

@@ -28,7 +28,7 @@ exports.REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDA
 exports.answer = async function(query, id, org, aiappid, request, flow_section="llm_flow") {
     const working_memory = {
         __error: false, __error_message: "", __error_reason: exports.REASONS.OK, query, id, org, 
-        aiappid, request, return_error: function(message, reason, working_memory) {
+        queryJSON: JSON.stringify(query), aiappid, request, return_error: function(message, reason, working_memory) {
             working_memory.__error = true; working_memory.__error_message = message; LOG.error(message); 
             working_memory.__error_reason = reason; }
     };

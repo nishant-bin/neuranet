@@ -64,12 +64,14 @@ const cpucores = os.cpus().length*2;    // assume 2 cpu-threads per core (hypert
 const maxthreads_for_search = cpucores - 1; // leave 1 thread for the main program
 const worker_threads = require("worker_threads");
 const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
+const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const conf = require(`${NEURANET_CONSTANTS.CONFDIR||(__dirname+"/conf")}/aidb.json`);
 
-const dbs = {}, DB_INDEX_NAME = "dbindex.ndjson", 
-    DB_INDEX_OBJECT_TEMPLATE = {index:{}, modifiedts:Date.now(), savedts: 0, multithreaded: false}, workers = [];
+const dbs = {}, DB_INDEX_NAME = "dbindex.ndjson", VECTORDB_ADD_VECTOR_TOPIC = "vecdb.addvector", 
+    VECTORDB_DELETE_VECTOR_TOPIC = "vecdb.rmvector", DB_INDEX_OBJECT_TEMPLATE = {index:{}, modifiedts:Date.now(), 
+        savedts: 0, multithreaded: false}, workers = [];
 
-let dbs_worker, workers_initialized = false;
+let dbs_worker, workers_initialized = false, blackboard_initialized = false;
 
 if (!worker_threads.isMainThread) worker_threads.parentPort.on("message", async message => {    // multi-threading support
     let result;
@@ -89,28 +91,32 @@ exports.initAsync = async (db_path_in, multithreaded) => {
         await Promise.all(workersOnlinePromises);  // make sure all are online
     }
 
+    if (!blackboard_initialized) {_initBlackboardHooks(); blackboard_initialized = true;}
+
+    const _createEmptyDB = _ => {return {...(serverutils.clone(DB_INDEX_OBJECT_TEMPLATE)), multithreaded, dbpath: db_path_in}};
+
     try {await fspromises.access(db_path_in, fs.constants.R_OK)} catch (err) {
         _log_error("Vector DB path folder does not exist. Initializing to an empty DB", db_path_in, err); 
-        await fspromises.mkdir(db_path_in, {recursive:true});
-        dbs[_get_db_index(db_path_in)] = {...(serverutils.clone(DB_INDEX_OBJECT_TEMPLATE)), multithreaded}; // init to an empty db
-        return;
+        dbs[_get_db_index(db_path_in)] = _createEmptyDB(); await fspromises.mkdir(db_path_in, {recursive:true}); return;
     }
 
-    try {if (!dbs[_get_db_index(db_path_in)]) await exports.read_db(db_path_in, multithreaded);} catch (err) { // read if not in memory already
+    if (!dbs[_get_db_index(db_path_in)]) try {  // read only if not in memory already
+        dbs[_get_db_index(db_path_in)] = _createEmptyDB(); // init to an empty db then read it
+        await exports.read_db(db_path_in);
+    } catch (err) { 
         _log_error("Vector DB index does not exist, or read error. Initializing to an empty DB", db_path_in, err); 
-        dbs[_get_db_index(db_path_in)] = {...(serverutils.clone(DB_INDEX_OBJECT_TEMPLATE)), multithreaded}; // init to an empty db
+        dbs[_get_db_index(db_path_in)] = _createEmptyDB();  // override partial reads with a new completely empty DB
     }
 }
 
-exports.read_db = async (db_path_in, multithreaded) => {
-    const ndjson_index = await fspromises.readFile(_get_db_index_file(db_path_in), "utf8"), 
-        dbToFill = {...(serverutils.clone(DB_INDEX_OBJECT_TEMPLATE)), multithreaded};
+exports.read_db = async (db_path_in) => {
+    const dbToFill = dbs[_get_db_index(db_path_in)];
+    const ndjson_index = await fspromises.readFile(_get_db_index_file(db_path_in), "utf8");
     for (const vector of ndjson_index.trim().split("\n")) { 
         if (vector.trim() == "") continue;  // ignore blank lines
         const vectorObject = JSON.parse(vector); 
-        dbToFill.index[vectorObject.hash] = vectorObject; 
+        _addVectorObject(dbToFill, vectorObject.hash, vectorObject);
     }
-    dbs[_get_db_index(db_path_in)] = dbToFill;
     await _update_db_for_worker_threads();
 }
 
@@ -157,11 +163,11 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
     const dbToUse = dbs[_get_db_index(db_path)]; 
     const vectorHash = _get_vector_hash(vector), texthash = _get_text_hash(text); 
     if (!dbToUse.index[vectorHash]) {  
-        dbToUse.index[vectorHash] = {vector, hash: vectorHash, metadata, length: _getVectorLength(vector), texthash}; 
+        _addVectorObject(dbToUse, vectorHash, {vector, hash: vectorHash, metadata, length: _getVectorLength(vector), texthash}); 
         
         try {await fspromises.writeFile(_get_db_index_text_file(vector, db_path), text||"", "utf8");}
         catch (err) {
-            delete dbToUse.index[vectorHash]; 
+            _deleteVectorObject(dbToUse, vectorHash);
             _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be saved`, db_path, err);
             return false;
         }
@@ -202,7 +208,7 @@ exports.delete = async (vector, db_path) => {
     }
 
     try {
-        delete dbToUse.index[hash]; dbToUse.modifiedts = Date.now();
+        _deleteVectorObject(dbToUse, hash); dbToUse.modifiedts = Date.now();
         if (dbToUse.multithreaded) await _update_db_for_worker_threads();
         await fspromises.unlink(_get_db_index_text_file(vector, db_path));
         return true;
@@ -473,6 +479,32 @@ function _get_vector_hash(vector) {
 function _get_text_hash(text) {
     const hashAlgo = crypto.createHash("md5"); hashAlgo.update(text.toString().toLowerCase());
     const hash = hashAlgo.digest("hex"); return hash;
+}
+
+function _initBlackboardHooks() {
+    blackboard.subscribe(VECTORDB_ADD_VECTOR_TOPIC, async msg => {
+        const {dbpath, multithreaded, hash, vectorObject} = msg;
+        if (!dbs[_get_db_index(dbpath)]) await exports.initAsync(dbpath, multithreaded);
+        _addVectorObject(dbs[_get_db_index(dbpath)], hash, vectorObject, true);
+    });
+
+    blackboard.subscribe(VECTORDB_DELETE_VECTOR_TOPIC, async msg => {
+        const {dbpath, multithreaded, hash} = msg;
+        if (!dbs[_get_db_index(dbpath)]) await exports.initAsync(dbpath, multithreaded);
+        _deleteVectorObject(dbs[_get_db_index(dbpath)], hash, true);
+    });
+}
+
+function _addVectorObject(db, hash, vectorObject, setCallfromBlackboard) {
+    if (!setCallfromBlackboard) blackboard.publish(VECTORDB_ADD_VECTOR_TOPIC, {dbpath: db.dbpath, 
+        multithreaded: db.multithreaded, hash, vectorObject});
+    else db.index[hash] = vectorObject;
+}
+
+function _deleteVectorObject(db, hash, deleteCallfromBlackboard) {
+    if (!deleteCallfromBlackboard) blackboard.publish(VECTORDB_DELETE_VECTOR_TOPIC, {dbpath: db.dbpath, 
+        multithreaded: db.multithreaded, hash});
+    else delete db.index[hash];
 }
 
 const _log_error = (message, db_path, error) => (global.LOG||console).error(

@@ -35,17 +35,18 @@ const crypto = require("crypto");
 const natural = require("natural");
 const {Readable} = require("stream");
 const fspromises = require("fs").promises;
+const memfs = require(`${CONSTANTS.LIBDIR}/memfs.js`);
+const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const jpsegmenter = require(`${__dirname}/../3p/jpsegmenter.js`);
 const zhsegmenter = require(`${__dirname}/../3p/zhsegmenter.js`);
 const langdetector = require(`${__dirname}/../3p/langdetector.js`);
-const LOG = global.LOG || console;  // allow independent operation
-const memfs = CONSTANTS?.LIBDIR ? require(`${CONSTANTS.LIBDIR}/memfs.js`) : fspromises;  // use uncached fs if not under monkshu
 const conf = require(`${NEURANET_CONSTANTS?.CONFDIR||(__dirname+"/conf")}/aidb.json`);
 
-const WORDDOCCOUNTS_FILE = "worddoccounts", VOCABULARY_FILE = "vocabulary", METADATA_DOCID_KEY="aidb_docid", 
+const WORDDOCCOUNTS_FILE = "worddoccounts", VOCABULARY_FILE = "vocabulary", METADATA_DOCID_KEY="docid.key", 
+    METADATA_LANGID_KEY="langid.key", METADATA_DOCID_DEFAULT = "aidb_docid", METADATA_LANGID_DEFAULT = "aidb_langid", 
     MIN_STOP_WORD_IDENTIFICATION_LENGTH = 5, MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95, 
-    DEFAULT_MAX_COORD_BOOST = 0.10, METADATA_LANGID_KEY="aidb_langid";
-const IN_MEM_DBS = {};
+    DEFAULT_MAX_COORD_BOOST = 0.10, TFIDFDB_ADD_DOC_TOPIC = "tfidf.adddoc", TFIDFDB_DELETE_DOC_TOPIC = "tfidf.rmdoc";
+const IN_MEM_DBS = {}; let blackboard_initialized = false;
 
 // international capable punctuation character regex from: https://stackoverflow.com/questions/7576945/javascript-regular-expression-for-punctuation-international
 const PUNCTUATIONS = new RegExp(/[\$\uFFE5\^\+=`~<>{}\[\]|\u3000-\u303F!-#%-\x2A,-/:;\x3F@\x5B-\x5D_\x7B}\u00A1\u00A7\u00AB\u00B6\u00B7\u00BB\u00BF\u037E\u0387\u055A-\u055F\u0589\u058A\u05BE\u05C0\u05C3\u05C6\u05F3\u05F4\u0609\u060A\u060C\u060D\u061B\u061E\u061F\u066A-\u066D\u06D4\u0700-\u070D\u07F7-\u07F9\u0830-\u083E\u085E\u0964\u0965\u0970\u0AF0\u0DF4\u0E4F\u0E5A\u0E5B\u0F04-\u0F12\u0F14\u0F3A-\u0F3D\u0F85\u0FD0-\u0FD4\u0FD9\u0FDA\u104A-\u104F\u10FB\u1360-\u1368\u1400\u166D\u166E\u169B\u169C\u16EB-\u16ED\u1735\u1736\u17D4-\u17D6\u17D8-\u17DA\u1800-\u180A\u1944\u1945\u1A1E\u1A1F\u1AA0-\u1AA6\u1AA8-\u1AAD\u1B5A-\u1B60\u1BFC-\u1BFF\u1C3B-\u1C3F\u1C7E\u1C7F\u1CC0-\u1CC7\u1CD3\u2010-\u2027\u2030-\u2043\u2045-\u2051\u2053-\u205E\u207D\u207E\u208D\u208E\u2329\u232A\u2768-\u2775\u27C5\u27C6\u27E6-\u27EF\u2983-\u2998\u29D8-\u29DB\u29FC\u29FD\u2CF9-\u2CFC\u2CFE\u2CFF\u2D70\u2E00-\u2E2E\u2E30-\u2E3B\u3001-\u3003\u3008-\u3011\u3014-\u301F\u3030\u303D\u30A0\u30FB\uA4FE\uA4FF\uA60D-\uA60F\uA673\uA67E\uA6F2-\uA6F7\uA874-\uA877\uA8CE\uA8CF\uA8F8-\uA8FA\uA92E\uA92F\uA95F\uA9C1-\uA9CD\uA9DE\uA9DF\uAA5C-\uAA5F\uAADE\uAADF\uAAF0\uAAF1\uABEB\uFD3E\uFD3F\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE61\uFE63\uFE68\uFE6A\uFE6B\uFF01-\uFF03\uFF05-\uFF0A\uFF0C-\uFF0F\uFF1A\uFF1B\uFF1F\uFF20\uFF3B-\uFF3D\uFF3F\uFF5B\uFF5D\uFF5F-\uFF65]+/g);
@@ -66,28 +67,28 @@ const SPLITTERS = new RegExp(/[\s,]+/), JP_SEGMENTER = jpsegmenter.getSegmenter(
  *                         this saves memory but will slow down the performance
  * @return {object} The database object.
  */
-exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY, 
-        metadata_langid_key=METADATA_LANGID_KEY, stopwords_path, no_stemming=false, mem_only=false, lowmem=true) {
+exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA_DOCID_DEFAULT, 
+        metadata_langid_key=METADATA_LANGID_KEY_DEFAULT, stopwords_path, no_stemming=false, mem_only=false, lowmem=false) {
+
+    if (!blackboard_initialized) {_initBlackboardHooks(); blackboard_initialized = true;}
+
+    const dbmemid = mem_only ? dbPathOrMemID : path.resolve(dbPathOrMemID);
+    const dbLoadedInMemAlready = IN_MEM_DBS[dbmemid] ? true : false;
+    if (!dbLoadedInMemAlready) IN_MEM_DBS[dbmemid] = await exports.emptydb(dbPathOrMemID, metadata_docid_key, 
+        metadata_langid_key, stopwords_path, no_stemming, mem_only, lowmem); 
     
-    let dbmemid = dbPathOrMemID; if (!mem_only) {
-        dbmemid = path.resolve(dbPathOrMemID); if (!IN_MEM_DBS[dbmemid]) {    // load the DB from the disk only if needed
-            try { await fspromises.access(dbPathOrMemID); } catch (err) {    // check the DB path exists or create it etc.
-                if (err.code == "ENOENT") { 
-                    LOG.warn(`Unable to access the TF.IDF DB store at path ${dbPathOrMemID}. Creating a new one.`); 
-                    await fspromises.mkdir(dbPathOrMemID, {recursive: true});
-                } else throw err;   // not an issue with the DB folder, something else so throw it
-            }
-            IN_MEM_DBS[dbmemid] = await exports.loadData(path.resolve(dbPathOrMemID), lowmem);
-        }
-    } else if (!IN_MEM_DBS[dbmemid]) IN_MEM_DBS[dbmemid] = await exports.emptydb();
-    
-    const db = IN_MEM_DBS[dbmemid]; db.METADATA_DOCID_KEY = metadata_docid_key; db.no_stemming = no_stemming;
-    db.METADATA_LANGID_KEY = metadata_langid_key; if (stopwords_path) db._stopwords = require(stopwords_path);
-    db.lowmem = lowmem;
+    if ((!mem_only) && (!dbLoadedInMemAlready)) try {   // load the DB from the disk only if needed
+        await fspromises.access(dbPathOrMemID); await exports.loadData(dbmemid, lowmem, IN_MEM_DBS[dbmemid]);
+    } catch (err) {    // check the DB path exists or create it etc.
+        if (err.code == "ENOENT") { 
+            LOG.warn(`Unable to access the TF.IDF DB store at path ${dbPathOrMemID}. Creating a new one.`); 
+            await fspromises.mkdir(dbPathOrMemID, {recursive: true});
+        } else throw err;   // not an issue with the DB folder, something else so throw it
+    } 
 
     let save_timer; if (conf.autosave && (!mem_only)) save_timer = setInterval(_=>exports.writeData(dbPathOrMemID, db), conf.autosave_frequency);
 
-    const dbObjectWrapper = {    
+    const db = IN_MEM_DBS[dbmemid], dbObjectWrapper = {    
         create: async (document, metadata, dontRebuildDB, lang) => {
             const result = await exports.create(document, metadata, dontRebuildDB, db, lang); return result; },
         createStream: async (stream, metadata, dontRebuildDB, lang) => {
@@ -104,7 +105,8 @@ exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA
         sortForTF: documents => documents.sort((doc1, doc2) => doc1.tf_score < doc2.tf_score ? 1 : 
             doc1.tf_score > doc2.tf_score ? -1 : 0),
         flush: _ => exports.writeData(dbPathOrMemID, db),      // writeData is async so the caller can await for the flush to complete
-        free_memory: _ => {if (save_timer) clearInterval(save_timer); delete IN_MEM_DBS[dbmemid];}
+        free_memory: _ => {if (save_timer) clearInterval(save_timer); delete IN_MEM_DBS[dbmemid];},
+        _getRawDB: _ => db
     }; dbObjectWrapper.ingest = dbObjectWrapper.create; dbObjectWrapper.ingestStream = dbObjectWrapper.createStream;
     return dbObjectWrapper;
 }
@@ -113,53 +115,72 @@ exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA
  * Creates an empty DB.
  * @returns An empty DB.
  */
-exports.emptydb = async _ => await exports.loadData();
+exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DEFAULT, 
+        metadata_langid_key=METADATA_LANGID_KEY_DEFAULT, stopwords_path, no_stemming=false, mem_only=false, lowmem=true) => {
+
+    const _readFileFromMemFSOrNullOnError = async hashOrPath => {
+        try {return JSON.parse(await memfs.readFile(EMPTY_DB.tfidfDocStore[hashOrPath], "utf8"));} 
+        catch(err) {LOG.error(`TF.IDF error reading document with hash or path ${hashOrPath}, due to ${err} returning null.`); return null;}
+    }
+
+    const EMPTY_DB = {tfidfDocStore: {}, wordDocCounts: {}, vocabulary: []}; 
+    EMPTY_DB.tfidfDocStore.entries = _ => Object.keys(EMPTY_DB.tfidfDocStore).filter(key => 
+        typeof EMPTY_DB.tfidfDocStore[key] !== "function"); 
+    EMPTY_DB.tfidfDocStore.doclength = _ => EMPTY_DB.tfidfDocStore.entries().length;
+    EMPTY_DB.tfidfDocStore.delete = async (hash, fromBackboard) => { 
+        if (!fromBackboard) blackboard.publish(TFIDFDB_DELETE_DOC_TOPIC, {creation_data: _createDBCreationData(EMPTY_DB), hash}); 
+        else {
+            delete EMPTY_DB.tfidfDocStore[hash]; if (!EMPTY_DB.mem_only) {
+                const pathOnDisk = `${EMPTY_DB.pathOrMemID}/${hash}`;
+                try {await fspromises.rm(pathOnDisk)} catch (err) {
+                    LOG.warn(`Error deleting file ${pathIn}/${hash} for TD.IDF hash ${hash} due to ${err}.`); }
+            }
+        }
+    };
+    EMPTY_DB.tfidfDocStore.add = (hash, document, fromBackboard) => {
+        if (!fromBackboard) blackboard.publish(TFIDFDB_ADD_DOC_TOPIC, {creation_data: _createDBCreationData(EMPTY_DB), hash, document}); 
+        else EMPTY_DB.tfidfDocStore[hash] = document; 
+    }
+    EMPTY_DB.tfidfDocStore.data = async documentHash => typeof EMPTY_DB.tfidfDocStore[documentHash] === "object" ? 
+        EMPTY_DB.tfidfDocStore[documentHash] : EMPTY_DB.tfidfDocStore.entries().includes(documentHash) ? 
+            _readFileFromMemFSOrNullOnError(documentHash) : null;    // if parsed then returns object, if doc hash then the doc is read or if path, then file doc is read and returned
+    
+    EMPTY_DB[METADATA_DOCID_KEY] = metadata_docid_key; EMPTY_DB.no_stemming = no_stemming;
+    EMPTY_DB[METADATA_LANGID_KEY] = metadata_langid_key; if (stopwords_path) EMPTY_DB._stopwords = require(stopwords_path);
+    EMPTY_DB.lowmem = lowmem; EMPTY_DB.pathOrMemID = dbPathOrMemID; EMPTY_DB.stopwords_path = stopwords_path; 
+    EMPTY_DB.mem_only = mem_only;
+    return EMPTY_DB;
+}
 
 /**
  * Loads the given database into memory and returns the DB object.
  * @param {string} pathIn The DB path
  * @param {boolean} lowmem If true, then only a portion of DB is kept in memory using LRU.
- * @returns {object} The DB loaded
+ * @param {dbToLoad} object The DB to load into
+ * @returns {object} The DB loaded 
  */
-exports.loadData = async function(pathIn, lowmem) {
-    const EMPTY_DB = {tfidfDocStore: {}, wordDocCounts: {}, vocabulary: []}; 
-    const _readFileFromMemFSOrNullOnError = async hashOrPath => {
-        try {return JSON.parse(await memfs.readFile(EMPTY_DB.tfidfDocStore[hashOrPath], "utf8"));} 
-        catch(err) {LOG.error(`TF.IDF error reading document with hash or path ${hashOrPath}, due to ${err} returning null.`); return null;}
-    }
-    EMPTY_DB.tfidfDocStore.entries = _ => Object.keys(EMPTY_DB.tfidfDocStore).filter(key => 
-        typeof EMPTY_DB.tfidfDocStore[key] !== "function"); 
-    EMPTY_DB.tfidfDocStore.doclength = _ => EMPTY_DB.tfidfDocStore.entries().length;
-    EMPTY_DB.tfidfDocStore.delete = async hash => { delete EMPTY_DB.tfidfDocStore[hash]; 
-        try {await fspromises.rm(`${pathIn}/${hash}`)} catch (err) {LOG.warn(`Error deleting file ${pathIn}/${hash} for TD.IDF hash ${hash} due to ${err}.`)} };
-    EMPTY_DB.tfidfDocStore.add = (hash, document) => EMPTY_DB.tfidfDocStore[hash] = document; 
-    EMPTY_DB.tfidfDocStore.data = async documentHash => typeof EMPTY_DB.tfidfDocStore[documentHash] === "object" ? 
-        EMPTY_DB.tfidfDocStore[documentHash] : EMPTY_DB.tfidfDocStore.entries().includes(documentHash) ? 
-            _readFileFromMemFSOrNullOnError(documentHash) : null;    // if parsed then returns object, if doc hash then the doc is read or if path, then file doc is read and returned
-
-    if (!pathIn) return EMPTY_DB;
-    const dbLoaded = EMPTY_DB; 
-
+exports.loadData = async function(pathIn, lowmem, dbToLoad) {
     const wordDocCountsFile = `${pathIn}/${WORDDOCCOUNTS_FILE}`, vocabularyFile = `${pathIn}/${VOCABULARY_FILE}`;
     let wordDocCounts; try {wordDocCounts = JSON.parse(await fspromises.readFile(wordDocCountsFile, "utf8"))} catch (err) {
-        LOG.error(`TF.IDF search can't find or load ${WORDDOCCOUNTS_FILE} from path ${pathIn}. Using an empty DB.`); return dbLoaded;
+        LOG.error(`TF.IDF search can't find or load ${WORDDOCCOUNTS_FILE} from path ${pathIn}. Using an empty DB.`); return dbToLoad;
     };
     let vocabulary; try {vocabulary = JSON.parse(await fspromises.readFile(vocabularyFile, "utf8"));} catch (err) {
-        LOG.error(`TF.IDF search can't find or load ${VOCABULARY_FILE} from path ${pathIn}. Using an empty DB.`); return dbLoaded;
+        LOG.error(`TF.IDF search can't find or load ${VOCABULARY_FILE} from path ${pathIn}. Using an empty DB.`); return dbToLoad;
     };
     let fileEntries; try{fileEntries = await fspromises.readdir(pathIn)} catch (err) {
         LOG.error(`TF.IDF search can't find or load database directory from path ${pathIn}. Using an empty DB.`); 
-        return dbLoaded; 
+        return dbToLoad; 
     };
-    dbLoaded.wordDocCounts = wordDocCounts; dbLoaded.vocabulary = vocabulary;
+    dbToLoad.wordDocCounts = wordDocCounts; dbToLoad.vocabulary = vocabulary;
 
     try {
-        for (const file of fileEntries) if ((file != WORDDOCCOUNTS_FILE) && (file != VOCABULARY_FILE))  // these are our indices, so skip
-            dbLoaded.tfidfDocStore.add(file, lowmem ? `${pathIn}/${file}` : JSON.parse(await fspromises.readFile(
-                `${pathIn}/${file}`, "utf8"))); // not using memfs here to avoid double memory hit for no reason if lowmem is disabled
+        for (const file of fileEntries) if ((file != WORDDOCCOUNTS_FILE) && (file != VOCABULARY_FILE)) { // these are our indices, so skip
+            const document = JSON.parse(await memfs.readFile(`${pathIn}/${file}`, {memfs_dontcache: lowmem, encoding: "utf8"}));
+            dbToLoad.tfidfDocStore.add(_getDocumentHashIndex(document.metadata, dbToLoad), lowmem ? `${pathIn}/${file}` : document); 
+        }
     } catch (err) {LOG.error(`TF.IDF search load document ${file} from path ${pathIn}. Skipping this document.`);};
 
-    return dbLoaded;
+    return dbToLoad;
 }
 
 /**
@@ -187,7 +208,7 @@ exports.writeData = async (pathIn, db) => {
  * @return {object} metadata The document's metadata.
  * @throws {Error} If the document's metadata is missing the document ID field. 
  */
-exports.ingest = exports.create = async function(document, metadata, dontRecalculate=false, db=exports.emptydb(), lang) {
+exports.ingest = exports.create = async function(document, metadata, dontRecalculate=false, db, lang) {
     return await exports.ingestStream(Readable.from(document), metadata, dontRecalculate, db, lang);
 }
 
@@ -201,18 +222,18 @@ exports.ingest = exports.create = async function(document, metadata, dontRecalcu
  * @return {object} metadata The document's metadata.
  * @throws {Error} If the document's metadata is missing the document ID field. 
  */
-exports.ingestStream = exports.createStream = async function(readstream, metadata, dontRecalculate=false, 
-        db=exports.emptydb(), lang) {
+exports.ingestStream = exports.createStream = async function(readstream, metadata, dontRecalculate=false, db, lang) {
 
     LOG.info(`Starting word extraction for ${JSON.stringify(metadata)}`);
-    if ((!lang) && metadata[db.METADATA_LANGID_KEY]) lang = metadata[db.METADATA_LANGID_KEY];
-    if (!metadata[db.METADATA_DOCID_KEY]) throw new Error("Missing document ID in metadata.");
+    if ((!lang) && metadata[db[METADATA_LANGID_KEY]]) lang = metadata[db[METADATA_LANGID_KEY]];
+    if (!metadata[db[METADATA_DOCID_KEY]]) throw new Error("Missing document ID in metadata.");
 
     const docHash = _getDocumentHashIndex(metadata, db), datenow = Date.now();
     LOG.info(`Deleting old document for ${JSON.stringify(metadata)}`);
     await exports.delete(metadata, db);   // if adding the same document, delete the old one first.
     const newDocument = {metadata: _deepclone(metadata), scores: {}, length: 0, 
-        date_created: datenow, date_modified: datenow}; db.tfidfDocStore.add(docHash, newDocument);
+        date_created: datenow, date_modified: datenow}; 
+    db.tfidfDocStore.add(docHash, newDocument); // add to DB
     LOG.info(`Starting word counting for ${JSON.stringify(metadata)}`);
 
     return new Promise((resolve, reject) => {
@@ -220,14 +241,14 @@ exports.ingestStream = exports.createStream = async function(readstream, metadat
             const docchunk = chunk.toString("utf8");
             if (!lang) {
                 lang = langdetector.getISOLang(docchunk); 
-                if (!metadata[db.METADATA_LANGID_KEY]) metadata[db.METADATA_LANGID_KEY] = lang;
+                if (!metadata[db[METADATA_LANGID_KEY]]) metadata[db[METADATA_LANGID_KEY]] = lang;
                 LOG.info(`Autodetected language ${lang} for ${JSON.stringify(metadata)}.`);
             }
             const docWords = _getLangNormalizedWords(docchunk, lang, db); newDocument.length += docWords.length;
             const docsInDB = db.tfidfDocStore.doclength(), wordsCounted = {}; for (const word of docWords) {
                 const wordIndex = _getWordIndex(word, db, true); 
                 if (!wordsCounted[wordIndex]) {
-                    db.wordDocCounts[wordIndex] = Math.min(db.wordDocCounts[wordIndex]?db.wordDocCounts[wordIndex]+1:1, docsInDB);  // db.wordDocCounts can't eevr be more than number of docs in the DB
+                    db.wordDocCounts[wordIndex] = Math.min(db.wordDocCounts[wordIndex]?db.wordDocCounts[wordIndex]+1:1, docsInDB);  // db.wordDocCounts can't ever be more than number of docs in the DB
                     wordsCounted[wordIndex] = true; 
                 }
                 if (!newDocument.scores[wordIndex]) newDocument.scores[wordIndex] = {tfidf: 0, wordcount: 1};   // see _recalculateTFIDF below
@@ -262,7 +283,7 @@ exports.rebuild = async db => {
  * @param {object} metadata The metadata for the document to delete.
  * @param {object} db The incoming database
  */
-exports.delete = async function(metadata, db=exports.emptydb()) {
+exports.delete = async function(metadata, db) {
     const document = await db.tfidfDocStore.data(_getDocumentHashIndex(metadata, db)), wordCounts = _deepclone(db.wordDocCounts);
     if (document) {
         const allDocumentWordIndexes = Object.keys(document.scores);
@@ -282,7 +303,7 @@ exports.delete = async function(metadata, db=exports.emptydb()) {
  * @param {object} db The database to operate on
  * @returns 
  */
-exports.update = async (oldmetadata, newmetadata, db=exports.emptydb()) => {
+exports.update = async (oldmetadata, newmetadata, db) => {
     const oldhash = _getDocumentHashIndex(oldmetadata, db), newhash = _getDocumentHashIndex(newmetadata, db),
         document = await db.tfidfDocStore.data(oldhash);
     if (!document) return false;    // not found
@@ -311,8 +332,7 @@ exports.update = async (oldmetadata, newmetadata, db=exports.emptydb()) => {
  * @param {boolean} autocorrect Whether to autocorrect query's spelling mistakes, only works for English
  * @returns {Array} The resulting documents as an array of {metadata, plus other stats} objects.
  */
-exports.query = async (query, topK, filter_function, cutoff_score, options={}, db=exports.emptydb(), 
-        lang, autocorrect=true) => {
+exports.query = async (query, topK, filter_function, cutoff_score, options={}, db, lang, autocorrect=true) => {
 
     const queryWords = _getLangNormalizedWords(query, lang||langdetector.getISOLang(query), db, autocorrect), 
         scoredDocs = []; 
@@ -350,29 +370,31 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
  * Defragments the database. Over a period of time the vocabulary can contain words
  * which no document has. Defragmenting will drop those and improve memory and performance.
  * @param {object} db The DB to defragment
+ * @return {object} db The defragmented DB
  */
 exports.defragment = async function(db) {
     const newVocabulary = []; for (const [wordIndex, word] of db.vocabulary.entries())
         if (db.wordDocCounts[wordIndex]) newVocabulary.push(word);  // rebuild by unsparsing the new vocabulary
     if (newVocabulary.length == db.vocabulary.length) return;   //nothing to do
-
-    db = await exports.emptydb();
-    for (const documentHash of db.tfidfDocStore.entries()) {
-        const document = await db.tfidfDocStore.data(documentHash);
+    
+    const defragmentedDB = await exports.emptydb(db.pathOrMemID, db[METADATA_DOCID_KEY], 
+        db[METADATA_LANGID_KEY], db.stopwords_path, db.no_stemming, db.mem_only, db.lowmem);
+    for (const documentHash of defragmentedDB.tfidfDocStore.entries()) {
+        const document = await defragmentedDB.tfidfDocStore.data(documentHash);
         const newDocument = _deepclone(document); newDocument.scores = {};
         for (const wordIndex of Object.keys(document.scores)) {
-            const word = _getDocWordFromIndex(wordIndex, db);
-            const newWordIndex = _getWordIndex(word, {...db, vocabulary: newVocabulary});
+            const word = _getDocWordFromIndex(wordIndex, defragmentedDB);
+            const newWordIndex = _getWordIndex(word, {...defragmentedDB, vocabulary: newVocabulary});
             newDocument.scores[newWordIndex] = document.scores[wordIndex];
         }
-        db.tfidfDocStore.add(documentHash, newDocument);
+        defragmentedDB.tfidfDocStore.add(documentHash, newDocument);
     }
 
     const newWordDocCounts = {}; for (const [wordIndex, word] of newVocabulary.entries())
-        newWordDocCounts[wordIndex] = db.wordDocCounts[_getWordIndex(word, db)];
+        newWordDocCounts[wordIndex] = defragmentedDB.wordDocCounts[_getWordIndex(word, defragmentedDB)];
     
-    db.wordDocCounts = newWordDocCounts;
-    db.vocabulary = newVocabulary;
+    defragmentedDB.wordDocCounts = newWordDocCounts;
+    defragmentedDB.vocabulary = newVocabulary;
 }
 
 async function _recalculateTFIDF(db) {  // rebuilds the entire TF.IDF index for all documents, necessary as IDF changes with every new doc ingested
@@ -442,8 +464,8 @@ function _getLangNormalizedWords(document, lang, db, autocorrect=false, fastSpli
 }
 
 const _getDocumentHashIndex = (metadata, db) => {
-    const lang = metadata[db.METADATA_LANGID_KEY||METADATA_LANGID_KEY]||"en";
-    if (metadata[db.METADATA_DOCID_KEY||METADATA_DOCID_KEY]) return metadata[db.METADATA_DOCID_KEY||METADATA_DOCID_KEY]; 
+    const lang = metadata[db[METADATA_LANGID_KEY]]||"en";
+    if (metadata[db[METADATA_DOCID_KEY]]) return metadata[db[METADATA_DOCID_KEY]]; 
     else {  // hash the object otherwise
         const lowerCaseObject = {}; for (const [key, keysValue] of Object.entries(metadata))
             lowerCaseObject[key.toLocaleLowerCase?key.toLocaleLowerCase(lang):key] = 
@@ -459,3 +481,27 @@ const _getWordIndex = (word, db, create) => {
 }
 const _getDocWordFromIndex = (index, db) => db.vocabulary[index];
 const _deepclone = object => JSON.parse(JSON.stringify(object));
+
+const _createDBCreationData = db => {
+    return { metadata_docid_key: db[METADATA_DOCID_KEY], no_stemming: db.no_stemming, 
+        metadata_langid_key: db[METADATA_LANGID_KEY], stopwords_path: db.stopwords_path, lowmem: db.lowmem, 
+        pathOrMemID: db.pathOrMemID, mem_only: db.mem_only };
+}
+
+function _initBlackboardHooks() {
+    blackboard.subscribe(TFIDFDB_ADD_DOC_TOPIC, async msg => {
+        const {creation_data, hash, document} = msg;
+        const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
+            creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
+            creation_data.mem_only, creation_data.lowmem))._getRawDB();
+        db.tfidfDocStore.add(hash, document, true);
+    });
+
+    blackboard.subscribe(TFIDFDB_DELETE_DOC_TOPIC, async msg => {
+        const {creation_data, hash} = msg;
+        const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
+            creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
+            creation_data.mem_only, creation_data.lowmem))._getRawDB();
+        db.tfidfDocStore.delete(hash, true);
+    });
+}
