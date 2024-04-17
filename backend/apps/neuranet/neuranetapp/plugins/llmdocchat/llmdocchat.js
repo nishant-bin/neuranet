@@ -56,7 +56,7 @@ const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-
  * 					                 to the exact document
  */
 exports.answer = async (params) => {
-	const id = params.id, org = params.org, session_id = params.session_id;
+	const id = params.id, org = params.org, session_id = params.session_id, brainid = params.brainid;
 
 	LOG.debug(`Got LLM_History chat request from ID ${id} of org ${org}. Incoming params are ${JSON.stringify(params)}`);
 
@@ -68,7 +68,7 @@ exports.answer = async (params) => {
 	const chatsession = llmchat.getUsersChatSession(id, session_id).chatsession;
 	const aiModelToUseForChat = params.model.name||CHAT_MODEL_DEFAULT, 
 		aiModelObjectForChat = await aiapp.getAIModel(aiModelToUseForChat, params.model.model_overrides, 
-			params.id, params.org, params.brainid);
+			params.id, params.org, brainid);
 	const aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObjectForChat.driver.module}`
 	let aiLibrary; try{aiLibrary = utils.requireWithDebug(aiModuleToUse, DEBUG_MODE);} catch (err) {
 		const errMsg = "Bad AI Library or model - "+aiModuleToUse+", error: "+err;
@@ -83,8 +83,8 @@ exports.answer = async (params) => {
 	const languageDetectedForQuestion =  langdetector.getISOLang(params.question)
 
 	if (params.rephrasequestion && finalSessionObject.length > 0) {
-		const standaloneQuestionResult = await simplellm.prompt_answer(params[`prompt_for_question_rephrasing_${languageDetectedForQuestion}`] || params.prompt_for_question_rephrasing, id, org, 
-			{session: finalSessionObject, question: params.question}, aiModelObjectForChat);
+		const standaloneQuestionResult = await simplellm.prompt_answer(params[`prompt_for_question_rephrasing_${languageDetectedForQuestion}`] || params.prompt_for_question_rephrasing, 
+			id, org, brainid, {session: finalSessionObject, question: params.question}, aiModelObjectForChat);
 		if (!standaloneQuestionResult) LOG.error("Couldn't create a stand alone version of the user's question, continuing with the originial question.");
 		else params.question = standaloneQuestionResult;
 	}
@@ -102,7 +102,7 @@ exports.answer = async (params) => {
 
 	const paramsChat = { id, org, maintain_session: true, session_id, model: aiModelObjectForChat,
         session: [{"role": aiModelObjectForChat.user_role, "content": knowledegebaseWithQuestion}],
-		auto_chat_summary_enabled: params.auto_summary||false, raw_question: params.question };
+		auto_chat_summary_enabled: params.auto_summary||false, raw_question: params.question, aiappid: brainid };
 	const response = await llmchat.chat(paramsChat);
 
 	return {...response, metadatas: metadatasForResponse};

@@ -11,6 +11,7 @@ const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
+const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 
@@ -20,18 +21,20 @@ const DEFAULT_SIMPLE_QA_MODEL = "simplellm-gpt35-turbo", DEBUG_MODE = NEURANET_C
  * Sends the given prompt to the indicated LLM and returns its raw response.
  * @param {string} promptFileOrPrompt Path to a prompt file or the full prompt itself if no data is provided to inflate the prompt.
  * @param {string} id The user ID on behalf of whom we are processing this request. If not given then LLM costs can't be updated.
+ * @param {string} org The calling user's org
+ * @param {string} aiappid The calling user's AI app
  * @param {object} data The prompt template data. If null then it is assume the promptFileOrPrompt is a full prompt.
  * @param {string} modelNameOrModelObject The LLM model name to use or object itseelf. If not provided then a default is used.
  * @returns The LLM response, unparsed.
  */
-exports.prompt_answer = async function(promptFileOrPrompt, id, org, data, modelNameOrModelObject=DEFAULT_SIMPLE_QA_MODEL) {
+exports.prompt_answer = async function(promptFileOrPrompt, id, org, aiappid, data, modelNameOrModelObject=DEFAULT_SIMPLE_QA_MODEL) {
     if (id && !(await quota.checkQuota(id, org))) {  // check quota if the ID was provided
 		LOG.error(`SimpleLLM: Disallowing the LLM call, as the user ${id} is over their quota.`);
 		return null;    // quota issue
 	}
 
     const aiModelObject = typeof modelNameOrModelObject === "string" ? 
-        await aiutils.getAIModel(modelNameOrModelObject) : modelNameOrModelObject,
+        await aiapp.getAIModel(modelNameOrModelObject, undefined, id, org, aiappid) : modelNameOrModelObject,
         aiKey = crypt.decrypt(aiModelObject.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
         aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObject.driver.module}`;
 

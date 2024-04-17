@@ -41,7 +41,8 @@ async function generate(fileindexer, generatorDefinition) {
     }
 
     const queueAnswer = async (promptToUse, promptData, sequence) => {
-        const rephrasedSplit = await simplellm.prompt_answer(promptToUse, fileindexer.id, fileindexer.org, promptData, modelObject);
+        const rephrasedSplit = await simplellm.prompt_answer(promptToUse, fileindexer.id, fileindexer.org, 
+            fileindexer.aiappid, promptData, modelObject);
         rephrasedSplits.push({content: rephrasedSplit||"", sequence}) ;
     }
     let rephrasedSplits = [], promisesToWaitFor = []; for (const [index, split] of splits.entries()) {

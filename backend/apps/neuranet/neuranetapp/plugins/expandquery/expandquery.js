@@ -39,7 +39,7 @@ const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-
  * @returns {string} The expanded query or the original query if the expansion failed.
  */
 exports.expand = async (params) => {
-	const id = params.id, org = params.org, session_id = params.session_id, query_in = params.query;
+	const id = params.id, org = params.org, session_id = params.session_id, query_in = params.query, brainid = params.brainid;
 
 	LOG.debug(`Got query expansion for query ${query_in} from ID ${id} of org ${org}.`);
 
@@ -56,7 +56,7 @@ exports.expand = async (params) => {
 
 	const aiModelToUseForChat = params.model.name||CHAT_MODEL_DEFAULT, 
 		aiModelObjectForChat = await aiapp.getAIModel(aiModelToUseForChat, params.model.model_overrides, 
-			params.id, params.org, params.brainid);
+			params.id, params.org, brainid);
 	const aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObjectForChat.driver.module}`
 	let aiLibrary; try{aiLibrary = utils.requireWithDebug(aiModuleToUse, DEBUG_MODE);} catch (err) {
 		const errMsg = "Bad AI Library or model - "+aiModuleToUse+", error: "+err;
@@ -72,7 +72,7 @@ exports.expand = async (params) => {
 
 	let expandedQuery; if (finalSessionObject.length > 0) {
         expandedQuery = await simplellm.prompt_answer(
-            params[`prompt_${languageDetectedForQuestion}`] || params.prompt, id, org, 
+            params[`prompt_${languageDetectedForQuestion}`] || params.prompt, id, org, brainid,
 			{session: finalSessionObject, question: query_in}, aiModelObjectForChat);
 		if (!expandedQuery) LOG.error("Couldn't expand the query, continuing with the originial query.");
     }

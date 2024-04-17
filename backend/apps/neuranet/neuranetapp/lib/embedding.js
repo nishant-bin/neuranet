@@ -11,13 +11,13 @@
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
+const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
-const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 
 const MODEL_DEFAULT = "embedding-openai-ada002", EMBEDDING_PROMPT = `${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/embedding_prompt.txt`,
     REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", LIMIT: "limit"}
 
-async function createEmbeddingVector(id, org, text, model) {
+async function createEmbeddingVector(id, org, aiappid, text, model) {
 	LOG.debug(`Create embedding called for text ${text}`);
     if (!(await quota.checkQuota(id, org))) {
 		LOG.error(`Disallowing the embedding call, as the user ${id} is over their quota.`);
@@ -25,7 +25,7 @@ async function createEmbeddingVector(id, org, text, model) {
 	}
 
     const aiModelToUse = model || MODEL_DEFAULT, 
-		aiModelObject = typeof aiModelToUse === "object" ? aiModelToUse : await aiutils.getAIModel(aiModelToUse),
+		aiModelObject = typeof aiModelToUse === "object" ? aiModelToUse : await aiapp.getAIModel(aiModelToUse, undefined, id, org, aiappid),
         aiKey = crypt.decrypt(aiModelObject.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
 		aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObject.driver.module}`;
 	let aiLibrary; try{aiLibrary = require(aiModuleToUse);} catch (err) {

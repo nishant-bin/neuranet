@@ -11,7 +11,7 @@ const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 
 const topK = 5, minDistance = 0.5;
 
-const TEST_ID = "test@tekmonks.com", TEST_ORG = "Tekmonks", SEARCH_MODEL_DEFAULT = "openai-gpt-chat";
+const TEST_ID = "test@tekmonks.com", TEST_ORG = "Tekmonks", TEST_APP = "tkmaiapp", SEARCH_MODEL_DEFAULT = "openai-gpt-chat";
 
 exports.runTestsAsync = async function(argv) {
     if ((!argv[0]) || (argv[0].toLowerCase() != "vectorsearch")) {
@@ -50,7 +50,7 @@ exports.runTestsAsync = async function(argv) {
 
 const _embeddingsGenerator = async text => {
     const aiModelObjectForSearch = await aiutils.getAIModel(SEARCH_MODEL_DEFAULT);
-    const response = await embedding.createEmbeddingVector(TEST_ID, text, aiModelObjectForSearch.embeddings_model); 
+    const response = await embedding.createEmbeddingVector(TEST_ID, TEST_ORG, TEST_APP, text, aiModelObjectForSearch.embeddings_model); 
     if (response.reason != embedding.REASONS.OK) return null;
     else return response.embedding;
 }

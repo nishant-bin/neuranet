@@ -53,7 +53,7 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
     const aiModelToUseForEmbeddings = MODEL_DEFAULT, 
         aiModelObjectForEmbeddings = await aiapp.getAIModel(aiModelToUseForEmbeddings, undefined, id, org, brainid), 
         embeddingsGenerator = async text => {
-			const response = await embedding.createEmbeddingVector(id, org, text, aiModelToUseForEmbeddings); 
+			const response = await embedding.createEmbeddingVector(id, org, brainid, text, aiModelToUseForEmbeddings); 
 			if (response.reason != embedding.REASONS.OK) return null;
 			else return response.embedding;
 		}

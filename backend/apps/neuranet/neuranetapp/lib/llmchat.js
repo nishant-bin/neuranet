@@ -8,6 +8,7 @@
  *  maintain_session - If set to false, then session is not maintained
  *  session_id - The session ID for a previous session if this is a continuation else null
  *  auto_chat_summary_enabled - Optional, if true, LLM auto summarization is enabled to reduce session size
+ *  aiappid - The calling ai app
  * 
  * Response object
  *  result - true or false
@@ -21,8 +22,8 @@ const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
+const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
-const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
 	MODEL_DEFAULT = "chat-gpt35-turbo", CHAT_SESSION_UPDATE_TIMESTAMP_KEY = "__last_update",
@@ -41,7 +42,8 @@ exports.chat = async params => {
 	}
 
 	const aiModelToUse = params.model || MODEL_DEFAULT, 
-		aiModelObject = typeof aiModelToUse === "object" ? aiModelToUse : {...await aiutils.getAIModel(aiModelToUse)},
+		aiModelObject = typeof aiModelToUse === "object" ? aiModelToUse : 
+			await aiapp.getAIModel(aiModelToUse, undefined, params.id, params.org, params.aiappid),
         aiKey = crypt.decrypt(aiModelObject.ai_key, NEURANET_CONSTANTS.CONF.crypt_key),
         aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObject.driver.module}`;
 	let aiLibrary; try{aiLibrary = utils.requireWithDebug(aiModuleToUse, DEBUG_MODE);} catch (err) {
@@ -53,7 +55,7 @@ exports.chat = async params => {
 
 	const jsonifiedSession = exports.jsonifyContentsInThisSession([...chatsession, ...(utils.clone(params.session))]);
 	let finalSessionObject = await exports.trimSession(aiModelObject.max_memory_tokens||DEFAULT_MAX_MEMORY_TOKENS,
-		jsonifiedSession, aiModelToUse, aiModelObject.token_approximation_uplift, aiModelObject.tokenizer, aiLibrary); 
+		jsonifiedSession, aiModelObject, aiModelObject.token_approximation_uplift, aiModelObject.tokenizer, aiLibrary); 
 	if (!finalSessionObject.length) finalSessionObject = [jsonifiedSession[jsonifiedSession.length-1]];	// at least send the latest question
 	finalSessionObject[finalSessionObject.length-1].last = true;
 	
@@ -88,10 +90,8 @@ exports.getUsersChatSession = (userid, session_id_in) => {
 	return {chatsession: utils.clone(chatsession), sessionID, sessionKey};
 }
 
-exports.trimSession = async function(max_session_tokens, sessionObjects, aiModel, 
+exports.trimSession = async function(max_session_tokens, sessionObjects, aiModelObject, 
 		token_approximation_uplift, tokenizer_name, tokenprocessor) {
-
-	const aiModelObject = typeof aiModel === "object" ? aiModel : await aiutils.getAIModel(aiModel);
 
 	let tokensSoFar = 0; const sessionTrimmed = [];
 	for (let i = sessionObjects.length - 1; i >= 0; i--) {
