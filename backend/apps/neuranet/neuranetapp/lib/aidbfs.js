@@ -62,8 +62,9 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
-    const metadata = {id, date_created: Date.now(), fullpath: pathIn, referencelink:encodeURI(referencelink||_getDocID(pathIn))}; 
-    metadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(pathIn);
+    const metadata = {id, date_created: Date.now(), fullpath: pathIn}; 
+    metadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(pathIn); 
+    metadata[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY] = encodeURI(referencelink||_getDocID(pathIn));
 
     const _getExtractedTextStream = _ => streamGenerator ? streamGenerator() : fs.createReadStream(pathIn);
 

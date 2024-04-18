@@ -22,14 +22,13 @@
  */
 
 const mustache = require("mustache");
-const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
+const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const llmchat = require(`${NEURANET_CONSTANTS.LIBDIR}/llmchat.js`);
 const llmflowrunner = require(`${NEURANET_CONSTANTS.LIBDIR}/llmflowrunner.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-const simplellm = require(`${NEURANET_CONSTANTS.LIBDIR}/simplellm.js`);
 
 const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-gpt35-turbo", 
     DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode, DEFAULT_MAX_MEMORY_TOKENS = 1000;
@@ -44,6 +43,7 @@ const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-
  *                            prompt - The chat prompt
  * 							  brainid - The brain ID
  * 							  auto_summary - Set to true to reduce session size but can cause response errors
+ * 							  model - The chat model to use, with overrides
  *                            <anything else> - Used to expand the prompt, including user's queries
  * @param {Object} _llmstepDefinition Not used.
  * 
@@ -70,7 +70,7 @@ exports.answer = async (params) => {
 		aiModelObjectForChat = await aiapp.getAIModel(aiModelToUseForChat, params.model.model_overrides, 
 			params.id, params.org, brainid);
 	const aiModuleToUse = `${NEURANET_CONSTANTS.LIBDIR}/${aiModelObjectForChat.driver.module}`
-	let aiLibrary; try{aiLibrary = utils.requireWithDebug(aiModuleToUse, DEBUG_MODE);} catch (err) {
+	let aiLibrary; try{aiLibrary = serverutils.requireWithDebug(aiModuleToUse, DEBUG_MODE);} catch (err) {
 		const errMsg = "Bad AI Library or model - "+aiModuleToUse+", error: "+err;
         LOG.error(errMsg); params.return_error(errMsg, REASONS.INTERNAL); return;
 	}
@@ -82,21 +82,23 @@ exports.answer = async (params) => {
 
 	const languageDetectedForQuestion =  langdetector.getISOLang(params.question)
 
-	if (params.rephrasequestion && finalSessionObject.length > 0) {
-		const standaloneQuestionResult = await simplellm.prompt_answer(params[`prompt_for_question_rephrasing_${languageDetectedForQuestion}`] || params.prompt_for_question_rephrasing, 
-			id, org, brainid, {session: finalSessionObject, question: params.question}, aiModelObjectForChat);
-		if (!standaloneQuestionResult) LOG.error("Couldn't create a stand alone version of the user's question, continuing with the originial question.");
-		else params.question = standaloneQuestionResult;
-	}
-
-	const documentResultsForPrompt = params.documents;	// if no documents found, shortcircuit with no knowledge error
+	const documentResultsForPrompt = params.documents;	// if no documents found, short-circuit with no knowledge error
 	if ((!documentResultsForPrompt) || (!documentResultsForPrompt.length)) {
 		const errMsg = "No knowledge of this topic."; LOG.error(errMsg); 
 		params.return_error(errMsg, REASONS.NOKNOWLEDGE); return;
 	}
 	
-	const documentsForPrompt = [], metadatasForResponse = []; for (const [i,documentResult] of documentResultsForPrompt.entries()) {
-		documentsForPrompt.push({content: documentResult.text, document_index: i+1}); metadatasForResponse.push(documentResult.metadata) };
+	const documentsForPrompt = [], metadatasForResponse = []; 
+	for (const [i,documentResult] of documentResultsForPrompt.entries()) {
+		documentsForPrompt.push({content: documentResult.text, document_index: i+1}); 
+		const metadataThis = serverutils.clone(documentResult.metadata);
+		if (params.matchers_for_reference_links && metadataThis[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY]) 
+				for (const matcher of params.matchers_for_reference_links) { 
+			let reflink = metadataThis[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY], match = reflink.match(new RegExp(matcher));
+			if (match) metadataThis[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY] = match[1];
+		}
+		metadatasForResponse.push(metadataThis) 
+	};
 	const knowledgebasePromptTemplate =  params[`prompt_${languageDetectedForQuestion}`] || params.prompt;
 	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, {...params, documents: documentsForPrompt});
 

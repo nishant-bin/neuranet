@@ -24,6 +24,7 @@ exports.DEFAULT_ID = "_default_";
 exports.AIAPPDIR = path.resolve(`${BACKEND_ROOT}/aiapps`);
 exports.AIAPPMODES = {EDIT: 'editaiapp', NORMAL: 'normal'};
 exports.DEFAULT_ORG_DEFAULT_AIAPP = "_org_neuranet_default_aiapp_";
+exports.REFERENCELINK_METADATA_KEY = "referencelink";
 
 
 exports.NEURANET_DOCID = "aidb_docid";
