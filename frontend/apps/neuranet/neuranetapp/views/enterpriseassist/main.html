@@ -165,6 +165,7 @@ span#collapser {display: none; ismobile: true}
 {{#events}}
 <div id="singlenotification">
     <span id="path" title="{{path}}">{{path}}</span>
+    <span id="percentage">{{percentage}}%</span>
     <span id="donenotifier">{{#done}}{{i18n.EnterpriseAssist_Done}}{{/done}}{{^done}}{{i18n.EnterpriseAssist_Processing}}{{/done}}</span>
     <span id="progressimage"><img src="{{{VIEW_PATH}}}/img/spinner{{#success}}{{#done}}done{{/done}}{{/success}}{{#error}}error{{/error}}{{^done}}progress{{/done}}.svg"></span>
 </div>
