@@ -171,7 +171,7 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
             _log_error(`Vector DB text file ${_get_db_index_text_file(vector, db_path)} could not be saved`, db_path, err);
             return false;
         }
-        dbToUse.modifiedts = Date.now(); if (dbToUse.multithreaded) await _update_db_for_worker_threads();
+        if (dbToUse.multithreaded) await _update_db_for_worker_threads();
     } 
     
     LOG.debug(`Added vector ${vector} with hash ${vectorHash} to DB at index ${_get_db_index(db_path)}.`);
@@ -208,7 +208,7 @@ exports.delete = async (vector, db_path) => {
     }
 
     try {
-        _deleteVectorObject(dbToUse, hash); dbToUse.modifiedts = Date.now();
+        _deleteVectorObject(dbToUse, hash); 
         if (dbToUse.multithreaded) await _update_db_for_worker_threads();
         await fspromises.unlink(_get_db_index_text_file(vector, db_path));
         return true;
@@ -482,29 +482,30 @@ function _get_text_hash(text) {
 }
 
 function _initBlackboardHooks() {
+    const blackboardOptions = {}; blackboardOptions[blackboard.EXTERNAL_ONLY] = true;
     blackboard.subscribe(VECTORDB_ADD_VECTOR_TOPIC, async msg => {
         const {dbpath, multithreaded, hash, vectorObject} = msg;
         if (!dbs[_get_db_index(dbpath)]) await exports.initAsync(dbpath, multithreaded);
         _addVectorObject(dbs[_get_db_index(dbpath)], hash, vectorObject, true);
-    });
+    }, blackboardOptions);
 
     blackboard.subscribe(VECTORDB_DELETE_VECTOR_TOPIC, async msg => {
         const {dbpath, multithreaded, hash} = msg;
         if (!dbs[_get_db_index(dbpath)]) await exports.initAsync(dbpath, multithreaded);
         _deleteVectorObject(dbs[_get_db_index(dbpath)], hash, true);
-    });
+    }, blackboardOptions);
 }
 
 function _addVectorObject(db, hash, vectorObject, setCallfromBlackboard) {
     if (!setCallfromBlackboard) blackboard.publish(VECTORDB_ADD_VECTOR_TOPIC, {dbpath: db.dbpath, 
-        multithreaded: db.multithreaded, hash, vectorObject});
-    else db.index[hash] = vectorObject;
+        multithreaded: db.multithreaded, hash, vectorObject});  // if not from blackboard then let other cluster memebers know
+    db.index[hash] = vectorObject; db.modifiedts = Date.now();
 }
 
 function _deleteVectorObject(db, hash, deleteCallfromBlackboard) {
     if (!deleteCallfromBlackboard) blackboard.publish(VECTORDB_DELETE_VECTOR_TOPIC, {dbpath: db.dbpath, 
-        multithreaded: db.multithreaded, hash});
-    else delete db.index[hash];
+        multithreaded: db.multithreaded, hash});      // if not from blackboard then let other cluster memebers know
+    delete db.index[hash]; db.modifiedts = Date.now();
 }
 
 const _log_error = (message, db_path, error) => (global.LOG||console).error(

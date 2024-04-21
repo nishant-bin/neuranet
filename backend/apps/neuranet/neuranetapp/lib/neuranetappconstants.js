@@ -34,8 +34,8 @@ exports.GENERATED_FILES_FOLDER = "_neuranet_generated";
 exports.getPlugin = name => require(`${exports.LIBDIR}/pluginhandler.js`).getPlugin(name);
 
 exports.NEURANETEVENT = "__org_monkshu_neuranet_event";
-exports.EVENTS = Object.freeze({AIDB_FILE_PROCESSING: "aidb_file_processing", 
+exports.EVENTS = Object.freeze({AIDB_FILE_PROCESSING: "aidb_file_processing", AIDB_FILE_PROGRESS: "aidb_file_progress", 
     AIDB_FILE_PROCESSED: "aidb_file_processed", FILE_CREATED: "filecreated",
     FILE_DELETED: "filedeleted", FILE_RENAMED: "filerenamed", FILE_MODIFIED: "filemodified"});
 exports.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES = Object.freeze({INGESTED: "ingest_process",
-    UNINGESTED: "uningest_process", RENAMED: "rename_process", MODIFIED: "modified_process", FILE_PROGRESS: "file_progress"});
+    UNINGESTED: "uningest_process", RENAMED: "rename_process", MODIFIED: "modified_process"});

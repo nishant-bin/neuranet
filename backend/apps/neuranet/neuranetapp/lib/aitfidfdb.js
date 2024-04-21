@@ -43,9 +43,10 @@ const langdetector = require(`${__dirname}/../3p/langdetector.js`);
 const conf = require(`${NEURANET_CONSTANTS?.CONFDIR||(__dirname+"/conf")}/aidb.json`);
 
 const WORDDOCCOUNTS_FILE = "worddoccounts", VOCABULARY_FILE = "vocabulary", METADATA_DOCID_KEY="docid.key", 
-    METADATA_LANGID_KEY="langid.key", METADATA_DOCID_DEFAULT = "aidb_docid", METADATA_LANGID_DEFAULT = "aidb_langid", 
+    METADATA_LANGID_KEY="langid.key", METADATA_DOCID_KEY_DEFAULT = "aidb_docid", METADATA_LANGID_KEY_DEFAULT = "aidb_langid", 
     MIN_STOP_WORD_IDENTIFICATION_LENGTH = 5, MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95, 
-    DEFAULT_MAX_COORD_BOOST = 0.10, TFIDFDB_ADD_DOC_TOPIC = "tfidf.adddoc", TFIDFDB_DELETE_DOC_TOPIC = "tfidf.rmdoc";
+    DEFAULT_MAX_COORD_BOOST = 0.10, TFIDFDB_ADD_DOC_TOPIC = "tfidf.adddoc", TFIDFDB_DELETE_DOC_TOPIC = "tfidf.rmdoc",
+    TFIDFDB_UPDATE_DOC_TOPIC = "tfidf.updatedoc";
 const IN_MEM_DBS = {}; let blackboard_initialized = false;
 
 // international capable punctuation character regex from: https://stackoverflow.com/questions/7576945/javascript-regular-expression-for-punctuation-international
@@ -67,7 +68,7 @@ const SPLITTERS = new RegExp(/[\s,]+/), JP_SEGMENTER = jpsegmenter.getSegmenter(
  *                         this saves memory but will slow down the performance
  * @return {object} The database object.
  */
-exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA_DOCID_DEFAULT, 
+exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DEFAULT, 
         metadata_langid_key=METADATA_LANGID_KEY_DEFAULT, stopwords_path, no_stemming=false, mem_only=false, lowmem=false) {
 
     if (!blackboard_initialized) {_initBlackboardHooks(); blackboard_initialized = true;}
@@ -129,17 +130,19 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
     EMPTY_DB.tfidfDocStore.doclength = _ => EMPTY_DB.tfidfDocStore.entries().length;
     EMPTY_DB.tfidfDocStore.delete = async (hash, fromBackboard) => { 
         if (!fromBackboard) blackboard.publish(TFIDFDB_DELETE_DOC_TOPIC, {creation_data: _createDBCreationData(EMPTY_DB), hash}); 
-        else {
-            delete EMPTY_DB.tfidfDocStore[hash]; if (!EMPTY_DB.mem_only) {
-                const pathOnDisk = `${EMPTY_DB.pathOrMemID}/${hash}`;
-                try {await fspromises.rm(pathOnDisk)} catch (err) {
-                    LOG.warn(`Error deleting file ${pathIn}/${hash} for TD.IDF hash ${hash} due to ${err}.`); }
-            }
+        delete EMPTY_DB.tfidfDocStore[hash]; if (!EMPTY_DB.mem_only) {
+            const pathOnDisk = `${EMPTY_DB.pathOrMemID}/${hash}`;
+            try {await fspromises.rm(pathOnDisk)} catch (err) {
+                LOG.warn(`Error deleting file ${pathIn}/${hash} for TD.IDF hash ${hash} due to ${err}.`); }
         }
     };
     EMPTY_DB.tfidfDocStore.add = (hash, document, fromBackboard) => {
         if (!fromBackboard) blackboard.publish(TFIDFDB_ADD_DOC_TOPIC, {creation_data: _createDBCreationData(EMPTY_DB), hash, document}); 
-        else EMPTY_DB.tfidfDocStore[hash] = document; 
+        EMPTY_DB.tfidfDocStore[hash] = document; 
+    }
+    EMPTY_DB.tfidfDocStore.update = (hash, document, fromBackboard) => {
+        if (!fromBackboard) blackboard.publish(TFIDFDB_UPDATE_DOC_TOPIC, {creation_data: _createDBCreationData(EMPTY_DB), hash, document}); 
+        EMPTY_DB.tfidfDocStore[hash] = document; 
     }
     EMPTY_DB.tfidfDocStore.data = async documentHash => typeof EMPTY_DB.tfidfDocStore[documentHash] === "object" ? 
         EMPTY_DB.tfidfDocStore[documentHash] : EMPTY_DB.tfidfDocStore.entries().includes(documentHash) ? 
@@ -405,6 +408,7 @@ async function _recalculateTFIDF(db) {  // rebuilds the entire TF.IDF index for 
                 idf = 1+Math.log10(db.tfidfDocStore.doclength()/(db.wordDocCounts[wordIndex]+1));
             document.scores[wordIndex].tfidf = tf*idf; document.scores[wordIndex].tf = tf;
         }
+        db.tfidfDocStore.update(documentHash, document); 
     }
 }
 
@@ -489,13 +493,22 @@ const _createDBCreationData = db => {
 }
 
 function _initBlackboardHooks() {
+    const blackboardOptions = {}; blackboardOptions[blackboard.EXTERNAL_ONLY] = true;
     blackboard.subscribe(TFIDFDB_ADD_DOC_TOPIC, async msg => {
         const {creation_data, hash, document} = msg;
         const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
             creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
             creation_data.mem_only, creation_data.lowmem))._getRawDB();
         db.tfidfDocStore.add(hash, document, true);
-    });
+    }, blackboardOptions);
+
+    blackboard.subscribe(TFIDFDB_UPDATE_DOC_TOPIC, async msg => {
+        const {creation_data, hash, document} = msg;
+        const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
+            creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
+            creation_data.mem_only, creation_data.lowmem))._getRawDB();
+        db.tfidfDocStore.update(hash, document, true);
+    }, blackboardOptions);
 
     blackboard.subscribe(TFIDFDB_DELETE_DOC_TOPIC, async msg => {
         const {creation_data, hash} = msg;
@@ -503,5 +516,5 @@ function _initBlackboardHooks() {
             creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
             creation_data.mem_only, creation_data.lowmem))._getRawDB();
         db.tfidfDocStore.delete(hash, true);
-    });
+    }, blackboardOptions);
 }

@@ -31,28 +31,31 @@ exports.canHandle = async fileindexer => {
  * @returns true on success or false on failure
  */
 exports.ingest = async function(fileindexer) {
+    const pregenSteps = await _getPregenStepsAIApp(fileindexer), 
+        totalPregentSteps = (pregenSteps.length*3)+1;  // 3 substeps (gen, add to CMS, add to AI) + 1 for add to AI for original doc
+    const _informProgress = stepNum => _publishProgressEvent(fileindexer, stepNum, totalPregentSteps);
+
     await fileindexer.start(); 
-    const pregenSteps = await _getPregenStepsAIApp(fileindexer);
-    for (const pregenStep of pregenSteps) {
+    let currentStep = 0; for (const [i, pregenStep] of pregenSteps.entries()) {
         if (!await _condition_to_run_met(pregenStep)) continue;    // run only if condition is satisfied
-        const pregenResult = await pregenStep.generate(fileindexer);
-        blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type:NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSING,
-            result:true, subtype:NEURANET_CONSTANTS.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES.FILE_PROGRESS,
-            id:fileindexer.id, org:fileindexer.org, path:fileindexer.filepath, cmspath:fileindexer.cmspath,
-            extraInfo:fileindexer.extraInfo, noOfSteps:(pregenSteps.length*2)+1}); // 2 substeps & 1 original Doc
+        const pregenResult = await pregenStep.generate(fileindexer); _informProgress(++currentStep);
+
         if (pregenResult.result) {
             const addGeneratedFileToCMSResult = await fileindexer.addFileToCMSRepository(
                 pregenResult.contentBufferOrReadStream(), pregenStep.cmspath, pregenStep.comment, true);
-            const indexResult = addGeneratedFileToCMSResult ? await fileindexer.addFileToAI(pregenStep.cmspath, pregenResult.lang) : {result: false};
-            blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type:NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSING,
-                result:true, subtype:NEURANET_CONSTANTS.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES.FILE_PROGRESS,
-                id:fileindexer.id, org:fileindexer.org, path:fileindexer.filepath, cmspath:fileindexer.cmspath,
-                extraInfo:fileindexer.extraInfo, noOfSteps:(pregenSteps.length*2)+1});
+            _informProgress(++currentStep);
+
+            const indexResult = addGeneratedFileToCMSResult ? 
+                await fileindexer.addFileToAI(pregenStep.cmspath, pregenResult.lang) : {result: false}; 
+            _informProgress(++currentStep);
+
             if (!indexResult.result) LOG.error(`Pregen failed at step ${pregenStep.label} in adding generated file ${pregenStep.cmspath}.`);
             else LOG.info(`Pregen succeeded at step ${pregenStep.label} in adding generated file ${pregenStep.cmspath}.`);
         } else LOG.error(`Pregen failed at step ${pregenStep.label} in generate for file ${pregenStep.cmspath}.`);
     }
-    const rootIndexerResult = await fileindexer.addFileToAI(); await fileindexer.end(); 
+    const rootIndexerResult = await fileindexer.addFileToAI(); 
+    await fileindexer.end(); _informProgress(totalPregentSteps);
+
     if (!rootIndexerResult.result) LOG.error(`Pregen failed at adding original file (AI DB ingestion failure) for file ${fileindexer.cmspath}.`);
     else LOG.info(`Pregen succeeded at adding original file (AI DB ingestion) for file ${fileindexer.cmspath}.`);
     return rootIndexerResult.result;
@@ -138,3 +141,8 @@ async function _runJSCode(code, context) {
         LOG.error(`Error running custom JS code error is: ${err}`); return false;
     }
 }
+
+const _publishProgressEvent = (fileindexer, stepNum, totalSteps) => blackboard.publish(
+    NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROGRESS, result:true, 
+        id: fileindexer.id, org: fileindexer.org, path: fileindexer.filepath, cmspath: fileindexer.cmspath, 
+        extraInfo: fileindexer.extraInfo, stepNum, totalSteps});

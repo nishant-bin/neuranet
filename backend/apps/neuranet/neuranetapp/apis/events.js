@@ -12,13 +12,15 @@ const EVENTS_KEY = "__org_monkshu_neuranet_events_key", MEM_TO_USE = CLUSTER_MEM
 
 exports.initSync = _ => blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, message => {
     if ((message.type != NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSING && 
-        message.type != NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED) || (!message.path)) return;  // we only care about these two
+        message.type != NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED && 
+        message.type != NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROGRESS) || (!message.path)) return;  // we only care about these 
 
     const usermemory = _getUserMemory(message.id, message.org);
-    message = _calculateAndUpdatePercentage(message, usermemory);
-    usermemory[message.cmspath] = {...message, path: message.cmspath,   // overwrite full path as we don't want top send this out
-    done:  message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED, result: message.result, percentage:message.percentage};
+    const percentComplete = _calculateAndUpdatePercentage(message);
+    usermemory[message.cmspath] = {...message, path: message.cmspath,   // overwrite full path as we don't want to send this out
+        done: message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED, result: message.result, percentage: percentComplete};
     _setUserMemory(message.id, message.org, usermemory);
+    LOG.info(`File progress update for ${message.path}, percent: ${percentComplete}%, id ${message.id} and org ${message.org}.`);
 });
 
 exports.doService = async jsonReq => {
@@ -29,15 +31,17 @@ exports.doService = async jsonReq => {
 }
 
 /**
- * This function will calculate the percentage and update it in the message
+ * This function will calculate the percentage 
  * @param {Object} message The message broadcasted by the publised event
- * @param {Object} usermemory The cluster memory in use for user
- * @returns updated message object
+ * @returns The message percentage completion
  */
-const _calculateAndUpdatePercentage = (message, usermemory) => {
-    if(message.type===NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED) message.percentage=100;
-    else if(message.subtype!==NEURANET_CONSTANTS.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES.FILE_PROGRESS) message.percentage=0;
-    else message.percentage = usermemory[message.cmspath].percentage + (100/message.noOfSteps); return message;
+const _calculateAndUpdatePercentage = message => {
+    let percentage = 0;
+    if(message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED) percentage = 100; // done processing, emitted by fileindexer
+    else if (message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSING) percentage = 0;    // just started, emitted by fileindexer
+    else if (message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROGRESS)
+        percentage = Math.round((message.stepNum/message.totalSteps)*100);  // this message is for mid-way processing - emitted by ingestion plugins 
+    return percentage;
 }
 
 const _setUserMemory = (id, org, usermemory) => { const memory = MEM_TO_USE.get(EVENTS_KEY, {}); 

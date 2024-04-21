@@ -51,9 +51,13 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 	const aiappThis = await aiapp.getAIApp(id, org, aiappid), 
 		finalCMSPath = `${cmspath||aiappThis.api_uploads_cms_path||exports.DEFAULT_DYNAMIC_FILES_FOLDER}/${jsonReq.filename}`;
 	try {
-		const aidbFileProcessedPromise = new Promise(resolve => blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, 
-			message => { if (message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED && 
-				_areCMSPathsSame(message.cmspath, finalCMSPath)) resolve(message); }));
+		const aidbFileProcessedPromise = new Promise(resolve => blackboard.subscribe(
+			NEURANET_CONSTANTS.NEURANETEVENT, function(message) { 
+				if (message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED && 
+					_areCMSPathsSame(message.cmspath, finalCMSPath))
+				blackboard.unsubscribe(NEURANET_CONSTANTS.NEURANETEVENT, this); resolve(message); 
+			}
+		));
 		const extrainfo = brainhandler.createExtraInfo(id, org, aiappid);
 		if (!await fileindexer.addFileToCMSRepository(id, org, Buffer.from(data, encoding||"utf8"), 
 			finalCMSPath, comment, extrainfo)) {

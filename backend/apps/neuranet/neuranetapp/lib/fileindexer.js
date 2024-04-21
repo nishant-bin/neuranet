@@ -34,8 +34,9 @@ exports.initSync = _ => {
     conf = JSON.parse(confRendered);
     if (!conf.enabled) return;  // file indexer is disabled
     
-    blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message));
-    blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, message => _handleFileEvent(message));
+    const blackboardOptions = {}; blackboardOptions[blackboard.LOCAL_ONLY] = true;  // only operate on local CMS' events
+    if (!NEURANET_CONSTANTS.CONF.disable_xbin) blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message), blackboardOptions);
+    if (!NEURANET_CONSTANTS.CONF.disable_private_cms) blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, message => _handleFileEvent(message), blackboardOptions);
     _initPluginsAsync(); 
 }
 

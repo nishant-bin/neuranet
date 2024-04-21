@@ -4,6 +4,8 @@
 "debug_mode": true,
 "multithreaded": false,
 "verbose_log": false,
+"disable_xbin": false,
+"disable_private_cms": true,
 
 "ai_models": {
     "chat-gpt35-turbo": {

@@ -16,8 +16,9 @@ import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 import {monkshu_component} from "/framework/js/monkshu_component.mjs";
 
 let user, mouseX, mouseY, menuOpen, timer, selectedPath, currentlyActiveFolder, selectedIsDirectory, selectedElement, 
-   filesAndPercents = {}, selectedCutPath, selectedCopyPath, selectedCutCopyElement, shareDuration, showNotification, 
-   currentWriteBufferSize, uploadTransferIDs = {}, MIMES;
+    selectedCutPath, selectedCopyPath, selectedCutCopyElement, shareDuration, showNotification, 
+   currentWriteBufferSize, MIMES;
+const FILES_AND_PERCENTS = {}, UPLOAD_TRANSFER_IDs = {}, SERVER_ID_CACHE = {};
 
 const DIALOG_ID = "dialogfm";
 const API_GETFILES = APP_CONSTANTS.BACKEND+"/apps/"+APP_CONSTANTS.APP_NAME+"/getfiles";
@@ -59,8 +60,8 @@ const screenFocusUnfocus = (host, unfocus) => {
    if (unfocus) host.style.zIndex = "auto"; else host.style.zIndex = suggestedZIndexForFullScreen.toString(); 
 }
 
-const IO_CHUNK_SIZE = 10485760, INITIAL_UPLOAD_BUFFER_SIZE = 40960, MAX_UPLOAD_WAIT_TIME_SECONDS = 5, 
-   MAX_EDIT_SIZE = 4194304, MAX_UPLOAD_BUFFER_SIZE = 10485760;   // 10M read buffer, 40K initial write buffer, wait max 5 seconds to upload each chunk
+const IO_CHUNK_SIZE = 10485760, INITIAL_UPLOAD_BUFFER_SIZE = 40960, MAX_UPLOAD_WAIT_TIME_SECONDS = 5, // 10M read buffer, 40K initial write buffer, wait max 5 seconds to upload each chunk
+   MAX_EDIT_SIZE = 4194304, MAX_UPLOAD_BUFFER_SIZE = 10485760, SERVER_ID_HEADER = "x_monkshu_serverid";   
 
 async function elementConnected(host) {
    menuOpen = false; user = host.getAttribute("user"); MIMES = await $$.requireJSON(`${COMPONENT_PATH}/conf/mimes.json`);
@@ -232,20 +233,20 @@ async function _uploadAFile(element, file) {
          const dataToPost = file.size != 0 ? loadResult.target.result : new ArrayBuffer(0);  // handle 0 byte files
          LOG.info(`Read chunk number ${chunkNumber} from local file ${fileToRead.name}, size is: ${dataToPost.byteLength} bytes. Sending to the server.`); 
          const filesAndPercentsObjectThisFile = _getFilesAndPercentsObjectForPath(filePath);   
-         if (chunkNumber == 0) {uploadStartTime = Date.now(); uploadTransferIDs[normalizedPath] = null;  /*new transfer*/}
+         if (chunkNumber == 0) {uploadStartTime = Date.now(); UPLOAD_TRANSFER_IDs[normalizedPath] = null;  /*new transfer*/}
          const resp = await _uploadChunkAtOptimumSpeed(dataToPost, filePath, chunkNumber, chunkNumber == totalChunks-1, 
-            file.size, hostID, uploadTransferIDs[normalizedPath]);
+            file.size, hostID, UPLOAD_TRANSFER_IDs[normalizedPath]);
          if (!resp.result) {
             LOG.info(`Failed to write chunk number ${chunkNumber} from local file ${fileToRead.name}, to the server at path ${filePath}.`); 
             _updateProgress(hostID, chunkNumber, totalChunks, filePath, UPLOAD_ICON, true);
             apiman.rest(API_DELETEFILE, "GET", {path: filePath}, true); // delete remotely as it errored out
-            delete uploadTransferIDs[normalizedPath];
+            delete UPLOAD_TRANSFER_IDs[normalizedPath];
             _rejectReadPromises("Error writing to the server."); 
          } else {
-            uploadTransferIDs[normalizedPath] = resp.transfer_id; // continuing transfer
-            LOG.info(`Written chunk number ${chunkNumber} from local file ${fileToRead.name}, to the server at path ${filePath}, transfer ID is ${uploadTransferIDs[normalizedPath]}.`); 
+            UPLOAD_TRANSFER_IDs[normalizedPath] = resp.transfer_id; // continuing transfer
+            LOG.info(`Written chunk number ${chunkNumber} from local file ${fileToRead.name}, to the server at path ${filePath}, transfer ID is ${UPLOAD_TRANSFER_IDs[normalizedPath]}.`); 
             if (chunkNumber == totalChunks-1) { // upload finished
-               delete uploadTransferIDs[normalizedPath];
+               delete UPLOAD_TRANSFER_IDs[normalizedPath];
                LOG.info(`Upload of file ${fileToRead.name} took ${((Date.now() - uploadStartTime)/1000).toFixed(2)} seconds.`);
             }
             if (filesAndPercentsObjectThisFile && filesAndPercentsObjectThisFile.cancelled) {
@@ -287,15 +288,17 @@ async function _uploadChunkAtOptimumSpeed(data, remotePath, chunkNumber, isLastC
       const dataToSend = data.slice(bytesWritten, bytesWritten+bytesToSend), isLastSubChunk = isLastChunk && 
          (bytesWritten+bytesToSend == data.byteLength), isFirstSubChunk = chunkNumber == 0 && bytesWritten == 0;
       LOG.info(`Starting upload of subchunk ${subchunknumber} of chunk ${chunkNumber} to path ${remotePath} with length ${bytesToSend} with transfer ID ${transferID}.`);
-      const startTime = Date.now();
-      lastResp = await apiman.rest(API_UPLOADFILE, "POST", {data: _bufferToBase64URL(dataToSend), path: remotePath, user, 
-         startOfFile: isFirstSubChunk, endOfFile: isLastSubChunk, transfer_id: transferID}, true);
+      const startTime = Date.now(), headers = {}; if (SERVER_ID_CACHE[transferID]) headers[SERVER_ID_HEADER] = SERVER_ID_CACHE[transferID];
+      if (isLastChunk) delete SERVER_ID_CACHE[transferID];
+      const fullResponse = await apiman.rest({ url: API_UPLOADFILE, type: "POST", req: {data: _bufferToBase64URL(dataToSend), 
+            path: remotePath, user, startOfFile: isFirstSubChunk, endOfFile: isLastSubChunk, transfer_id: transferID}, 
+         sendToken:true, headers, provideHeaders: true }); lastResp = fullResponse.response;
       const timeTakenToPost = Date.now() - startTime;
       if (!lastResp.result) {
          LOG.error(`Upload of subchunk ${subchunknumber} of chunk ${chunkNumber} to path ${remotePath} failed, with transfer ID ${transferID}, sending back error, the response is ${JSON.stringify(lastResp)}.`);
          return lastResp;   // failed
       }
-      transferID = lastResp.transfer_id; bytesWritten += bytesToSend;
+      transferID = lastResp.transfer_id; bytesWritten += bytesToSend; SERVER_ID_CACHE[transferID] = fullResponse.headers[SERVER_ID_HEADER]; 
       LOG.info(`Ended upload of ${subchunknumber} of chunk ${chunkNumber} to path ${remotePath} transfer ID ${transferID}, with length ${bytesToSend}, time taken = ${timeTakenToPost/1000} seconds.`);
       const netSpeedBytesPerSecond = bytesToSend / (timeTakenToPost/1000);
       currentWriteBufferSize = Math.min(MAX_UPLOAD_BUFFER_SIZE, Math.round(netSpeedBytesPerSecond * MAX_UPLOAD_WAIT_TIME_SECONDS));  // max wait should not execeed this
@@ -507,12 +510,12 @@ const _normalizedPath = path => path.replace(/\\/g, "/").trim().replace(/\/+/g,"
 
 const _notificationFriendlyName = path => path.replace(/\/+/g, "/").trim().replace(/^\//g,"");
 
-const _getFilesAndPercentsObjectForPath = path => filesAndPercents[_notificationFriendlyName(path)];
+const _getFilesAndPercentsObjectForPath = path => FILES_AND_PERCENTS[_notificationFriendlyName(path)];
 
-const _clearFilesAndPercentsObjectForPath = path => delete filesAndPercents[_notificationFriendlyName(path)];
+const _clearFilesAndPercentsObjectForPath = path => delete FILES_AND_PERCENTS[_notificationFriendlyName(path)];
 
-const _isFileCancelledOrErrored = path => filesAndPercents[_notificationFriendlyName(path)]?.cancelled || 
-   filesAndPercents[_notificationFriendlyName(path)]?.lastoperror;
+const _isFileCancelledOrErrored = path => FILES_AND_PERCENTS[_notificationFriendlyName(path)]?.cancelled || 
+   FILES_AND_PERCENTS[_notificationFriendlyName(path)]?.lastoperror;
 
 async function _updateProgress(hostID, currentBlock, totalBlocks, fileName, icon, hasError, wasCancelled, justRerender) {   
    let reloadFlag = false;
@@ -520,14 +523,14 @@ async function _updateProgress(hostID, currentBlock, totalBlocks, fileName, icon
       const normalizedName = _notificationFriendlyName(fileName); 
       if (_isFileCancelledOrErrored(fileName)) return; // already cancelled or error
       const percent = (hasError || wasCancelled) ? 0 : Math.floor(currentBlock/totalBlocks*100);
-      filesAndPercents[normalizedName] = {name: normalizedName, percent, icon, 
+      FILES_AND_PERCENTS[normalizedName] = {name: normalizedName, percent, icon, 
          cancellable: (icon==UPLOAD_ICON) && (percent != 100) && (!hasError) && (!wasCancelled)?true:null,
          cancelled: wasCancelled?true:null, 
          lastoperror: hasError?true:null, direction: icon == DOWNLOAD_ICON ? DOWNLOAD_FILE_OP : UPLOAD_FILE_OP}; 
       if (percent == 100) reloadFlag = true;
-   } else if (fileName && (!filesAndPercents[_notificationFriendlyName(fileName)])) filesAndPercents[_notificationFriendlyName(fileName)] = {};
+   } else if (fileName && (!FILES_AND_PERCENTS[_notificationFriendlyName(fileName)])) FILES_AND_PERCENTS[_notificationFriendlyName(fileName)] = {};
    
-   const templateData = {files:[]}; for (const file of Object.keys(filesAndPercents)) templateData.files.unshift({...filesAndPercents[file]});
+   const templateData = {files:[]}; for (const file of Object.keys(FILES_AND_PERCENTS)) templateData.files.unshift({...FILES_AND_PERCENTS[file]});
    
    await _showNotification(hostID, PROGRESS_TEMPLATE, templateData);
    if (!justRerender && reloadFlag) file_manager.reload(hostID);
