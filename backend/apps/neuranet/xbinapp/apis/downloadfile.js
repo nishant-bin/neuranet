@@ -32,15 +32,18 @@ exports.handleRawRequest = async function(jsonReq, servObject, headers, url) {
 exports.downloadFile = async (fileReq, servObject, headers, url) => {
 	LOG.debug(`Got downloadfile request for path ${fileReq.fullpath}, starting download, reqid is ${fileReq.reqid}.`);
 
-	const _handleDownloadError = err => { LOG.error(`Error sending download file for path ${fileReq.fullpath} due to ${err} reqid is ${fileReq.reqid}.`); 
-		_updateWriteStatus(fileReq.reqid, undefined, 0, true); }
+	const _handleDownloadError = err => { 
+		LOG.error(`Error sending download file for path ${fileReq.fullpath} due to ${err} reqid is ${fileReq.reqid}.`); 
+		_updateWriteStatus(fileReq.reqid, undefined, 0, true); 
+	}
 	try {
 		let fullpath = fileReq.fullpath, stats = await uploadfile.getFileStats(fullpath), isFolder = false;
 		if (stats.xbintype == XBIN_CONSTANTS.XBIN_FOLDER) { isFolder = true; fullpath = await _zipDirectory(fullpath); 
 			stats = await fspromises.stat(fullpath); }
 
 		let respHeaders = {}; APIREGISTRY.injectResponseHeaders(url, {}, headers, respHeaders, servObject);
-		respHeaders["content-disposition"] = "attachment;filename=" + path.basename(isFolder?`${fileReq.fullpath}.zip`:fullpath);
+		const filename = encodeURIComponent(path.basename(isFolder?`${fileReq.fullpath}.zip`:fullpath));
+		respHeaders["content-disposition"] = `attachment;filename=${filename}`;
 		respHeaders["content-length"] = stats.size;   
 		respHeaders["content-type"] = "application/octet-stream";
 		servObject.server.statusOK(respHeaders, servObject, true);
@@ -48,7 +51,9 @@ exports.downloadFile = async (fileReq, servObject, headers, url) => {
 		_updateWriteStatus(decodeURIComponent(fileReq.reqid), stats.size, null);
 		const readStream = exports.getReadStream(fullpath, isFolder);
         const writable = readStream.pipe(servObject.res, {end:true});
-		readStream.on("data",chunk =>_updateWriteStatus(fileReq.reqid, undefined, chunk.length));
+		readStream.on("data",chunk =>{
+			_updateWriteStatus(fileReq.reqid, undefined, chunk.length)
+		});
 		writable.on("close", _=>{
 			LOG.debug(`Finished sending download file for path ${fileReq.fullpath} successfully, reqid is ${fileReq.reqid}.`);
 			if (isFolder) fspromises.unlink(fullpath);	// delete temporarily created ZIP files
