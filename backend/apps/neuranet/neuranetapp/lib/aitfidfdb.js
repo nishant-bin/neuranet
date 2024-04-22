@@ -133,7 +133,7 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
         delete EMPTY_DB.tfidfDocStore[hash]; if (!EMPTY_DB.mem_only) {
             const pathOnDisk = `${EMPTY_DB.pathOrMemID}/${hash}`;
             try {await fspromises.rm(pathOnDisk)} catch (err) {
-                LOG.warn(`Error deleting file ${pathIn}/${hash} for TD.IDF hash ${hash} due to ${err}.`); }
+                LOG.warn(`Error deleting file ${pathOnDisk} for TD.IDF hash ${hash} due to ${err}.`); }
         }
     };
     EMPTY_DB.tfidfDocStore.add = (hash, document, fromBackboard) => {
