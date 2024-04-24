@@ -24,7 +24,7 @@ const main = async (data, mainLoginAppModule) => {
 }
 
 async function _createdata(data) {   
-    let viewPath, aiendpoint, views, activeaiapp; delete data.showhome; delete data.shownotifications;
+    let viewPath, aiendpoint, views, activeaiapp, aiskipfolders; delete data.showhome; delete data.shownotifications;
     const loginresponse = session.get(APP_CONSTANTS.LOGIN_RESPONSE), appsAllowed = [...(loginresponse?.apps||[])];
 
     const _getAppToForceLoadOrFalse = _ => session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)?.toString()||false;
@@ -33,10 +33,10 @@ async function _createdata(data) {
         const appidToOpen = appid||_getAppToForceLoadOrFalse(), 
             app = (appsAllowed.filter(app => app.id == appidToOpen))[0];
         viewPath = `${APP_CONSTANTS.VIEWS_PATH}/${app.interface.type}`;
-        aiendpoint = app.endpoint; activeaiapp = app;
+        aiendpoint = app.endpoint; activeaiapp = app; aiskipfolders = app.interface.skippable_file_patterns;
     }
 
-     // load the given app if forced, or if apps allowed is just one, else load chooser
+    // load the given app if forced, or if apps allowed is just one, else load chooser
     if (appsAllowed.length == 1) _loadForcedView(appsAllowed[0].id);
     else if (_getAppToForceLoadOrFalse()) _loadForcedView();   
     else {    // left with chooser
@@ -51,7 +51,7 @@ async function _createdata(data) {
 
     // now load the view's HTML
     const viewURL = `${viewPath}/main.html`, viewMainMJS = `${viewPath}/js/main.mjs`;
-    data.viewpath = viewPath; data.aiendpoint = aiendpoint; data.activeaiapp = activeaiapp;
+    data.viewpath = viewPath; data.aiendpoint = aiendpoint; data.activeaiapp = activeaiapp; data.aiskipfolders = aiskipfolders;
     try { const viewMain = await import(viewMainMJS); await viewMain.main.initView(data, neuranetapp); }    // init the view before loading it
     catch (err) { LOG.error(`Error in initializing view ${viewPath}.`); }
     data.viewcontent = await router.loadHTML(viewURL, {...data, views}); 
