@@ -69,13 +69,13 @@ async function elementConnected(host) {
    i18n.addPath(COMPONENT_PATH); // add our i18n bundle
 
    const path = host.getAttribute("path") || (file_manager.getSessionMemory(host.id))["__lastPath"] || "/",
-      hiddenFolders = (host.getAttribute("hidefolders")?host.getAttribute("hidefolders").toLowerCase().split(","):[]).map(value => value.trim());
+      hiddenFilesPatterns = (host.getAttribute("hidefolders")?host.getAttribute("hidefolders").toLowerCase().split(","):[]).map(value => value.trim()).map(patternString => new RegExp(patternString));
    selectedPath = path.replace(/[\/]+/g,"/"); selectedIsDirectory = true; currentlyActiveFolder = selectedPath;
    const resp = await apiman.rest(API_GETFILES, "GET", {path}, true); if (!resp || !resp.result) return; 
    for (const entry of resp.entries) {
       const normPath = entry.path.replace(/[\/]+/g,"/"), pathSplits = normPath.split("/");
       if (normPath == selectedCutPath) entry.cutimage = "_cutimage"; 
-      for (const pathSplit of pathSplits) if (hiddenFolders.includes(pathSplit.toLowerCase())) {entry.skip = true; break;}
+      for (const pathSplit of pathSplits) if (hiddenFilesPatterns.some(pattern => pattern.test(pathSplit.toLowerCase()))) {entry.skip = true; break;}
       entry.stats.name = entry.name; entry.stats.json = JSON.stringify(entry.stats); entry.icon = _getIconForEntry(entry);
    }
    
