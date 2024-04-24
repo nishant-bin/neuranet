@@ -108,9 +108,9 @@ exports.rename = async function(fileindexer) {
 async function _getPregenStepsAIApp(fileindexer) {
     const pregenStepObjects = await aiapp.getPregenObject(fileindexer.id, fileindexer.org, fileindexer.aiappid);
     const pregenFunctions = []; for (const pregenStepObject of pregenStepObjects) {
-        const genfilesDir = NEURANET_CONSTANTS.GENERATED_FILES_FOLDER,
-            cmspath = `${path.dirname(fileindexer.cmspath)}/${genfilesDir}/${pregenStepObject.in.pathid}_${path.basename(fileindexer.cmspath)}.txt`,
-            cmspathTo = fileindexer.cmspathTo ? `${path.dirname(fileindexer.cmspathTo)}/${genfilesDir}/${pregenStepObject.in.pathid}_${path.basename(fileindexer.cmspathTo)}.txt` : undefined,
+        const genfilesDir = pregenStepObject.in.pregenfile_dir, genfilesExt = pregenStepObject.in.pregenfile_ext, genfilesPrefix = pregenStepObject.in.pregenfile_prefix;
+            cmspath = `${path.dirname(fileindexer.cmspath)}/${genfilesDir}/${genfilesPrefix}_${path.basename(fileindexer.cmspath)}.${genfilesExt}`,
+            cmspathTo = fileindexer.cmspathTo ? `${path.dirname(fileindexer.cmspathTo)}/${genfilesDir}/${genfilesPrefix}_${path.basename(fileindexer.cmspathTo)}.${genfilesExt}` : undefined,
             comment = `${pregenStepObject.in.label}: ${path.basename(fileindexer.cmspath)}`,
             commentTo = fileindexer.cmspathTo ? `${pregenStepObject.in.label}: ${path.basename(fileindexer.cmspathTo)}` : undefined;
         const [command, command_function] = pregenStepObject.command.split(".");
