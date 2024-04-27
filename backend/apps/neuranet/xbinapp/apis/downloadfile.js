@@ -125,13 +125,13 @@ async function _zipDirectory(pathIn) {	// unencrypt, ungzip etc before packing t
     });
 }
 
-function _updateWriteStatus(reqid, fileSize=0, bytesWrittenThisChunk, transferFailed, transferFinishedSuccessfully) {
-	const statusStorage = CLUSTER_MEMORY.get(XBIN_CONSTANTS.MEM_KEY_WRITE_STATUS) || {};
+async function _updateWriteStatus(reqid, fileSize=0, bytesWrittenThisChunk, transferFailed, transferFinishedSuccessfully) {
+	const statusStorage = CLUSTER_MEMORY.get(XBIN_CONSTANTS.MEM_KEY_WRITE_STATUS, {});
 	if (!(statusStorage[reqid])) statusStorage[reqid] = {size: fileSize, bytesSent: 0, failed: false, finishedSuccessfully: false};
 	
 	if (bytesWrittenThisChunk) statusStorage[reqid].bytesSent += bytesWrittenThisChunk;
 	if (transferFailed) statusStorage[reqid].failed = true; if (transferFinishedSuccessfully) statusStorage[reqid].finishedSuccessfully = true;
-	CLUSTER_MEMORY.set(XBIN_CONSTANTS.MEM_KEY_WRITE_STATUS, statusStorage);
+	await CLUSTER_MEMORY.set(XBIN_CONSTANTS.MEM_KEY_WRITE_STATUS, statusStorage, true);
 	if (!transferFailed) LOG.debug(`Update status for reqid ${reqid} - file size is ${fileSize} bytes, bytes written so far = ${statusStorage[reqid].bytesSent} bytes, bytes this chunk are ${bytesWrittenThisChunk}.`);
 	else LOG.error(`Update status for reqid ${reqid} - transfer failed after writing ${statusStorage[reqid].bytesSent} bytes.`);
 }
