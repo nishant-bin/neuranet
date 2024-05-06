@@ -54,8 +54,8 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 		const aidbFileProcessedPromise = new Promise(resolve => blackboard.subscribe(
 			NEURANET_CONSTANTS.NEURANETEVENT, function(message) { 
 				if (message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED && 
-					_areCMSPathsSame(message.cmspath, finalCMSPath))
-				blackboard.unsubscribe(NEURANET_CONSTANTS.NEURANETEVENT, this); resolve(message); 
+					_areCMSPathsSame(message.cmspath, finalCMSPath)) {
+				blackboard.unsubscribe(NEURANET_CONSTANTS.NEURANETEVENT, this); resolve(message); }
 			}
 		));
 		const extrainfo = brainhandler.createExtraInfo(id, org, aiappid);
