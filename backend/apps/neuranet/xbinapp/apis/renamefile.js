@@ -32,9 +32,10 @@ exports.renameFile = async function(headersOrIDAndOrg, cmsOldPath, cmsNewPath, e
 	}
 
 	const _renameFileInternal = async (oldpath, newpath, cmsRelativePathNew) => {
-		await fspromises.rename(oldpath, newpath);
 		await uploadfile.renameDiskFileMetadata(oldpath, newpath, cmsRelativePathNew);
 		await db.runCmd("UPDATE shares SET fullpath = ? WHERE fullpath = ?", [newpath, oldpath]);	// update shares
+		await fspromises.rename(oldpath, newpath);
+
 	}
 
 	const ip = utils.getLocalIPs()[0], id = headersOrIDAndOrg.xbin_id||cms.getID(headersOrIDAndOrg), 
