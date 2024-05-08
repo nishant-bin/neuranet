@@ -114,15 +114,7 @@ async function crawl(url, output_folder_streamer_function, accepted_mimes=DEFAUL
             mime = response.headers["content-type"], aElements = 
             htmlparser2.DomUtils.getElementsByTagName("a", dom), outputObject = {url, mime, is_binary: !_isTextMime(response.headers)};
 
-        if (output_folder_streamer_function && typeof output_folder_streamer_function == "string") (async _ => {
-            const outfolder = path.resolve(`${output_folder_streamer_function}/${_coreDomain(url)}`), 
-                outpath = path.resolve(`${outfolder}/${_convertURLToFSSafePath(url, mime, accepted_mimes, max_path_for_files)}`);
-            LOG.debug(`Serializing the URL ${url} to a file at path ${outpath}.`);
-            try{ 
-                await _createFolderIfNeeded(outfolder, {recursive: true}); const outObject = {...outputObject}; outObject.text = outputText;
-                fspromises.writeFile(outpath, JSON.stringify(outObject), "utf8");
-            } catch (err) { LOG.error(`Unable to save the crawled file for URL ${url}. Error is ${error}.`); }
-        })();   // async block with no wait - run the steps to save in the right order but overall don't wait for writing to finish
+        if (output_folder_streamer_function && typeof output_folder_streamer_function == "string") await saveCrawl(output_folder_streamer_function, outputObject, url, mime, accepted_mimes, max_path_for_files, outputText);  // async block with no wait - run the steps to save in the right order but overall don't wait for writing to finish
         if (output_folder_streamer_function && typeof output_folder_streamer_function == "function") 
             output_folder_streamer_function({...outputObject, stream: stream.Readable.from([Buffer.from(outputText, "utf-8")])});
 
@@ -149,6 +141,16 @@ async function crawl(url, output_folder_streamer_function, accepted_mimes=DEFAUL
         return memory.promiseToResolve;
     } catch (error) { LOG.error(`Crawler error URL: ${url}. Error is: ${error.message||error}. Cause is ${error.cause||"unknown"}. Stack is ${error.stack}.`); return false; }
     finally {memory.crawls_waiting--; if (memory.crawls_waiting == 0) memory.promiseToResolve.__resolveFunction(true);}
+}
+
+async function saveCrawl (output_folder_streamer_function, outputObject, url, mime, accepted_mimes, max_path_for_files, outputText){
+    const outfolder = path.resolve(`${output_folder_streamer_function}/${_coreDomain(url)}`), 
+        outpath = path.resolve(`${outfolder}/${_convertURLToFSSafePath(url, mime, accepted_mimes, max_path_for_files)}`);
+    LOG.debug(`Serializing the URL ${url} to a file at path ${outpath}.`);
+    try{ 
+        await _createFolderIfNeeded(outfolder, {recursive: true}); const outObject = {...outputObject}; outObject.text = outputText;
+        await fspromises.writeFile(outpath, JSON.stringify(outObject), "utf8");
+    } catch (err) { LOG.error(`Unable to save the crawled file for URL ${url}. Error is ${error}.`); }
 }
 
 module.exports = {crawl, init, coredomain: _coreDomain};

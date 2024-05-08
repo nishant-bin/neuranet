@@ -15,7 +15,7 @@
         ".pdf", ".pot", ".potm", ".potx", ".ppa", ".ppam", ".pps", ".ppsm", ".ppsx", ".ppt", ".pptm", ".pptx", 
         ".pst", ".pub", ".rfc822", ".rtf", ".sldasm", ".slddrw", ".sldm", ".sldprt", ".sxw", ".tnef", ".tsd", 
         ".txt", ".text", ".vsd", ".vsdm", ".vsdx", ".vssm", ".vssx", ".vstm", ".vstx", ".wp6", ".wps", ".xht", ".xhtml", 
-        ".xla", ".xlam", ".xlr", ".xls", ".xlsb", ".xlsm", ".xlsx", ".xlt", ".xltm", ".xltx", ".xlw", ".xml", ".xps"],
+        ".xla", ".xlam", ".xlr", ".xls", ".xlsb", ".xlsm", ".xlsx", ".xlt", ".xltm", ".xltx", ".xlw", ".xml", ".xps", ".crawl"],
         
     "always_ocr": true,
     "tesseract_path": "/usr/local/Cellar/tesseract/5.3.4_1/bin",

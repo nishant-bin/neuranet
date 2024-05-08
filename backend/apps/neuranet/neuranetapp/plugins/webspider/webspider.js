@@ -9,6 +9,9 @@ const path = require("path");
 const fspromises = require("fs").promises;
 const crawler = require(`${__dirname}/crawl.js`);
 const spiderconf = require(`${__dirname}/conf/spider.json`);
+const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
+const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
+const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 
 const PLUGIN_EXTENSION = ".crawl", DEFAULT_MINIMUM_SUCCESS_PERCENT = 0.5;
 const DEFAULT_MIMES = {"text/html":{ending:".html"}, "application/pdf":{ending:".pdf"}};
@@ -34,24 +37,24 @@ exports.ingest = async function(fileindexer) {
 
     let allCrawlsResult = true;
     for (const crawlingInstructionsThis of crawlingInstructions) {
+        const output_folder = path.resolve(`${__dirname}/${spiderconf.crawl_output_root}/${
+            spiderconf.dont_crawl ? spiderconf.ingestion_folder : crawler.coredomain(crawlingInstructionsThis.url)+"."+Date.now()}`);
         // first crawl to download all the files, this doesn't add anything to the CMS or AI DBs
-        const crawlResult = _crawlWebsite(crawlingInstructionsThis);
+        const crawlResult = await _crawlWebsite(crawlingInstructionsThis, output_folder);
         if (spiderconf.dont_ingest) continue;    // only testing crawling
 
         if (crawlResult) LOG.info(`Site crawl completed for ${crawlingInstructionsThis.url}, starting ingestion into the AI databases and stores.`);
         else {LOG.info(`Site crawl failed for ${crawlingInstructionsThis.url}, not ingesting into the AI databases and stores.`); allCrawlsResult = false; continue;}
         
         // now that the download succeeded, ingest into Neuranet databases
-        const ingestResult = await _ingestCrawledFilesIntoNeuranet(crawlingInstructionsThis, fileindexer);
+        const ingestResult = await _ingestCrawledFilesIntoNeuranet(crawlingInstructionsThis, fileindexer, output_folder);
         if (ingestResult) LOG.info(`Site AI database ingestion completed for ${crawlingInstructionsThis.url}.`);
         else {LOG.info(`Site AI database ingestion failed for ${crawlingInstructionsThis.url}`); allCrawlsResult = false;}
     }
     return allCrawlsResult;
 }
 
-async function _crawlWebsite(crawlingInstructionsThis) {
-    const output_folder = path.resolve(`${__dirname}/${spiderconf.crawl_output_root}/${
-        spiderconf.dont_crawl ? spiderconf.ingestion_folder : crawler.coredomain(crawlingInstructionsThis.url)+"."+Date.now()}`);
+async function _crawlWebsite(crawlingInstructionsThis, output_folder) {
     LOG.info(`Starting crawling the URL ${crawlingInstructionsThis.url} to path ${output_folder}.`);
     const crawlResult = spiderconf.dont_crawl ? true : await crawler.crawl(crawlingInstructionsThis.url, output_folder, 
         spiderconf.accepted_mimes||DEFAULT_MIMES, spiderconf.timegap||50, 
@@ -64,7 +67,7 @@ async function _crawlWebsite(crawlingInstructionsThis) {
     return crawlResult;
 }
 
-async function _ingestCrawledFilesIntoNeuranet(crawlingInstructionsThis, fileindexer) {
+async function _ingestCrawledFilesIntoNeuranet(crawlingInstructionsThis, fileindexer, output_folder) {
     let finalResult = true; fileindexer.start();
     const ingestionResult = await _ingestFolder(output_folder, 
         crawlingInstructionsThis.outfolder||`${crawler.coredomain(crawlingInstructionsThis.url)}_${Date.now()}`,
@@ -100,9 +103,26 @@ async function _ingestFolder(pathIn, cmsPath, fileindexer, memory) {
                     LOG.error(`Error ingesting file ${pathThisEntry} for CMS path ${cmsPathThisEntry} due to error: ${err}.`);
                     continue;
                 }
-                const result = await _promiseExceptionToBoolean(fileindexer.addFile(Buffer.from(fileJSON.text, 
-                    fileJSON.is_binary?"base64":"utf8"), cmsPathThisEntry, undefined, `URL: ${fileJSON.url}`, false, false));   
-                if ((!result) || (!result.result)) {
+                const result = await _promiseExceptionToBoolean(fileindexer.addFileToCMSRepository(Buffer.from(fileJSON.text, 
+                    fileJSON.is_binary?"base64":"utf8"), cmsPathThisEntry));   
+
+                if(!result) {
+                    LOG.error(`AI ingestion of URL ${fileJSON.url} failed.`); 
+                }
+
+                const _areCMSPathsSame = (cmspath1, cmspath2) => 
+		            (utils.convertToUnixPathEndings("/"+cmspath1, true) == utils.convertToUnixPathEndings("/"+cmspath2, true));
+
+                const aidbFileProcessedPromise = new Promise(resolve => blackboard.subscribe(
+                    NEURANET_CONSTANTS.NEURANETEVENT, function(message) { 
+                        if (message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED && 
+                            _areCMSPathsSame(message.cmspath, cmsPathThisEntry)) {
+                        blackboard.unsubscribe(NEURANET_CONSTANTS.NEURANETEVENT, this); resolve(message); }
+                    }
+                ));
+                
+                const aidbIngestionResult = await aidbFileProcessedPromise;
+                if ((!aidbIngestionResult) || (!aidbIngestionResult.result)) {
                     memory.failed_ingestion.push(pathThisEntry); 
                     LOG.error(`AI ingestion of URL ${fileJSON.url} failed.`); 
                 } else {

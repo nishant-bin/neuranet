@@ -197,11 +197,11 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
                 const contents = await neuranetutils.readFullFile(await this.getTextReadstream(), encoding);
                 return contents;
             } catch (err) {
-                LOG.error(`CRITICAL: File contant extraction failed for ${this.filepath}.`);
+                LOG.error(`CRITICAL: File content extraction failed for ${this.filepath}.`);
                 return null;
             }
         },
-        getContents: encoding => this.getTextContents(encoding),
+        getContents: async function(encoding) { return await this.getTextContents(encoding)},
         start: function(){},
         end: async function() { try {await aidbfs.rebuild(id, org, this.aiappid); await aidbfs.flush(id, org, this.aiappid); return true;} catch (err) {
             LOG.error(`Error ending AI databases. The error is ${err}`); return false;} },
