@@ -322,7 +322,7 @@ function _appendOrWrite(inpath, buffer, startOfFile, endOfFile, isZippable) {
 
 	const _deleteStreams = path => {
 		if (!_existing_streams[path]) return;
-		LOG.info(`Deleteting streams for path ${path}. Addable stream ID is ${(_existing_streams[path].addablestream?.getID())||"unknown"}`);
+		LOG.info(`Deleting streams for path ${path}. Addable stream ID is ${(_existing_streams[path].addablestream?.getID())||"unknown"}`);
 		if (_existing_streams[path].addablereadstream) _existing_streams[path].addablestream.end(); 
 		if (_existing_streams[path].closeWriteStream) try {
 			_existing_streams[path].ignoreWriteStreamFinishForID = _existing_streams[path].writestream.__org_xbin_writestream_id;

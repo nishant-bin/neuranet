@@ -58,7 +58,7 @@ exports.answer = async function(query, id, org, aiappid, request, flow_section="
             if (working_memory.__error) break;
             serverutils.setObjProperty(working_memory, (llmflowCommandDefinition.out||DEFAULT_OUT), flow_response);
         } catch (err) {
-            working_memory.return_error(`Error running flow command ${command} for id ${id} and org ${org} and ai app ${aiappid}. The error is ${err}`, exports.REASONS.INTERNAL);
+            working_memory.return_error(`Error running flow command ${command} for id ${id} and org ${org} and ai app ${aiappid}. The error is ${err}`, exports.REASONS.INTERNAL, working_memory);
             break;
         }
     }

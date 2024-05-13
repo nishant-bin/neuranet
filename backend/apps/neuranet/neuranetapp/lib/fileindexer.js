@@ -203,7 +203,7 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
         },
         getContents: async function(encoding) { return await this.getTextContents(encoding)},
         start: function(){},
-        end: async function() { try {await aidbfs.rebuild(id, org, this.aiappid); await aidbfs.flush(id, org, this.aiappid); return true;} catch (err) {
+        end: async function() { try {await aidbfs.flush(id, org, this.aiappid); return true;} catch (err) {
             LOG.error(`Error ending AI databases. The error is ${err}`); return false;} },
         //addfile, removefile, renamefile - all follow the same high level logic
         addFileToAI: async function(cmsPathThisFile=this.cmspath, langFile=this.lang) {
@@ -212,7 +212,7 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
                 
                 // update AI databases
                 const aiDBIngestResult = await aidbfs.ingestfile(fullPath, cmsPathThisFile, id, org, this.aiappid, 
-                    langFile, _=>this.getTextReadstream(fullPath), true);  // update AI databases
+                    langFile, _=>this.getTextReadstream(fullPath));  // update AI databases
                 if (aiDBIngestResult?.result) return CONSTANTS.TRUE_RESULT; else return CONSTANTS.FALSE_RESULT;
             } catch (err) {
                 LOG.error(`Error writing file ${cmsPathThisFile} for ID ${id} and org ${org} due to ${err}.`);

@@ -22,7 +22,7 @@ exports.runTestsAsync = async function(argv) {
     } 
     const filesToTest = argv.slice(1);
 
-    LOG.console(`Test case for AI DB unindexing called to index the files ${filesToTest.join(", ")}.\n`);
+    LOG.console(`Test case for AI DB unindexing called to unindex the files ${filesToTest.join(", ")}.\n`);
 
     await dblayer.initDBAsync();    // we need DB before anything else happens
     let finalResult = true; const unindexingPromises = [], unindexFile = async jsonReq => {
