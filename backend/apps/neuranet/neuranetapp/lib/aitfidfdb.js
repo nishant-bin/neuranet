@@ -139,12 +139,12 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
         if (!wordObject.docs[documentHash]) wordObject.docs[documentHash] = 1; else wordObject.docs[documentHash]++;
         EMPTY_DB.iindex[word] = wordObject;
     }
-    EMPTY_DB.iindex.getWordCountForDocument = (word, documentHash) => EMPTY_DB.iindex[word].docs[documentHash];
+    EMPTY_DB.iindex.getWordCountForDocument = (word, documentHash) => (EMPTY_DB.iindex[word]?.docs[documentHash])||0;
     EMPTY_DB.iindex.getCountOfDocumentsWithWord = word => EMPTY_DB.iindex[word]?Object.keys(EMPTY_DB.iindex[word].docs).length:0;
     EMPTY_DB.iindex.getAllWordObjects = _ => Object.values(EMPTY_DB.iindex).filter(value => typeof value !== "function");
     EMPTY_DB.iindex.getAllWords = _ => Object.keys(EMPTY_DB.iindex).filter(key => typeof EMPTY_DB.iindex[key] !== "function");
     EMPTY_DB.iindex.getWordObject = word => EMPTY_DB.iindex[word];
-    EMPTY_DB.iindex.getDocumentHashesForWord = word => Object.keys(EMPTY_DB.iindex[word].docs||{});
+    EMPTY_DB.iindex.getDocumentHashesForWord = word => Object.keys(EMPTY_DB.iindex[word]?.docs||{});
     EMPTY_DB.iindex.replace = iindex => {
         for (const word of EMPTY_DB.iindex.getAllWords()) delete EMPTY_DB.iindex[word];
         for (const word of Object.keys(iindex)) EMPTY_DB.iindex.addWordObject(word, serverutils.clone(iindex[word]));
