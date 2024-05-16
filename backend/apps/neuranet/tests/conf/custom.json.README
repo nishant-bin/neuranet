@@ -1,0 +1,43 @@
+# Custom.json Conventions:
+Custom.json is the place where we can write customised testcases based on the testFiles.
+Currently Custom.json has some testcases but we can edit the cases according to the need.
+One can also create a new json file for testcases with the same convention and use it for testing. And for this we just have to edit the costumFileName in test_custom.js(currently "custom.json");
+
+## Structure:
+```
+      {
+            "testcases": [
+                  // here {....} represents one operation or one testcase
+                  {
+                        "ingest": ["english_doc_path"], // testname: "argv[0] argv[1] argv[2]......"
+                        "aisearch": ["english_query"]
+                  },
+            ]
+      }
+```
+
+## Description
+- Every index of testcases({...}) represents an individual testcase.
+- The keys of each test case represent the operation to be performed, such as aiingest or aisearch.
+- The corresponding values are arrays of arguments (argv) required to execute the respective test file.
+
+## ARGVs for Custom Test
+1. argv[0] = testname ("custom" in this case) {required}
+2. argv[1] = CSV_Report_file_name (Ex: report.csv) {optional, if not provided use a default naming convention for file creation}.
+3. argv[2] = PATH_to_save_generated_CSV_Report (Ex: /home/deep/Download) {optional, generates the reports in the tests directory if not provifded}.
+
+# Common Convention for All test Files:
+
+## Parameters / ARGVs / file Conventions
+- Every file name must follow this naming convention "test_<testname>.js", testname is the name of the test we need to perform for example: aisearch the the filename will be "test_aisearch.js".
+- For input file, we just have to provide the filename with extension like:  example.pdf and this file must be present inside the "assests" folder of "tests directory". We can drop multiple files in the assests and then use for testing.
+
+## Note:
+For test files: {
+      test_nodesqlparser.js, 
+      test_sandox.js, 
+      test_tfidftest.js, 
+      test_vectoringest.js, 
+      test_vectorsearch.js, 
+      test_webcrawl.js 
+} requires fullPath of files because these are not edited yet to support fileName instead of fullPath.
