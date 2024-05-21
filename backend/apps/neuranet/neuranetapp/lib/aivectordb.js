@@ -284,7 +284,7 @@ exports.delete = async (vector, metadata, db_path) => {
  */
 exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, db_path, 
         filter_metadata_last, benchmarkIterations) {
-    const dbToUse = dbs[_get_db_index(db_path)]; _log_info(`Searching ${Object.values(dbToUse.index).length} vectors.`, db_path);
+    const dbToUse = serverutils.clone(dbs[_get_db_index(db_path)]); _log_info(`Searching ${Object.values(dbToUse.index).length} vectors.`, db_path);
     const _searchSimilarities = async _ => dbToUse.multithreaded ? await _search_multithreaded(db_path, 
         vectorToFindSimilarTo, (!filter_metadata_last)?metadata_filter_function:undefined) : _search_singlethreaded(
             dbToUse, vectorToFindSimilarTo, (!filter_metadata_last)?metadata_filter_function:undefined);
