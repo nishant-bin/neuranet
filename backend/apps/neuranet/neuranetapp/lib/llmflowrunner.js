@@ -16,6 +16,8 @@ const DEFAULT_OUT = "lastLLMFlowStepOutput", CONDITION_JS = "condition_js", NOIN
 exports.REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
     LIMIT: "limit", NOKNOWLEDGE: "noknowledge"};
 
+exports.DEFAULT_LLM_FLOW = "llm_flow";
+
 /**
  * Runs LLM flows that generate the final answer to a query.
  * @param {string} query The incoming query
@@ -25,7 +27,7 @@ exports.REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDA
  * @param {Object} request The incoming request params
  * @returns {Object} Final answer as {result: true|false,  response: set if result is true,error: set if result is false}. 
  */
-exports.answer = async function(query, id, org, aiappid, request, flow_section="llm_flow") {
+exports.answer = async function(query, id, org, aiappid, request, flow_section=exports.DEFAULT_LLM_FLOW) {
     const working_memory = {
         __error: false, __error_message: "", __error_reason: exports.REASONS.OK, query, id, org, 
         queryJSON: JSON.stringify(query), aiappid, request, return_error: function(message, reason, working_memory) {

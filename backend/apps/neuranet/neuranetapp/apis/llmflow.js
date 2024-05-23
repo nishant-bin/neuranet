@@ -6,6 +6,7 @@
  *  org - The user org
  *  aiappid - The AI app to use, if not provided then the org's default app is used
  *  question - The user's question
+ *  flow - The flow section of AI app to call, if null then llm_flow section is used as default
  *  session_id - The session ID for a previous session if this is a continuation
  * 
  * API Response
@@ -32,9 +33,10 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 
 	LOG.debug(`Got knowledge base chat request from ID ${jsonReq.id}. Incoming request is ${JSON.stringify(jsonReq)}`);
 
-    const aiappid = await brainhandler.getAppID(jsonReq.id, jsonReq.org, {id: jsonReq.id, org: jsonReq.org, aiappid: jsonReq.aiappid});
+    const extraInfo = brainhandler.createExtraInfo(jsonReq.id, jsonReq.org, jsonReq.aiappid);
+    const aiappid = await brainhandler.getAppID(jsonReq.id, jsonReq.org, extraInfo);
     const result = await llmflowrunner[aiapp.DEFAULT_ENTRY_FUNCTIONS.llm_flow](
-        jsonReq.question, jsonReq.id, jsonReq.org, aiappid, jsonReq, jsonReq.flow||"llm_flow");
+        jsonReq.question, jsonReq.id, jsonReq.org, aiappid, jsonReq, jsonReq.flow||llmflowrunner.DEFAULT_LLM_FLOW);
     return result;
 }
 

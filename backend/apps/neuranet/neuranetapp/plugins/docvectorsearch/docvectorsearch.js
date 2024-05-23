@@ -30,10 +30,9 @@ const REASONS = llmflowrunner.REASONS;
  * 
  * @param {Object} params Contains the following properties
  * 							id The ID of the logged in user 
- * 							The org of the logged in user's org
+ * 							org The org of the logged in user's org
  * 							query The query to search for
- * 							metadata The metadata to condition on
- *                          search_metadata true if metadata is to be used to condition else false
+ * 							brainid The AI application ID for the DB to search
  *                          topK_tfidf TopK for TD-IDF search
  *                          cutoff_score_tfidf Cutoff score for TF-IDF
  *                          topK_vectors TopK for vector search

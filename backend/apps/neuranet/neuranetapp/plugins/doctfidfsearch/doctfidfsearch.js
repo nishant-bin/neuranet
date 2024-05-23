@@ -27,14 +27,12 @@ const REASONS = llmflowrunner.REASONS, TEMP_MEM_TFIDF_ID = "_com_tekmonks_neuran
  * 
  * @param params Contains the following properties
  * 							id The ID of the logged in user 
- * 							The org of the logged in user's org
+ * 							org The org of the logged in user's org
  * 							query The query to search for
- * 							metadata The metadata to condition on
- *                          search_metadata true if metadata is to be used to condition else false
+ * 							brainid The AI application ID for the DB to search
  *                          topK_tfidf TopK for TD-IDF search
  *                          cutoff_score_tfidf Cutoff score for TF-IDF
  *                          topK_vectors TopK for vector search
- *                          min_distance_vectors Cutoff distance for vector search
  * @param {Object} _llmstepDefinition Not used, optional.
  * 
  * @returns The search returns array of {metadata, text} objects matching the 

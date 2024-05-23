@@ -65,10 +65,24 @@ exports.getPregenObject = (id, org, aiappid) => exports.getAIAppObject(id, org, 
 exports.getAIApp = async function(id, org, aiappid) {
     const appCacheKey = `${org}_${aiappid}`;
 
-    const app = (APP_CACHE[appCacheKey] && (!DEBUG_MODE)) ? APP_CACHE[appCacheKey] :
-        yaml.parse(await fspromises.readFile(_getAppFile(id, org, aiappid), "utf8"));
-    if (!APP_CACHE[appCacheKey]) APP_CACHE[appCacheKey] = app;
-    return app;
+    try {
+        const app = (APP_CACHE[appCacheKey] && (!DEBUG_MODE)) ? APP_CACHE[appCacheKey] :
+            yaml.parse(await fspromises.readFile(_getAppFile(id, org, aiappid), "utf8"));
+        if (!APP_CACHE[appCacheKey]) APP_CACHE[appCacheKey] = app;
+        return app;
+    } catch (err) { // app file parsing issue
+        if (!NEURANET_CONSTANTS.CONF.dynamic_aiapps) {  // dynamic apps not supported, we can't do anything else
+            LOG.error(`AI app parsing error for ID ${aiappid} for org ${org}.`);
+            throw err; 
+        }
+
+        // dynamic app support will allow for partitioned DBs with app IDs but using default YAML as the app definition
+        LOG.warn(`Using dynamic app for app ID ${aiappid} for org ${org}, as static app for this ID not found.`);
+        const aiappid = brainhandler.getDefaultAppIDForOrg(org);
+        const app = yaml.parse(await fspromises.readFile(_getAppFile(id, org, aiappid), "utf8"));
+        if (!APP_CACHE[appCacheKey]) APP_CACHE[appCacheKey] = app;
+        return app;
+    }
 }
 
 /**

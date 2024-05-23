@@ -234,7 +234,7 @@ docsearch_flow:
   - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
     condition_js: |
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang("{{{queryJSON}}}"); if ((lang == "zh") || (lang == "ja")) return true; else return false;
+      const lang = langdetector.getISOLang({{{queryJSON}}}); if ((lang == "zh") || (lang == "ja")) return true; else return false;
     in: 
       query: "{{{query}}}"                  # inbuilt variable contains the user's query
       metadata: null
@@ -242,13 +242,13 @@ docsearch_flow:
       cutoff_score_tfidf: 0.75
       topK_vectors: 3
       min_distance_vectors: 0
-      brainid: "{{{aiappid}}}"              # inbuilt variable contains the ai app ID
+      brainid: "{{{aiappid}}}"              
     out: airesponse.documents
 
   - command: docvectorsearch.search         # for all languages except Chinese and Japanese, the condition below 
     condition_js: |
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang("{{{queryJSON}}}"); if ((lang == "zh") || (lang == "ja")) return false; else return true;
+      const lang = langdetector.getISOLang({{{queryJSON}}}); if ((lang == "zh") || (lang == "ja")) return false; else return true;
     in: 
       query: "{{{query}}}"
       topK_tfidf: 3
