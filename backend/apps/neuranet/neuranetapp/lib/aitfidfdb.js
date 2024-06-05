@@ -150,7 +150,7 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
         for (const word of Object.keys(iindex)) EMPTY_DB.iindex.addWordObject(word, serverutils.clone(iindex[word]));
     }
     EMPTY_DB.iindex.getSerializableObject = _ => {
-        const retObject = [], allWords = EMPTY_DB.iindex.getAllWords();
+        const retObject = {}, allWords = EMPTY_DB.iindex.getAllWords();
         for (const word of allWords) retObject[word] = serverutils.clone(EMPTY_DB.iindex.getWordObject(word));
         return retObject;
     }
