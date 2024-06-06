@@ -17,6 +17,7 @@
  *  start_transaction - Optional: If used indicates a start to a mass load transaction
  *  stop_transaction - Optional: If used indicates a stop to a mass load transaction
  *  continue_transaction - Optional: If used indicates a continuation of a mass load transaction
+ *  metadata - Optional: The metadata for this file
  *  __forceDBFlush - Optional: if true, forces the DBs to flush to the filesystem
  * 
  * API Response
@@ -43,7 +44,7 @@ exports.DEFAULT_DYNAMIC_FILES_FOLDER = DEFAULT_DYNAMIC_FILES_FOLDER;
 exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
 
-	const {id, org, aiappid, filename, cmspath, encoding, data, comment, __forceDBFlush} = jsonReq;
+	const {id, org, aiappid, filename, cmspath, encoding, data, comment, metadata, __forceDBFlush} = jsonReq;
 	LOG.debug(`Got index document request from ID ${id} and org ${org}. Incoming filename is ${cmspath||"undefined"}/${filename}.`);
 
 	const _areCMSPathsSame = (cmspath1, cmspath2) => 
@@ -58,7 +59,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 				blackboard.unsubscribe(NEURANET_CONSTANTS.NEURANETEVENT, this); resolve(message); }
 			}
 		));
-		const extrainfo = brainhandler.createExtraInfo(id, org, aiappid);
+		const extrainfo = brainhandler.createExtraInfo(id, org, aiappid, metadata, NEURANET_CONSTANTS.AIAPPMODES.TRAIN);
 		if (!await fileindexer.addFileToCMSRepository(id, org, Buffer.from(data, encoding||"utf8"), 
 			finalCMSPath, comment, extrainfo)) {
 

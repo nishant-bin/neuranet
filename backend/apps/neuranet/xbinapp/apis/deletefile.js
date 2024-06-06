@@ -19,7 +19,7 @@ exports.doService = async (jsonReq, _, headers) => {
 		{xbin_id: jsonReq.id, xbin_org: jsonReq.org, headers} : headers;
 
 	const fullpath = await cms.getFullPath(headersOrLoginIDAndOrg, jsonReq.path, jsonReq.extraInfo);
-	if (!await cms.isSecure(headersOrLoginIDAndOrg, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
+	if (!await cms.isSecure(headersOrLoginIDAndOrg, fullpath, jsonReq.extraInfo)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 
 	try {await fspromises.access(fullpath)} catch (err) { 
 		if (err.code == "ENOENT") {
@@ -43,7 +43,7 @@ exports.deleteFile = async (headersOrIDAndOrg, cmsPath, extraInfo, noevent) => {
 	LOG.debug("Got delete file request for cms path: " + cmsPath + " for ID: " + id + " and org: " + org);
 
 	const fullpath = await cms.getFullPath(headersOrIDAndOrg, cmsPath, extraInfo);
-	if (!await cms.isSecure(headersOrIDAndOrg, fullpath)) {LOG.error(`Path security validation failure: ${fullpath}`); return CONSTANTS.FALSE_RESULT;}
+	if (!await cms.isSecure(headersOrIDAndOrg, fullpath, extraInfo)) {LOG.error(`Path security validation failure: ${fullpath}`); return CONSTANTS.FALSE_RESULT;}
 
 	try {await fspromises.access(fullpath, fs.constants.W_OK | fs.constants.R_OK)} catch (err) {
 		if (err.code == "ENOENT") return CONSTANTS.TRUE_RESULT;	// doesn't exist already

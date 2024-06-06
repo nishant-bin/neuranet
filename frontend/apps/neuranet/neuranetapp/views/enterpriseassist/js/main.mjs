@@ -10,20 +10,25 @@ import {router} from "/framework/js/router.mjs";
 import {session} from "/framework/js/session.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
-const API_GET_EVENTS = "events", MODULE_PATH = util.getModulePath(import.meta), VIEW_PATH = util.resolveURL(`${MODULE_PATH}/../`);
+const API_GET_EVENTS = "events";
 
 let chatsessionID;
 
 function initView(data) {
     const loginresponse = session.get(APP_CONSTANTS.LOGIN_RESPONSE), 
-        isAdmin = session.get(APP_CONSTANTS.CURRENT_USERROLE).toString() == "admin";
+        isAdmin = data.activeaiapp.is_user_appadmin||session.get(APP_CONSTANTS.CURRENT_USERROLE).toString() == "admin";
     LOG.info(`The login response object is ${JSON.stringify(loginresponse)}`);
     window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {
         ...(window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME]||{}), enterprise_assist_main: main}; 
-    data.VIEW_PATH = VIEW_PATH;
+    data.VIEW_PATH = data.view_path;
     data.show_ai_training = isAdmin;
     data.collapse_ai_training = false;
+    data.extrainfo = {id: session.get(APP_CONSTANTS.USERID).toString(), 
+        org: session.get(APP_CONSTANTS.USERORG).toString(), aiappid: data.activeaiapp.id, mode: "trainaiapp"};
+    data.extrainfo_base64_json = util.stringToBase64(JSON.stringify(data.extrainfo));
     data.shownotifications = {action: "monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].enterprise_assist_main.getNotifications()"};
+    data.aiskipfolders_base64_json = data.activeaiapp.interface.skippable_file_patterns?
+        util.stringToBase64(JSON.stringify(data.activeaiapp.interface.skippable_file_patterns)) : undefined;
 }
 
 async function getNotifications() {
@@ -54,7 +59,7 @@ async function processAssistantResponse(result, _chatboxid, _aiappid) {
     if (!result.result) return {error: await i18n.get("ChatAIError"), ok: false};
     // result ok but no metadata means response is not from our data, reject it as well with no knowledge
     if (!result.metadatas) return {ok: true, response: await i18n.get("EnterpriseAssist_ErrorNoKnowledge")};
-    
+
     const references=[]; for (const metadata of result.metadatas) if (!references.includes(
         decodeURIComponent(metadata.referencelink))) references.push(decodeURIComponent(metadata.referencelink));
     const resultFinal = (await router.getMustache()).render(await i18n.get("EnterpriseAssist_ResponseTemplate"), 

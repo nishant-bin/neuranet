@@ -39,5 +39,16 @@ export const i18n = {
 "EnterpriseAssist_KnowledgeBase": "AI Training",
 "EnterpriseAssist_ErrorNoKnowledge": "Sorry I have no knowledge of this topic.",
 "EnterpriseAssist_AIError": "AI error in processing. Please reload the page to start a new assistant request.",
-"EnterpriseAssist_ResponseTemplate": "{{response}}\n\n<span id='aireferences' style='font-size: x-small;font-weight: 100;'>References\n{{#references}}{{.}}\n{{/references}}<span>"
+"EnterpriseAssist_ResponseTemplate": "{{response}}\n\n<span id='aireferences' style='font-size: x-small;font-weight: 100;'>References\n{{#references}}{{.}}\n{{/references}}<span>",
+
+"AIWorkshop_NewAIApp": "New",
+"AIWorkshop_DeleteAIApp": "Delete",
+"AIWorkshop_PublishAIApp": "Publish",
+"AIWorkshop_UnpublishAIApp": "Unpublish",
+"AIWorkshop_AIAppNamePrompt": "Enter AI Application ID",
+"AIWorkshop_AIAppGenericError": "Error in AI application",
+"AIWorkshop_AIAppGenericSuccess": "Command succeeded",
+"AIWorkshop_AIAppAlreadyExists": "Error an app by that ID already exists",
+"AIWorkshop_ClickAppToEdit": "Click to edit",
+"AIWorkshop_KnowledgeBase": "AI Training"
 }

@@ -12,7 +12,9 @@ interface:                                  # the interface details
     - ^\.system?.+
 endpoint: llmflow                           # the API endpoint - usually llmflow
 users: ["*"]                                # the * means all users, else must be an array of user IDs
+admins: ["thecompany@tekmonks.com"]         # the admins for this app - they can train for example
 api_uploads_cms_path: uploads               # where files are uploaded by index, unindex APIs
+generated_files_path: _neuranet_generated
 
 # all flows are sequence of commands which follow the same syntax - command, in, out - in is the input
 # to the command, out is the variable holding the output and name points to the command module and entry
@@ -138,21 +140,22 @@ llm_flow:
   - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
     condition_js: |
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang({{{queryJSON}}}); if ((lang == "zh") || (lang == "ja")) return true; else return false;
+      const lang = langdetector.getISOLang(queryJSON); if ((lang == "zh") || (lang == "ja")) return true; else return false;
     in: 
       query: "{{{query}}}"                  # inbuilt variable contains the user's query
-      metadata: null
       topK_tfidf: 3
       cutoff_score_tfidf: 0.75
       topK_vectors: 3
       min_distance_vectors: 0
-      brainid: "{{{aiappid}}}"              
+      aiappid: "{{{aiappid}}}"  
+      bridges_js: return (request.bridges||[aiappid])
+      metadata_filter_function: "{{{request.metadata_filter_function}}}"
     out: documentsfound
 
   - command: docvectorsearch.search         # for all languages except Chinese and Japanese, the condition below 
     condition_js: |
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang({{{queryJSON}}}); if ((lang == "zh") || (lang == "ja")) return false; else return true;
+      const lang = langdetector.getISOLang(queryJSON); if ((lang == "zh") || (lang == "ja")) return false; else return true;
     in: 
       query: "{{{query}}}"
       topK_tfidf: 3
@@ -163,7 +166,9 @@ llm_flow:
         name: embedding-openai-ada002
         model_overrides:                    
           read_ai_response_from_samples: true
-      brainid: "{{{aiappid}}}"
+      aiappid: "{{{aiappid}}}"  
+      bridges_js: return (request.bridges||[aiappid])
+      metadata_filter_function: "{{{request.metadata_filter_function}}}"
     out: documentsfound
 
   - command: llm_history_chat               # default function entry is answer so entry function name is skipped
@@ -231,10 +236,11 @@ llm_flow:
 
 
 docsearch_flow:
-  - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
+  - command: doctfidfsearch.search          # if forced return true, else for double-byte (cn and ja) return true
     condition_js: |
+      if (request.force_nonllm_search) return true; 
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang({{{queryJSON}}}); if ((lang == "zh") || (lang == "ja")) return true; else return false;
+      const lang = langdetector.getISOLang(queryJSON); if ((lang == "zh") || (lang == "ja")) return true; else return false;
     in: 
       query: "{{{query}}}"                  # inbuilt variable contains the user's query
       metadata: null
@@ -242,13 +248,16 @@ docsearch_flow:
       cutoff_score_tfidf: 0.75
       topK_vectors: 3
       min_distance_vectors: 0
-      brainid: "{{{aiappid}}}"              
+      aiappid: "{{{aiappid}}}"  
+      bridges_js: return (request.bridges||[aiappid])
+      metadata_filter_function: "{{{request.metadata_filter_function}}}"           
     out: airesponse.documents
 
-  - command: docvectorsearch.search         # for all languages except Chinese and Japanese, the condition below 
+  - command: docvectorsearch.search         # if forced return true, else for non double-byte (cn and ja) return true
     condition_js: |
+      if (request.force_llm_search) return true; 
       const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang({{{queryJSON}}}); if ((lang == "zh") || (lang == "ja")) return false; else return true;
+      const lang = langdetector.getISOLang(queryJSON); if ((lang == "zh") || (lang == "ja")) return false; else return true;
     in: 
       query: "{{{query}}}"
       topK_tfidf: 3
@@ -259,7 +268,9 @@ docsearch_flow:
         name: embedding-openai-ada002
         model_overrides:                    
           read_ai_response_from_samples: true
-      brainid: "{{{aiappid}}}"
+      aiappid: "{{{aiappid}}}"  
+      bridges_js: return (request.bridges||[aiappid])
+      metadata_filter_function: "{{{request.metadata_filter_function}}}"
     out: airesponse.documents
 
 

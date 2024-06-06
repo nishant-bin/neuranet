@@ -9,9 +9,11 @@ import {i18n} from "/framework/js/i18n.mjs";
 import {util} from "/framework/js/util.mjs";
 import {router} from "/framework/js/router.mjs";
 import {session} from "/framework/js/session.mjs";
+import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
 const MODULE_PATH = util.getModulePath(import.meta), AI_WORKSHOP_VIEW = "aiworkshop",
-    MAIN_HTML = util.resolveURL(`${APP_CONSTANTS.EMBEDDED_APP_PATH}/main.html`), IMAGE_DATA = "data:image";
+    MAIN_HTML = util.resolveURL(`${APP_CONSTANTS.EMBEDDED_APP_PATH}/main.html`), IMAGE_DATA = "data:image",
+    API_GET_AIAPPS = "getorgaiapps";
 
 let loginappMain;
 
@@ -23,9 +25,20 @@ const main = async (data, mainLoginAppModule) => {
     data.maincontent = await router.loadHTML(MAIN_HTML, {...data}); 
 }
 
+async function refreshAIApps() {
+    const loginresponse = session.get(APP_CONSTANTS.LOGIN_RESPONSE);
+    const id = session.get(APP_CONSTANTS.USERID).toString(), org = session.get(APP_CONSTANTS.USERORG).toString();
+    const aiAppsResult = await apiman.rest(`${APP_CONSTANTS.API_PATH}/${API_GET_AIAPPS}`, "GET", {id, org, unpublished: false}, true);
+    if (aiAppsResult && aiAppsResult.result) loginresponse.apps = aiAppsResult.aiapps;
+    session.set(APP_CONSTANTS.LOGIN_RESPONSE, loginresponse);
+}
+
 async function _createdata(data) {   
-    let viewPath, aiendpoint, views, activeaiapp, aiskipfolders; delete data.showhome; delete data.shownotifications;
-    const loginresponse = session.get(APP_CONSTANTS.LOGIN_RESPONSE), appsAllowed = [...(loginresponse?.apps||[])];
+    let viewPath, aiendpoint, views, activeaiapp; delete data.showhome; delete data.shownotifications;
+    const loginresponse = session.get(APP_CONSTANTS.LOGIN_RESPONSE), appsAllowed = [...(loginresponse?.apps||[])],
+        isAdmin = session.get(APP_CONSTANTS.CURRENT_USERROLE).toString() == "admin";
+    if (isAdmin) appsAllowed.push({id: AI_WORKSHOP_VIEW, interface: {type: AI_WORKSHOP_VIEW,
+        label: await i18n.get(`ViewLabel_${AI_WORKSHOP_VIEW}`)}});  // admins can run AI workshops always
 
     const _getAppToForceLoadOrFalse = _ => session.get(APP_CONSTANTS.FORCE_LOAD_VIEW)?.toString()||false;
     const _loadForcedView = appid => {
@@ -33,10 +46,10 @@ async function _createdata(data) {
         const appidToOpen = appid||_getAppToForceLoadOrFalse(), 
             app = (appsAllowed.filter(app => app.id == appidToOpen))[0];
         viewPath = `${APP_CONSTANTS.VIEWS_PATH}/${app.interface.type}`;
-        aiendpoint = app.endpoint; activeaiapp = app; aiskipfolders = app.interface.skippable_file_patterns;
+        aiendpoint = app.endpoint; activeaiapp = app;
     }
 
-    // load the given app if forced, or if apps allowed is just one, else load chooser
+     // load the given app if forced, or if apps allowed is just one, else load chooser
     if (appsAllowed.length == 1) _loadForcedView(appsAllowed[0].id);
     else if (_getAppToForceLoadOrFalse()) _loadForcedView();   
     else {    // left with chooser
@@ -51,7 +64,7 @@ async function _createdata(data) {
 
     // now load the view's HTML
     const viewURL = `${viewPath}/main.html`, viewMainMJS = `${viewPath}/js/main.mjs`;
-    data.viewpath = viewPath; data.aiendpoint = aiendpoint; data.activeaiapp = activeaiapp; data.aiskipfolders = aiskipfolders;
+    data.viewpath = viewPath; data.aiendpoint = aiendpoint; data.activeaiapp = activeaiapp; 
     try { const viewMain = await import(viewMainMJS); await viewMain.main.initView(data, neuranetapp); }    // init the view before loading it
     catch (err) { LOG.error(`Error in initializing view ${viewPath}.`); }
     data.viewcontent = await router.loadHTML(viewURL, {...data, views}); 
@@ -73,4 +86,4 @@ const showMessage = message => loginappMain.showMessage(message);
 
 const showError = error => {LOG.error(error); showMessage(error);}
 
-export const neuranetapp = {main, openView, gohome, onlogout, showMessage, showError};
+export const neuranetapp = {main, openView, gohome, onlogout, showMessage, showError, refreshAIApps};

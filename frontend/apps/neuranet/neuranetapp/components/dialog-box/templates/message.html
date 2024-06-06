@@ -1,0 +1,16 @@
+<style>
+span#message {
+    font: inherit;
+    font-size: smaller;
+    text-align: center;
+    padding: 0px 2em 0px 2em;
+    display: inline-block;
+}
+
+@media (hover: none) and (pointer: coarse) and (orientation: portrait) {
+    span#message {padding: 0px;}
+    div#dialog {width: 90%;}
+}
+</style>
+
+<span id="message">{{{message}}}</span>

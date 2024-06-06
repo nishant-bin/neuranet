@@ -24,7 +24,7 @@ exports.handleRawRequest = async function(jsonReq, servObject, headers, url) {
 
 	const headersMod = {...headers, "authorization": `Bearer ${jsonReq.auth}`};
 	jsonReq.fullpath = await cms.getFullPath(headersMod, jsonReq.path, jsonReq.extraInfo);
-	if (!await cms.isSecure(headersMod, jsonReq.fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); _sendError(servObject); return;}
+	if (!await cms.isSecure(headersMod, jsonReq.fullpath, jsonReq.extraInfo)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); _sendError(servObject); return;}
 
 	await this.downloadFile(jsonReq, servObject, headers, url);
 }
@@ -65,20 +65,22 @@ exports.downloadFile = async (fileReq, servObject, headers, url) => {
 
 exports.readUTF8File = async function (headers, inpath, extraInfo) {
 	const fullpath = await cms.getFullPath(headers, inpath, extraInfo);
-	if (!await cms.isSecure(headers, fullpath)) throw `Path security validation failure: ${fullpath}`;
+	if (!await cms.isSecure(headers, fullpath, extraInfo)) throw `Path security validation failure: ${fullpath}`;
 	const zippable = uploadfile.isZippable(fullpath);
 
 	let dataRead = await fspromises.readFile(fullpath); 
-	if (XBIN_CONSTANTS.CONF.DISK_SECURED) dataRead = await _readEncryptedUTF8Data(dataRead, zippable);
+	if (uploadfile.isEncryptable(fullpath)) dataRead = await _readEncryptedUTF8Data(dataRead, zippable);
 	else dataRead = dataRead.toString("utf8");
 	return dataRead;
 }
 
 exports.getReadStream = function(fullpath, pathIsATemporarilyZippedFolderForDownloading) {
 	const zippable = pathIsATemporarilyZippedFolderForDownloading?false:uploadfile.isZippable(fullpath);
-	let readStream = fs.createReadStream(fullpath, {highWaterMark: XBIN_CONSTANTS.CONF.DOWNLOAD_READ_BUFFER_SIZE||DEFAULT_READ_BUFFER_SIZE, 
+	const encrypted = uploadfile.isEncryptable(fullpath) && (!pathIsATemporarilyZippedFolderForDownloading);
+	let readStream = fs.createReadStream(fullpath, {
+		highWaterMark: XBIN_CONSTANTS.CONF.DOWNLOAD_READ_BUFFER_SIZE||DEFAULT_READ_BUFFER_SIZE, 
 		flags:"r", autoClose:true});
-	if (XBIN_CONSTANTS.CONF.DISK_SECURED && (!pathIsATemporarilyZippedFolderForDownloading)) readStream = readStream.pipe(crypt.getDecipher(XBIN_CONSTANTS.CONF.SECURED_KEY)); // decrypt the file before sending if it is encrypted
+	if (encrypted) readStream = readStream.pipe(crypt.getDecipher(XBIN_CONSTANTS.CONF.SECURED_KEY)); // decrypt the file before sending if it is encrypted
 	if (zippable) readStream = readStream.pipe(zlib.createGunzip());	// gunzip if zipped
 	return readStream;
 }
@@ -117,7 +119,7 @@ async function _zipDirectory(pathIn) {	// unencrypt, ungzip etc before packing t
 				
 				const zippable = uploadfile.isZippable(fullPath); 
 				let readstreamEntry = fs.createReadStream(fullPath); 
-				if (XBIN_CONSTANTS.CONF.DISK_SECURED) readstreamEntry = readstreamEntry.pipe(crypt.getDecipher(XBIN_CONSTANTS.CONF.SECURED_KEY));
+				if (uploadfile.isEncryptable(fullpath)) readstreamEntry = readstreamEntry.pipe(crypt.getDecipher(XBIN_CONSTANTS.CONF.SECURED_KEY));
 				if (zippable) readstreamEntry = readstreamEntry.pipe(zlib.createGunzip());	
 				archive.append(readstreamEntry, {name: relativePath});
 			}, false, _=>archive.finalize());

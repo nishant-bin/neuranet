@@ -24,18 +24,17 @@ exports.renameFile = async function(headersOrIDAndOrg, cmsOldPath, cmsNewPath, e
 
 	const oldPath = await cms.getFullPath(headersOrIDAndOrg, cmsOldPath, extraInfo), 
 		newPath = await cms.getFullPath(headersOrIDAndOrg, cmsNewPath, extraInfo);
-	if (!await cms.isSecure(headersOrIDAndOrg, oldPath)) {LOG.error(`Path security validation failure: ${oldPath}`); return CONSTANTS.FALSE_RESULT;}
-	if (!await cms.isSecure(headersOrIDAndOrg, newPath)) {LOG.error(`Path security validation failure: ${newPath}`); return CONSTANTS.FALSE_RESULT;}
+	if (!await cms.isSecure(headersOrIDAndOrg, oldPath, extraInfo)) {LOG.error(`Path security validation failure: ${oldPath}`); return CONSTANTS.FALSE_RESULT;}
+	if (!await cms.isSecure(headersOrIDAndOrg, newPath, extraInfo)) {LOG.error(`Path security validation failure: ${newPath}`); return CONSTANTS.FALSE_RESULT;}
 	if (oldPath == newPath) {	// sanity check
 		LOG.warn(`Rename requested from and to the same file paths. Ignoring. From is ${oldPath} and to is the same.`);
 		return CONSTANTS.TRUE_RESULT;
 	}
 
 	const _renameFileInternal = async (oldpath, newpath, cmsRelativePathNew) => {
+		await fspromises.rename(oldpath, newpath);
 		await uploadfile.renameDiskFileMetadata(oldpath, newpath, cmsRelativePathNew);
 		await db.runCmd("UPDATE shares SET fullpath = ? WHERE fullpath = ?", [newpath, oldpath]);	// update shares
-		await fspromises.rename(oldpath, newpath);
-
 	}
 
 	const ip = utils.getLocalIPs()[0], id = headersOrIDAndOrg.xbin_id||cms.getID(headersOrIDAndOrg), 

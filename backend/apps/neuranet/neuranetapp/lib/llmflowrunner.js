@@ -35,12 +35,15 @@ exports.answer = async function(query, id, org, aiappid, request, flow_section=e
             working_memory.__error_reason = reason; }
     };
 
-    const llmflowCommands = await aiapp.getAIAppObject(id, org, aiappid, flow_section); 
+    let llmflowCommands; try {llmflowCommands = await aiapp.getAIAppObject(id, org, aiappid, flow_section)} catch (err) {
+        return {...CONSTANTS.FALSE_RESULT, error: `Error parsing app for ${aiappid}`, reason: exports.REASONS.INTERNAL};
+    }
+
     for (const llmflowCommandDefinition of llmflowCommands) {
         const condition_code = llmflowCommandDefinition[CONDITION_JS] ? mustache.render(
             llmflowCommandDefinition[CONDITION_JS], working_memory) : undefined;
         if (condition_code) if (!await _runJSCode(condition_code, {NEURANET_CONSTANTS,  // run only if condition is satisfied
-            require: function() {const module = require(...arguments); return module} })) continue;  
+            require: function() {const module = require(...arguments); return module}, ...working_memory })) continue;  
 
         const [command, command_function] = llmflowCommandDefinition.command.split(".");
         const llmflowModule = await aiapp.getCommandModule(id, org, aiappid, command);
@@ -60,7 +63,7 @@ exports.answer = async function(query, id, org, aiappid, request, flow_section=e
             if (working_memory.__error) break;
             serverutils.setObjProperty(working_memory, (llmflowCommandDefinition.out||DEFAULT_OUT), flow_response);
         } catch (err) {
-            working_memory.return_error(`Error running flow command ${command} for id ${id} and org ${org} and ai app ${aiappid}. The error is ${err}`, exports.REASONS.INTERNAL, working_memory);
+            working_memory.return_error(`Error running flow command ${command} for id ${id} and org ${org} and ai app ${aiappid}. The error is ${err.stack?err.stack.toString():err.toString()}`, exports.REASONS.INTERNAL, working_memory);
             break;
         }
     }

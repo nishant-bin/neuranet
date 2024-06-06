@@ -22,8 +22,10 @@ exports.AIDBPATH = path.resolve(`${LOGINAPP_CONSTANTS.DB_DIR}/ai_db`);
 exports.DEFAULT_ORG = "_org_neuranet_defaultorg_";
 exports.DEFAULT_ID = "_default_";
 exports.AIAPPDIR = path.resolve(`${BACKEND_ROOT}/aiapps`);
-exports.AIAPPMODES = {EDIT: 'editaiapp', NORMAL: 'normal'};
+exports.AIAPPMODES = {EDIT: 'editaiapp', TRAIN: 'trainaiapp'};
 exports.DEFAULT_ORG_DEFAULT_AIAPP = "_org_neuranet_default_aiapp_";
+exports.DEFAULT_ORG_DEFAULT_AIAPP_LABEL = "AI assistant";
+
 exports.REFERENCELINK_METADATA_KEY = "referencelink";
 
 exports.NEURANET_DOCID = "aidb_docid";

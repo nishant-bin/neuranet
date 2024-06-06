@@ -39,11 +39,11 @@ exports.getCMSRoot = async function(headersOrLoginIDAndOrg, extraInfo) {
 	if (!loginID) throw "No login for CMS root"; 
 	const org = headersOrLoginIDAndOrgIsHeaders ? (login.getOrg(headersOrLoginIDAndOrg)||"unknown") : headersOrLoginIDAndOrg.xbin_org;
 	let cmsRootToReturn = _getPathForIDAndOrg(loginID, org);
-	LOG.debug(`CMS raw root located at ${cmsRootToReturn} for ID ${loginID}.`);
+	LOG.info(`CMS raw root located at ${cmsRootToReturn} for ID ${loginID}.`);
 	if (CMSPATH_MODIFIERS.length) for (cmsPathModifier of CMSPATH_MODIFIERS) 
 		cmsRootToReturn = await cmsPathModifier(cmsRootToReturn, loginID, org, extraInfo);
 	cmsRootToReturn = path.resolve(cmsRootToReturn);
-	LOG.debug(`Located final CMS home as ${cmsRootToReturn} for id ${loginID} of org ${org}.`);
+	LOG.info(`Located final CMS home as ${cmsRootToReturn} for id ${loginID} of org ${org}.`);
 
 	if (!SAFE_CMS_PATHS[cmsRootToReturn]) try {	// ensure directory exists if we have not already done so
 		await fspromises.access(cmsRootToReturn, fs.F_OK); SAFE_CMS_PATHS[cmsRootToReturn] = true; } catch (err) { 
@@ -96,10 +96,10 @@ exports.getOrg = headersOrLoginIDAndOrg => headersOrLoginIDAndOrg.xbin_org || lo
  * @param {string} path The path to operate on
  * @returns {boolean} true on success, false on failure
  */
-exports.isSecure = async (headersOrHeadersAndOrg, path) => {	// add domain check here to ensure ID and org domains are ok
+exports.isSecure = async (headersOrHeadersAndOrg, path, extraInfo) => {	// add domain check here to ensure ID and org domains are ok
 	const isKeySecure = headersOrHeadersAndOrg.xbin_org && headersOrHeadersAndOrg.headers ? 
 		await loginappAPIKeyChecker.isAPIKeySecure(headersOrHeadersAndOrg.headers, headersOrHeadersAndOrg.xbin_org) : true;
-	return isKeySecure && XBIN_CONSTANTS.isSubdirectory(path, await this.getCMSRoot(headersOrHeadersAndOrg, {rawRoot: true}));
+	return isKeySecure && XBIN_CONSTANTS.isSubdirectory(path, await this.getCMSRoot(headersOrHeadersAndOrg, extraInfo));
 }
 
 /**
@@ -114,7 +114,22 @@ exports.addCMSPathModifier = modifier => CMSPATH_MODIFIERS.push(modifier);
  */
 exports.removeCMSPathModifier = modifier => CMSPATH_MODIFIERS.indexOf(modifier) ? CMSPATH_MODIFIERS.splice(CMSPATH_MODIFIERS.indexOf(modifier),1) : null;
 
-const _getPathForIDAndOrg = (id, org) => `${XBIN_CONSTANTS.CONF.CMS_ROOT}/${_convertToPathFriendlyString(org.toLowerCase())}/${_convertToPathFriendlyString(id.toLowerCase())}`;
+/**
+ * Returns overridden config for the corresponding repository for the given path.
+ * @param {string} fullpath The fullpath to the file 
+ * @returns The overridden config for the corresponding repository for the given path.
+ */
+exports.getRepositoryConfig = fullpath => {
+	for (const [cmsRoot, config] of Object.entries(XBIN_CONSTANTS.CONF.CMS_OVERRIDES||{}))
+		if (XBIN_CONSTANTS.isSubdirectory(fullpath, path.resolve(cmsRoot))) {
+			const subConfig = {...XBIN_CONSTANTS.CONF, ...config};
+			return subConfig;
+		}
+		
+	return XBIN_CONSTANTS.CONF;
+}
+
+const _getPathForIDAndOrg = (id, org) => `${XBIN_CONSTANTS.CONF.DEFAULT_CMS_ROOT}/${_convertToPathFriendlyString(org.toLowerCase())}/${_convertToPathFriendlyString(id.toLowerCase())}`;
 
 const _convertToPathFriendlyString = (s, maxPathLength=DEFAULT_MAX_PATH_LENGTH) => {
 	let tentativeFilepath = encodeURIComponent(s);

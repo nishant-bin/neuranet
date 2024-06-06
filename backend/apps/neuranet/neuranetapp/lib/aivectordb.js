@@ -623,6 +623,7 @@ function _initBlackboardHooks() {
     const blackboardOptions = {}; blackboardOptions[blackboard.EXTERNAL_ONLY] = true;
     blackboard.subscribe(VECTORDB_ADD_VECTOR_TOPIC, async msg => {
         const {dbpath, multithreaded, vectorObject, metadata_docid_key} = msg;
+        if (!dbpath) {LOG.error(`Missing DB path for message ${JSON.stringify(msg)}`); return;}
         if (!dbs[_get_db_index(dbpath)]) {
             _log_warning(`Unable to locate database for blackboard add vector event. Trying to initialize.`, dbpath);
             await exports.initAsync(dbpath, metadata_docid_key, multithreaded);
@@ -633,6 +634,7 @@ function _initBlackboardHooks() {
 
     blackboard.subscribe(VECTORDB_DELETE_VECTOR_TOPIC, async msg => {
         const {dbpath, multithreaded, hash, metadata_docid_key} = msg;
+        if (!dbpath) {LOG.error(`Missing DB path for message ${JSON.stringify(msg)}`); return;}
         if (!dbs[_get_db_index(dbpath)]) {
             _log_warning(`Unable to locate database for blackboard add vector event. Trying to initialize.`, dbpath);
             await exports.initAsync(dbpath, metadata_docid_key, multithreaded);

@@ -12,6 +12,7 @@ interface:                                  # the interface details
     - ^\.system?.+
 endpoint: llmflow                           # the API endpoint - usually llmflow
 users: ["*"]                                # the * means all users, else must be an array of user IDs
+admins: ["*"]                               # the admins for this app - they can train for example
 api_uploads_cms_path: uploads               # where files are uploaded by index, unindex APIs
 
 # all flows are sequence of commands which follow the same syntax - command, in, out - in is the input

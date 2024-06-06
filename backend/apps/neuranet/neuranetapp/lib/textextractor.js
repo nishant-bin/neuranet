@@ -14,12 +14,19 @@ exports.initAsync = async _ => {
         if (textExtractor.initAsync) await textExtractor.initAsync();
 }
 
-exports.extractTextAsStreams = async function(inputstream, filepath) {
-    for (const textExtractor of conf.text_extraction_plugins) {
-        const pluginThis = NEURANET_CONSTANTS.getPlugin(textExtractor); 
-        const extractedTextStream = await pluginThis.getContentStream(inputstream, filepath);
-        if (extractedTextStream) return extractedTextStream;
-    } 
-
-    throw new Error(`Unable to process the given file to extract the text.`);
+exports.extractTextAsStreams = function(inputstream, filepath) {
+    return new Promise(async (resolve, reject) => { // stream processing can throw errors midway, so promise is used
+        inputstream.on("error", error => 
+            reject(new Error(`Unable to process the given file to extract the text due to error ${error}`)));
+    
+        for (const textExtractor of conf.text_extraction_plugins) {
+            const pluginThis = NEURANET_CONSTANTS.getPlugin(textExtractor); 
+            try {
+                const extractedTextStream = await pluginThis.getContentStream(inputstream, filepath);
+                if (extractedTextStream) resolve(extractedTextStream);
+            } catch (err) {LOG.warn(`Error thrown by text extractin plugin ${textExtractor} for file ${filepath}, ignoring.`);}
+        } 
+    
+        reject(new Error(`Unable to process the given file to extract the text.`));
+    }); 
 }

@@ -446,9 +446,9 @@ span.button {
 
     <span class="button" onclick='event.preventDefault(); event.stopPropagation(); 
         this.parentNode.classList.remove("visible"); 
-        monkshu_env.components["file-manager"].updateFileEntryCommentIfModified("{{{path}}}", "{{{comment}}}", 
+        monkshu_env.components["file-manager"].updateFileEntryCommentIfModified(this, "{{{path}}}", "{{{comment}}}", 
             this.parentNode.querySelector("textarea#filecomments")?.value)'>{{i18n.Close}}</span>
 <%={{ }}=%> -->
 </template>
 
-<dialog-box id="dialogfm"></dialog-box>
+<dialog-box id="fmdialog"></dialog-box>

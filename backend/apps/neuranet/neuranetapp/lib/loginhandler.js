@@ -7,7 +7,6 @@ const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
 const register = require(`${LOGINAPP_CONSTANTS.API_DIR}/register.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
-const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 
 exports.initSync = _ => {
     login.addLoginListener(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`, "viewInjector");
@@ -17,12 +16,15 @@ exports.initSync = _ => {
 exports.viewInjector = async function(result) {
     if (result.tokenflag) try {     // add in all AI apps the user has access to
         try {
-            const aiapps = await dblayer.getAllAIAppsForOrg(result.org), aiappsForUser = [];
+            const aiapps = (await aiapp.getAllAIAppsForOrg(result.id, result.org, true))||[], aiappsForUser = [];
+            if (aiapps.length == 0) aiapps.push({aiappid: NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP});   // use default app if none found
             for (const aiappThis of aiapps) {
-                const aiappObject = await aiapp.getAIApp(result.id, result.org, aiappThis.aiappid),
-                    usersThisApp = aiappObject?aiappObject.users:[];
+                const aiappObject = await aiapp.getAIApp(result.id, result.org, aiappThis.id),
+                    usersThisApp = aiappObject?aiappObject.users:[], adminsThisApp = aiappObject?aiappObject.admins:[];
                 if (usersThisApp.includes('*') || usersThisApp.some(id => id.toLowerCase() == result.id.toLowerCase()))
-                    aiappsForUser.push({id: aiappObject.id, interface: aiappObject.interface, endpoint: aiappObject.endpoint});
+                    aiappsForUser.push({id: aiappObject.id, interface: aiappObject.interface, 
+                        endpoint: aiappObject.endpoint, 
+                        is_user_appadmin: adminsThisApp.some(id => id.toLowerCase() == result.id.toLowerCase())});
             }
             result.apps = aiappsForUser; 
         } catch(err) {

@@ -1,0 +1,118 @@
+<style>
+div#body {
+    padding: 0em 3em 3em 3em;
+    height: 100%;
+    width: 100%;
+    overflow: auto;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+input {
+    border: 1px solid #37acee;
+    border-radius: 0.5em;
+    padding: 0.5em;
+    outline: none;
+}
+
+span#header {
+    margin-bottom: 1em;
+    font-size: 0.9em;
+    color: #0086d1;
+}
+
+span#results {
+    margin-top: 1em;
+    white-space: pre-line;
+    font-family: monospace;
+    color: #0086d1;
+    overflow: auto;
+}
+
+
+div#filecontainer {
+    border: 1px solid #03B3FF;
+    flex-grow: 1;
+    margin: 0em 3em 3em 0em;
+    border-radius: 0.5em;
+    overflow: hidden;
+    box-sizing: border-box;
+    display: flex;
+    flex-flow: column;
+}
+
+span#filecontainerheader{
+    display: flex;
+    flex-flow: row;
+    justify-content: space-between;
+    padding: 0.5em 1em;
+    user-select: none;
+}
+span#collapser {display: inline-flex;}
+span#expander {
+    display: none;
+    width: 100%;
+    text-align: center;
+}
+div#verticalheader {
+    color: #03B3FF;
+    letter-spacing: 0.2em;
+    font-size: larger;
+    writing-mode: vertical-lr;
+    display: none;
+    height: 100%;
+    justify-content: space-around;
+    align-items: center;
+    user-select: none;
+}
+
+file-manager#fm {
+    padding: 0em 1em;
+    display: block;
+    height: calc(100% - 3em);
+}
+</style>
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_START}}}
+div#filecontainer {
+    width: calc(100% - 1em);
+    height: calc(100% - 6em);
+    margin: 4em 0.5em 2em 0.5em;
+    flex-grow: 0;
+}
+span#collapser {display: none; ismobile: true}
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_END}}}
+
+<div id="body">
+<span id="header">Twinblue Search</span>
+<input placeholder="Search" onkeypress="if(event.key === 'Enter') monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].search_main.search(this.value)">
+<div id="container">
+<span id="results"></span>
+<div id="filecontainer">
+    <span id="filecontainerheader">
+        <span id="filecontainerheaderlabel">{{i18n.EnterpriseAssist_KnowledgeBase}}</span>
+        <span id="collapser" onclick="this.parentNode.parentNode.style.width='4em';
+            this.parentNode.parentNode.querySelector('#fm').style.display='none';
+            this.parentNode.parentNode.style.flexGrow=0; 
+            this.parentNode.parentNode.parentNode.querySelector('#enterpriseassistant').style.flexGrow=1;
+            this.parentNode.parentNode.querySelector('#filecontainerheaderlabel').style.display='none';
+            this.style.display='none';
+            this.parentNode.querySelector('#expander').style.display='inline';
+            this.parentNode.parentNode.querySelector('#verticalheader').style.display='flex'">&gt;&gt;&gt;</span>
+        
+        <span id="expander" onclick="this.parentNode.parentNode.style.width='auto';
+            this.parentNode.parentNode.querySelector('#fm').style.display='block';
+            this.parentNode.parentNode.style.flexGrow=1; 
+            this.parentNode.parentNode.parentNode.querySelector('#enterpriseassistant').style.flexGrow=0;
+            this.parentNode.parentNode.querySelector('#filecontainerheaderlabel').style.display='inline';
+            this.style.display='none';
+            this.parentNode.querySelector('#collapser').style.display='inline';
+            this.parentNode.parentNode.querySelector('#verticalheader').style.display='none'">&lt;&lt;&lt;</span>
+    </span>
+    <file-manager id="fm" disable="sharefile,copy,cut,paste,hr2" iconsize="3em" fontsize="smaller" 
+        padding="0em 0.5em 0.25em 0.5em" hidefolders="{{aiskipfolders_base64_json}}" extrainfo="{{{extrainfo_base64_json}}}"></file-manager>
+    <div id="verticalheader"><span>{{i18n.AIWorkshop_KnowledgeBase}}</span></span>
+</div>
+</div>
+</div>

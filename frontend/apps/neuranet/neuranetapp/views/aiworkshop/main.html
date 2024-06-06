@@ -30,6 +30,7 @@
         box-sizing: border-box;
         display: flex;
         justify-content: space-between;
+        box-sizing: border-box;
     }
 
     div#main {
@@ -44,14 +45,20 @@
         height: 100%;
         width: 40%;
         border-right: 1px solid #03B3FF;
+        overflow: auto;
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
     }
     div#mainright {
         background-color: aliceblue;
         height: 100%;
         flex-grow: 1;
+        padding: 1em;
+        box-sizing: border-box;
     }
 
-    div.brainicon {
+    div.aiappicon {
         border: 0.5px solid transparent;
         display: flex;
         flex-direction: column;
@@ -65,21 +72,24 @@
         padding: 1em;
         box-sizing: border-box;
     }
-    div.brainicon:hover {
+    div.aiappicon:hover, div.aiappicon.selected {
         border: 0.5px solid #C8CDD1;
         background-color: #FAFAFB;
         border-radius: 0.5em;
     }
-    div.brainicon img {
+    div.aiappicon img {
         width: 3.5em;
     }
-    div.brainicon span {
+    div.aiappicon span {
         width: 100%;
         text-overflow: ellipsis;
         white-space: nowrap;
         overflow: hidden;
-        height: 1em;
+        height: 1.2em;
         text-align: center;
+    }
+    div.aiappicon span#aiappid {
+        font-size: smaller;
     }
 
     span.button {
@@ -92,6 +102,9 @@
         padding: 0.5em;
         user-select: none;
     }
+
+    file-manager#fmaiapp {display: none;}
+    file-manager#fmaiapp.visible {display: block !important;}
 </style>
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_START}}}
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_END}}}
@@ -113,22 +126,28 @@ div#mainright {height: unset;}
     <div id="main">
         <div id="mainleft">
             {{#aiapps}}
-            <div class="brainicon" id="brain_tkmaiapp">
+            <div class="aiappicon" id="{{{id}}}" title="{{i18n.AIWorkshop_ClickAppToEdit}}"
+                    onclick="window.monkshu_env.apps.neuranetapp.aiworkshop_main.aiappSelected(this, '{{{id}}}')">
                 <img src="{{#interface.icon}}{{.}}{{/interface.icon}}{{^interface.icon}}{{{VIEW_PATH}}}/img/bot.svg{{/interface.icon}}">
-                <span>{{interface.label}}</span>
+                <span id="aiapplabel">{{interface.label}}</span>
+                <span id="aiappid">{{id}}</span>
             </div>
             {{/aiapps}}
         </div>
 
         <div id="mainright">
-            
+            <file-manager id="fmaiapp" disable="sharefile,copy,cut,paste,hr2" iconsize="3em" 
+                fontsize="smaller" padding="0em 0.5em 0.25em 0.5em" extrainfo="" 
+                genstats="true"></file-manager>
         </div>
     </div>
 
     <div id="bottombar">
-        <span class="button">New</span>
-        <span class="button">Delete</span>
-        <span class="button">Unpublish</span>
-        <span class="button">Publish</span>
+        <span class="button" onclick="window.monkshu_env.apps.neuranetapp.aiworkshop_main.newAIApp(this)">{{i18n.AIWorkshop_NewAIApp}}</span>
+        <span class="button" onclick="window.monkshu_env.apps.neuranetapp.aiworkshop_main.deleteAIApp(this)">{{i18n.AIWorkshop_DeleteAIApp}}</span>
+        <span class="button" onclick="window.monkshu_env.apps.neuranetapp.aiworkshop_main.unpublishAIApp(this)">{{i18n.AIWorkshop_UnpublishAIApp}}</span>
+        <span class="button" onclick="window.monkshu_env.apps.neuranetapp.aiworkshop_main.publishAIApp(this)">{{i18n.AIWorkshop_PublishAIApp}}</span>
     </div>
 </div>
+
+<dialog-box id="dialog"></dialog-box>

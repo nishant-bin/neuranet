@@ -22,7 +22,7 @@ async function generate(fileindexer, generatorDefinition) {
     chatModelDefinition = chatModelDefinition || {name: CHAT_MODEL_DEFAULT, model_overrides: {}};
     embeddingsModelDefinition = embeddingsModelDefinition || {name: EMBEDDINGS_MODEL_DEFAULT, model_overrides: {}};
 
-    let document = await fileindexer.getTextContents(generatorDefinition.encoding||"utf8");
+    let document; try {document = await fileindexer.getTextContents(generatorDefinition.encoding||"utf8")} catch (err) {LOG.error(`Error in extracting text from document due to ${err}`);}
     if (!document) {LOG.error(`File content extraction failed for ${fileindexer.filepath}.`); return {result: false};}
     document = document.replace(/\s*\n\s*/g, "\n").replace(/[ \t]+/g, " ");
 

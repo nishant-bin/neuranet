@@ -19,7 +19,7 @@ exports.doService = async (jsonReq, _, headers) => {
 			LOG.debug("Got share file request for path: " + jsonReq.path);
 
 			const fullpath = await cms.getFullPath(headers, jsonReq.path, jsonReq.extraInfo);
-			if (!await cms.isSecure(headers, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
+			if (!await cms.isSecure(headers, fullpath, jsonReq.extraInfo)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 			if (!await uploadfile.isFileConsistentOnDisk(fullpath)) {LOG.error(`Path is not consistent on the disk ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 
 			const expiry = Date.now()+((jsonReq.expiry||XBIN_CONSTANTS.CONF.DEFAULT_SHARED_FILE_EXPIRY)*86400000);	

@@ -33,6 +33,7 @@ const REASONS = llmflowrunner.REASONS, TEMP_MEM_TFIDF_ID = "_com_tekmonks_neuran
  *                          topK_tfidf TopK for TD-IDF search
  *                          cutoff_score_tfidf Cutoff score for TF-IDF
  *                          topK_vectors TopK for vector search
+ * 							autocorrect_query Default is true, set to false to turn off
  * @param {Object} _llmstepDefinition Not used, optional.
  * 
  * @returns The search returns array of {metadata, text} objects matching the 
@@ -42,34 +43,51 @@ const REASONS = llmflowrunner.REASONS, TEMP_MEM_TFIDF_ID = "_com_tekmonks_neuran
  */
 exports.search = async function(params, _llmstepDefinition) {
 	const id = params.id, org = params.org, query = params.query, aiModelObjectForSearch = {...params},
-		brainid = params.brainid;
+		brainids = params.bridges?Array.isArray(params.bridges)?params.bridges:[params.bridges]:[params.aiappid];
+	if (!aiModelObjectForSearch.autocorrect_query) aiModelObjectForSearch.autocorrect_query = true;
+	const autoCorrectQuery = params.request.autocorrect_query !== undefined ? params.request.autocorrect_query : aiModelObjectForSearch.autocorrect_query;
+	const topK = params.request.topk || aiModelObjectForSearch.topK_tfidf;
+	const cutoff_score_tfidf = params.request.cutoff_score_tfidf || aiModelObjectForSearch.cutoff_score_tfidf;
 
-    const tfidfDBs = await aidbfs.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainid);
+    const tfidfDBs = []; for (const brainidThis of brainids) tfidfDBs.push(...await aidbfs.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainidThis));
+	if (!tfidfDBs.length) {	// no TF.IDF DB worked or found
+		const errMsg = `Can't instantiate any TF.IDF DBs user ID ${id}. Giving up.`;
+		params.return_error(errMsg, REASONS.INTERNAL); return;
+	}
 	let tfidfScoredDocuments = []; 
 	for (const tfidfDB of tfidfDBs) { 
-		const searchResults = await tfidfDB.query(query, aiModelObjectForSearch.topK_tfidf, null, aiModelObjectForSearch.cutoff_score_tfidf);
+		const searchResults = await tfidfDB.query(query, topK, params.metadata_filter_function, cutoff_score_tfidf, 
+			undefined, undefined, autoCorrectQuery);
 		if (searchResults && searchResults.length) tfidfScoredDocuments.push(...searchResults);
-		else LOG.warn(`No TF.IDF search documents found for query ${query} for id ${id} org ${org} and brainid ${brainid}.`);
+		else LOG.warn(`No TF.IDF search documents found for query ${query} for id ${id} org ${org} and brainid ${brainids}.`);
 	}
-	if (tfidfScoredDocuments.length == 0) return [];	// no knowledge
+	if (tfidfScoredDocuments.length == 0) return _formatResults(params, []);	// no knowledge
 
 	// now we need to rerank these documents according to their TF score only (IDF is not material for this collection)
 	tfidfDBs[0].sortForTF(tfidfScoredDocuments); tfidfScoredDocuments = tfidfScoredDocuments.slice(0, 
-		(aiModelObjectForSearch.topK_tfidf < tfidfScoredDocuments.length ? aiModelObjectForSearch.topK_tfidf : tfidfScoredDocuments.length))
+		(topK < tfidfScoredDocuments.length ? topK : tfidfScoredDocuments.length))
 
 	const documentsToUseDocIDs = []; for (const tfidfScoredDoc of tfidfScoredDocuments) 
 		documentsToUseDocIDs.push(tfidfScoredDoc.metadata[NEURANET_CONSTANTS.NEURANET_DOCID]);
 	
-	let vectordbs; try { vectordbs = await aidbfs.getVectorDBsForIDAndOrgAndBrainID(id, org, brainid, 
-			NEURANET_CONSTANTS.CONF.multithreaded) } catch(err) { 
-		const errMsg = `Can't instantiate the vector DB for ID ${id} due to ${err}. Unable to continue.`;
-		LOG.error(errMsg); params.return_error(errMsg, REASONS.INTERNAL); return;
+	let vectordbs = []; for (const brainidThis of brainids) {
+		try {
+			vectordbs.push(...await aidbfs.getVectorDBsForIDAndOrgAndBrainID(id, org, brainidThis, undefined, 
+				NEURANET_CONSTANTS.CONF.multithreaded)) 
+		} catch (err) { 
+			const errMsg = `Can't instantiate the vector DB for brain ID ${brainidThis} user ID ${id} due to ${err}. Skipping this DB.`;
+			LOG.error(errMsg); continue;
+		}
+	} 
+	if (!vectordbs.length) {	// no vector DB worked or found
+		const errMsg = `Can't instantiate any vector DBs user ID ${id} due to ${err}. Giving up.`;
+		params.return_error(errMsg, REASONS.INTERNAL); return;
 	}
 	let vectorResults = [];
 	for (const vectordb of vectordbs) vectorResults.push(...await vectordb.query(	// just get all the vectors for these documents
 		undefined, undefined, undefined, metadata => documentsToUseDocIDs.includes(
 			metadata[NEURANET_CONSTANTS.NEURANET_DOCID])));
-	if ((!vectorResults) || (!vectorResults.length)) return [];
+	if ((!vectorResults) || (!vectorResults.length)) return _formatResults(params, []);	// no knowledge
 
 	// create an in-memory temporary TF.IDF DB to search for relevant document fragments
 	const tfidfDBInMem = await aitfidfdb.get_tfidf_db(TEMP_MEM_TFIDF_ID+Date.now(), NEURANET_CONSTANTS.NEURANET_DOCID, 
@@ -78,12 +96,21 @@ exports.search = async function(params, _llmstepDefinition) {
 		const uniqueID = (Date.now() + Math.random()).toString().split(".").join(""); vectorResult.metadata.__uniqueid = uniqueID;
 		const temporaryMetadata = {...(vectorResult.metadata)}; temporaryMetadata[NEURANET_CONSTANTS.NEURANET_DOCID]  = uniqueID;
 		await tfidfDBInMem.create(vectorResult.text, temporaryMetadata); } 
-	const tfidfVectors = await tfidfDBInMem.query(query, aiModelObjectForSearch.topK_tfidf, null, aiModelObjectForSearch.cutoff_score_tfidf), 
+	const topK_vectors = params.request.topk || aiModelObjectForSearch.topK_vectors;
+	const tfidfVectors = await tfidfDBInMem.query(query, topK, null, cutoff_score_tfidf), 
 		searchResultsAll = tfidfDBInMem.sortForTF(tfidfVectors), 
-		tfidfSearchResultsTopK = searchResultsAll.slice(0, aiModelObjectForSearch.topK_vectors);
+		tfidfSearchResultsTopK = searchResultsAll.slice(0, topK_vectors);
 	tfidfDBInMem.free_memory();
 
 	const searchResultsTopK = []; for (const tfidfSearchResultTopKThis of tfidfSearchResultsTopK) 
 		searchResultsTopK.push(...(vectorResults.filter(vectorResult => vectorResult.metadata.__uniqueid == tfidfSearchResultTopKThis.metadata.__uniqueid)));
-    return searchResultsTopK;
+    
+    return _formatResults(params, searchResultsTopK);
+}
+
+function _formatResults(params, searchResultsTopK) {
+	const searchResults = []; for (const searchResultTopKThis of searchResultsTopK) 
+		if (!params.request.llm_format) searchResults.push({text: searchResultTopKThis.text, metadata: searchResultTopKThis.metadata});
+		else searchResults.push(searchResultTopKThis.text);
+    return params.request.llm_format?searchResults.join("\n\n"):searchResults;
 }

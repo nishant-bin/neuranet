@@ -22,7 +22,7 @@ exports.canHandle = async fileindexer => {
 
     if (conf.skip_extensions.includes(path.extname(fileindexer.filepath).toLowerCase())) return false; 
 
-    return true;    // if told to pregen, then we can handle all files
+    return true;    // if enabled to pregen, then we can handle all files
 }
 
 /**
@@ -36,7 +36,7 @@ exports.ingest = async function(fileindexer) {
     const _informProgress = stepNum => _publishProgressEvent(fileindexer, stepNum, totalPregentSteps);
 
     await fileindexer.start(); 
-    let currentStep = 0; for (const [i, pregenStep] of pregenSteps.entries()) {
+    let currentStep = 0; for (const pregenStep of pregenSteps) {
         if (!await _condition_to_run_met(pregenStep)) continue;    // run only if condition is satisfied
         const pregenResult = await pregenStep.generate(fileindexer); _informProgress(++currentStep);
 
@@ -53,12 +53,19 @@ exports.ingest = async function(fileindexer) {
             else LOG.info(`Pregen succeeded at step ${pregenStep.label} in adding generated file ${pregenStep.cmspath}.`);
         } else LOG.error(`Pregen failed at step ${pregenStep.label} in generate for file ${pregenStep.cmspath}.`);
     }
-    const rootIndexerResult = await fileindexer.addFileToAI(); 
+
+    const aiappObject = await aiapp.getAIApp(fileindexer.id, fileindexer.org, fileindexer.aiappid), 
+        genfilesDir = aiappObject.generated_files_path;
+    const cmsGenTextFilePath = `${path.dirname(fileindexer.cmspath)}/${genfilesDir}/${path.basename(fileindexer.cmspath)}.txt`;
+    const rootComment = `Text for: ${path.basename(fileindexer.cmspath)}`;
+    const rootIndexerResultCMS = await fileindexer.addFileToCMSRepository(await fileindexer.getReadstream(), cmsGenTextFilePath, rootComment, true);  // save the extracted text as well
+    const rootIndexerResultAI = await fileindexer.addFileToAI(); 
     await fileindexer.end(); _informProgress(totalPregentSteps);
 
-    if (!rootIndexerResult.result) LOG.error(`Pregen failed at adding original file (AI DB ingestion failure) for file ${fileindexer.cmspath}.`);
-    else LOG.info(`Pregen succeeded at adding original file (AI DB ingestion) for file ${fileindexer.cmspath}.`);
-    return rootIndexerResult.result;
+    if (!rootIndexerResultCMS.result) LOG.error(`Pregen failed at adding original file for file ${fileindexer.cmspath}'s extracted text.`);
+    if (!rootIndexerResultAI.result) LOG.error(`Pregen failed at adding original file to AI ${fileindexer.cmspath}.`);
+    else LOG.info(`Pregen succeeded at adding original file for file ${fileindexer.cmspath}.`);
+    return rootIndexerResultAI.result;  // adding original file to AI is the the only important thing
 }
 
 /**
@@ -74,13 +81,17 @@ exports.uningest = async function(fileindexer) {
         const delGeneratedFileFromCMSResult = await fileindexer.deleteFileFromCMSRepository(pregenStep.cmspath, true);
         const stepIndexerResult = delGeneratedFileFromCMSResult ? await fileindexer.removeFileFromAI(pregenStep.cmspath) : {result: false};
         if (!stepIndexerResult.result) LOG.error(`Pregen removal failed at step ${pregenStep.label} in removing generated file ${pregenStep.cmspath}.`); 
-        else LOG.error(`Pregen removal succeeded at step ${pregenStep.label} in removing generated file ${pregenStep.cmspath}.`); 
+        else LOG.info(`Pregen removal succeeded at step ${pregenStep.label} in removing generated file ${pregenStep.cmspath}.`); 
     }
     
-    const rootIndexerResult = await fileindexer.removeFileFromAI(); await fileindexer.end();
-    if (!rootIndexerResult.result) LOG.error(`Pregen failed at removing original file (AI DB uningestion failure) ${fileindexer.cmspath}.`);
-    else LOG.info(`Pregen succeeded at removing original file (AI DB uningestion) ${fileindexer.cmspath}.`);
-    return rootIndexerResult.result;
+    const aiappObject = await aiapp.getAIApp(fileindexer.id, fileindexer.org, fileindexer.aiappid), 
+        genfilesDir = aiappObject.generated_files_path;    const cmsGenTextFilePath = `${path.dirname(fileindexer.cmspath)}/${genfilesDir}/${path.basename(fileindexer.cmspath)}.txt`;
+    const rootIndexerResultCMS = await fileindexer.deleteFileFromCMSRepository(cmsGenTextFilePath, true);  // remove the extracted text as well
+    const rootIndexerResultAI = await fileindexer.removeFileFromAI(); await fileindexer.end();
+    if (!rootIndexerResultCMS.result) LOG.error(`Pregen failed at removing original file ${fileindexer.cmspath}'s extracted text.`);
+    if (!rootIndexerResultAI.result) LOG.error(`Pregen failed at removing original file (AI DB uningestion failure) ${fileindexer.cmspath}.`);
+    else LOG.info(`Pregen succeeded at removing original file ${fileindexer.cmspath}.`);
+    return rootIndexerResultAI.result;  // removing original file from AI is the the only important thing
 }
 
 /**
@@ -100,9 +111,14 @@ exports.rename = async function(fileindexer) {
         if (!stepIndexerResult.result) LOG.error(`Pregen rename failed at step ${pregenStep.label} in rename generated file.`);
     }
 
-    const rootIndexerResult = await fileindexer.renameFileToAI();
-    await fileindexer.end(); if (!rootIndexerResult.result) LOG.error(`Pregen failed at renaming original file (AI DB rename failure).`);
-    return rootIndexerResult.result;
+    const aiappObject = await aiapp.getAIApp(fileindexer.id, fileindexer.org, fileindexer.aiappid), 
+        genfilesDir = aiappObject.generated_files_path;    const cmsGenTextFilePath = `${path.dirname(fileindexer.cmspath)}/${genfilesDir}/${path.basename(fileindexer.cmspath)}.txt`;
+    const cmsGenTextFilePathTo = `${path.dirname(fileindexer.cmspathTo)}/${genfilesDir}/${path.basename(fileindexer.cmspathTo)}.txt`;
+    const rootIndexerResultCMS = await fileindexer.renameFileFromCMSRepository(cmsGenTextFilePath, cmsGenTextFilePathTo, true);  // rename the extracted text as well
+    if (!rootIndexerResultCMS.result) LOG.error(`Pregen failed at renaming original file ${fileindexer.cmspath}'s extracted text.`);
+    const rootIndexerResultAI = await fileindexer.renameFileToAI();
+    await fileindexer.end(); if (!rootIndexerResultAI.result) LOG.error(`Pregen failed at renaming original file (AI DB rename failure).`);
+    return rootIndexerResultAI.result;  // renaming original file to AI is the the only important thing
 }
 
 async function _getPregenStepsAIApp(fileindexer) {

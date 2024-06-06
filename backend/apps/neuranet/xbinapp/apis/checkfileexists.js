@@ -16,7 +16,7 @@ exports.doService = async (jsonReq, _, headers) => {
     LOG.debug("Got checkfile request for path: " + jsonReq.path);
 
     const fullpath = await cms.getFullPath(headers, jsonReq.path, jsonReq.extraInfo);
-    if (!await cms.isSecure(headers, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
+    if (!await cms.isSecure(headers, fullpath, jsonReq.extraInfo)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 
     try {
         if (!(await uploadfile.isFileConsistentOnDisk(fullpath))) return CONSTANTS.FALSE_RESULT;

@@ -14,7 +14,7 @@ exports.doService = async (jsonReq, _, headers) => {
 
 	try {
 		const fullpath = await cms.getFullPath(headers, jsonReq.path, jsonReq.extraInfo);
-		if (!await cms.isSecure(headers, fullpath)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
+		if (!await cms.isSecure(headers, fullpath, jsonReq.extraInfo)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 
 		if (jsonReq.isDirectory && jsonReq.isDirectory != "false") 
 			await uploadfile.createFolder(headers, jsonReq.path, jsonReq.extraInfo);

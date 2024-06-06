@@ -38,10 +38,14 @@ exports.getAppID = async function(id, org, extraInfo) {
     return NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP; 
 }
 
+exports.getMetadata = extraInfo => extraInfo.metadata||{};
+
 exports.getDefaultAppIDForOrg = async function (org) {
     const orgSettings = await dblayer.getOrgSettings(org);
     return orgSettings.defaultapp || NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP;
 }
 
-exports.createExtraInfo = (id, org, aiappid, mode) => {return {id, org, aiappid, mode:
-    mode == NEURANET_CONSTANTS.AIAPPMODES.EDIT ? mode : NEURANET_CONSTANTS.AIAPPMODES.NORMAL}};
+exports.isAIAppBeingEdited = extraInfo => extraInfo.mode == NEURANET_CONSTANTS.AIAPPMODES.EDIT;
+
+exports.createExtraInfo = (id, org, aiappid, metadata, mode) => {return {id, org, metadata, aiappid, mode:
+    mode == NEURANET_CONSTANTS.AIAPPMODES.EDIT ? mode : NEURANET_CONSTANTS.AIAPPMODES.TRAIN}};

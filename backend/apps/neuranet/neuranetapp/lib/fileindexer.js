@@ -49,8 +49,8 @@ exports.initSync = _ => {
  * @param {string} cmspath The cms path at which to upload the file.
  * @param {string} comment The file's comment.
  * @param {object} extrainfo Extrainfo object associated with this upload.
- * @param {noaievent} boolean If true, the file is added to CMS without further AI processing 
- * @returns true on success or false on failure.
+ * @param {boolean} noaievent If true, the file is added to CMS without further AI processing 
+ * @returns {object} Returns result of the format {result: true|false} on success or on failure.
  */
 exports.addFileToCMSRepository = async function(id, org, contentsOrStream, cmspath, comment, extrainfo, noaievent=false) {
     const xbinResult = await uploadfile.uploadFile(id, org, contentsOrStream, cmspath, comment, extrainfo, noaievent);
@@ -100,6 +100,8 @@ async function _handleFileEvent(message) {
         blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED, 
             path: fullpath, result: result?result.result:false, subtype: type, id, org, cmspath, extraInfo});
     }
+
+    if (message.extraInfo && brainhandler.isAIAppBeingEdited(message.extraInfo)) return;  // we don't handle AI events for edit AI of apps
 
     // only the testing classes currently use NEURANET_CONSTANTS.EVENTS.* as they directly upload to the
     // Neuranet drive instead of CMS
@@ -191,7 +193,7 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
             const readStream = await textextractor.extractTextAsStreams(inputStream, pathToRead);
             return readStream;
         },
-        getReadstream: overridePath => this.getTextReadstream(overridePath),
+        getReadstream: function(overridePath) {return this.getTextReadstream(overridePath)},
         getTextContents: async function(encoding) {
             try {
                 const contents = await neuranetutils.readFullFile(await this.getTextReadstream(), encoding);
@@ -206,13 +208,13 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
         end: async function() { try {await aidbfs.flush(id, org, this.aiappid); return true;} catch (err) {
             LOG.error(`Error ending AI databases. The error is ${err}`); return false;} },
         //addfile, removefile, renamefile - all follow the same high level logic
-        addFileToAI: async function(cmsPathThisFile=this.cmspath, langFile=this.lang) {
+        addFileToAI: async function(cmsPathThisFile=this.cmspath, langFile=this.lang, metadata) {
             try {
                 const fullPath = await cms.getFullPath({xbin_id: id, xbin_org: org}, cmsPathThisFile, extraInfo);
                 
                 // update AI databases
                 const aiDBIngestResult = await aidbfs.ingestfile(fullPath, cmsPathThisFile, id, org, this.aiappid, 
-                    langFile, _=>this.getTextReadstream(fullPath));  // update AI databases
+                    langFile, _=>this.getTextReadstream(fullPath), metadata||brainhandler.getMetadata(this.extrainfo));  // update AI databases
                 if (aiDBIngestResult?.result) return CONSTANTS.TRUE_RESULT; else return CONSTANTS.FALSE_RESULT;
             } catch (err) {
                 LOG.error(`Error writing file ${cmsPathThisFile} for ID ${id} and org ${org} due to ${err}.`);

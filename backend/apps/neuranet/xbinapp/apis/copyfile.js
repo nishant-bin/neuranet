@@ -19,15 +19,16 @@ exports.doService = async (jsonReq, _, headers) => {
 
 	const _logCopy = (message, level="info") => LOG[level](`${message} Copy from is ${fromPath} and to is ${toPath}.`)
 
-	if (!await cms.isSecure(headers, fromPath)) {_logCopy("Path security validation failure in from.", "error"); return CONSTANTS.FALSE_RESULT;}
-	if (!await cms.isSecure(headers, toPath)) {_logCopy("Path security validation failure in to.", "error"); return CONSTANTS.FALSE_RESULT;}
+	if (!await cms.isSecure(headers, fromPath, jsonReq.extraInfo)) {_logCopy("Path security validation failure in from.", "error"); return CONSTANTS.FALSE_RESULT;}
+	if (!await cms.isSecure(headers, toPath, jsonReq.extraInfo)) {_logCopy("Path security validation failure in to.", "error"); return CONSTANTS.FALSE_RESULT;}
 	if (fromPath == toPath) {	// sanity check
 		_logCopy("Copy requested from and to the same file paths. Ignoring.", "warn"); return CONSTANTS.TRUE_RESULT; }
 	if (_copyRequestedToItsOwnSubdirectory(fromPath, toPath)) {_logCopy("Can't copy a directory to inside itself.", "error"); return CONSTANTS.FALSE_RESULT;}
 
 	try { 
 		const stats = await uploadfile.getFileStats(fromPath); 
-		if (!(await quotas.checkQuota(headers, stats.size)).result) {LOG.error("Quota is full write failed."); return;}
+		if (!(await quotas.checkQuota(headers, jsonReq.extraInfo, stats.size)).result) {
+			LOG.error("Quota is full write failed."); return;}
 		
 		await utils.copyFileOrFolder(fromPath, toPath, async (_from, to, relativePath) => {
 			if (!uploadfile.isMetaDataFile(to)) {	// not a metadata file

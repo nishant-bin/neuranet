@@ -92,10 +92,10 @@ exports.setOrgSettings = async function(org, settings) {
 	return result;
 }
 
-exports.getAllAIAppsForOrg = async function(org) {
-	const query = "SELECT * FROM aiapps WHERE org=? COLLATE NOCASE";
+exports.getAllAIAppsForOrg = async function(org, status) {
+	const query = status?"SELECT * FROM aiapps WHERE org=? COLLATE NOCASE AND status=?" : "SELECT * FROM aiapps WHERE org=? COLLATE NOCASE";
 	
-	const aiapps = await db.getQuery(query, [org]);
+	const aiapps = await db.getQuery(query, status?[org, status]:[org]);
 	if ((!aiapps) || (!aiapps.length)) {
 		LOG.warn(`No ai apps found for org ${org}.`);
 		return [];
@@ -112,10 +112,10 @@ exports.getAIAppForOrg = async function(org, aiappid) {
 	} else return aiapps[0];
 }
 
-exports.addOrUpdateAIAppForOrg = async function(org, aiappid, status, users) {
-	const query = "REPLACE INTO aiapps (id, org, aiappid, users, status) values (?,?,?,?,?)";
+exports.addOrUpdateAIAppForOrg = async function(org, aiappid, status) {
+	const query = "REPLACE INTO aiapps (id, org, aiappid, status) values (?,?,?,?)";
 	
-	const result = await db.runCmd(query, [`${org.toLowerCase()}_${aiappid.toLowerCase()}`, org, aiappid, users, status]);
+	const result = await db.runCmd(query, [`${org.toLowerCase()}_${aiappid.toLowerCase()}`, org, aiappid, status]);
 	return result;
 }
 

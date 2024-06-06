@@ -28,7 +28,7 @@ const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT:
 	MODEL_DEFAULT = "embedding-openai-ada002", UNKNOWN_ORG = "unknownorg";
 
 /**
- * Ingests the given file into the AI DBs.
+ * Ingests the given file into the AI DBs. It must be a simple text file.
  * @param {string} pathIn The path to the file
  * @param {string} referencelink The reference link for the document
  * @param {string} id The user ID
@@ -36,9 +36,10 @@ const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT:
  * @param {string} brainid The brain ID
  * @param {string} lang The language to use to ingest. If omitted will be autodetected.
  * @param {object} streamGenerator A read stream generator for this file, if available, else null. Must be a text stream.
+ * @param {object} metadata The file's associated metadata, or null
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
  */
-async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamGenerator) {
+async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamGenerator, metadata={}) {
     LOG.info(`AI DB FS ingestion of file ${pathIn} for ID ${id} and org ${org} started.`);
     if (!(await quota.checkQuota(id, org))) {
 		LOG.error(`Disallowing the ingest call for the path ${pathIn}, as the user ${id} of org ${org} is over their quota.`);
@@ -57,9 +58,9 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
-    const metadata = {id, date_created: Date.now(), fullpath: pathIn}; 
-    metadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(pathIn); 
-    metadata[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY] = encodeURI(referencelink||_getDocID(pathIn));
+    const metadataFinal = {...metadata, id, date_created: Date.now(), fullpath: pathIn}; 
+    metadataFinal[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(pathIn); 
+    metadataFinal[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY] = encodeURI(referencelink||_getDocID(pathIn));
 
     const _getExtractedTextStream = _ => streamGenerator ? streamGenerator() : fs.createReadStream(pathIn);
 
@@ -67,7 +68,7 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
     const tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid); 
     try {        
         LOG.info(`Starting text extraction and TFIDF ingestion of file ${pathIn}.`);
-        await tfidfDB.createStream(await _getExtractedTextStream(), metadata);
+        await tfidfDB.createStream(await _getExtractedTextStream(), metadataFinal);
         LOG.info(`Ended text extraction and TFIDF ingestion of file ${pathIn}.`);
     } catch (err) {
         LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
@@ -79,10 +80,10 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
 	try { 
         const chunkSize = aiModelObjectForEmbeddings.vector_chunk_size[lang] || aiModelObjectForEmbeddings.vector_chunk_size["*"],
             split_separators = aiModelObjectForEmbeddings.split_separators[lang] || aiModelObjectForEmbeddings.split_separators["*"];
-        await vectordb.ingeststream(metadata, await _getExtractedTextStream(), aiModelObjectForEmbeddings.encoding, 
+        await vectordb.ingeststream(metadataFinal, await _getExtractedTextStream(), aiModelObjectForEmbeddings.encoding, 
             chunkSize, split_separators, aiModelObjectForEmbeddings.overlap);
     } catch (err) { 
-        tfidfDB.delete(metadata);   // delete the file from tf.idf DB too to keep them in sync
+        tfidfDB.delete(metadataFinal);   // delete the file from tf.idf DB too to keep them in sync
         LOG.error(`Vector ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
         return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
     }
