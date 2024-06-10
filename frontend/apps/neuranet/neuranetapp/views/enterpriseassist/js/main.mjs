@@ -12,7 +12,7 @@ import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
 const API_GET_EVENTS = "events";
 
-let chatsessionID;
+let chatsessionID, VIEW_PATH;
 
 function initView(data) {
     const loginresponse = session.get(APP_CONSTANTS.LOGIN_RESPONSE), 
@@ -20,7 +20,8 @@ function initView(data) {
     LOG.info(`The login response object is ${JSON.stringify(loginresponse)}`);
     window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {
         ...(window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME]||{}), enterprise_assist_main: main}; 
-    data.VIEW_PATH = data.view_path;
+    data.VIEW_PATH = data.viewpath;
+    VIEW_PATH = data.viewpath;
     data.show_ai_training = isAdmin;
     data.collapse_ai_training = false;
     data.extrainfo = {id: session.get(APP_CONSTANTS.USERID).toString(), 
