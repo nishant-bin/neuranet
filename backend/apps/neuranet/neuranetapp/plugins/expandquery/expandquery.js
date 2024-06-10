@@ -39,7 +39,7 @@ const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-
  * @returns {string} The expanded query or the original query if the expansion failed.
  */
 exports.expand = async (params) => {
-	const id = params.id, org = params.org, session_id = params.session_id, query_in = params.query, brainid = params.brainid;
+	const id = params.id, org = params.org, session_id = params.session_id, query_in = params.query, brainid = params.brainid||params.aiappid;
 
 	LOG.debug(`Got query expansion for query ${query_in} from ID ${id} of org ${org}.`);
 

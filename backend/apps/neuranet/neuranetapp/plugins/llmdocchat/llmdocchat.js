@@ -56,7 +56,7 @@ const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-
  * 					                 to the exact document
  */
 exports.answer = async (params) => {
-	const id = params.id, org = params.org, session_id = params.session_id, brainid = params.brainid;
+	const id = params.id, org = params.org, session_id = params.session_id, brainid = params.brainid||params.aiappid;
 
 	LOG.debug(`Got LLM_History chat request from ID ${id} of org ${org}. Incoming params are ${JSON.stringify(params)}`);
 
