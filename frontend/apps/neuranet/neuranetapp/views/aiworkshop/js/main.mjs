@@ -26,17 +26,19 @@ async function initView(data, neuranetappIn) {
     const aiAppsResult = await apiman.rest(`${APP_CONSTANTS.API_PATH}/${API_GET_AIAPPS}`, "GET", {id, org, unpublished: true}, true);
     data.aiapps = aiAppsResult.result ? aiAppsResult.aiapps : [];
     allAIApps = data.aiapps;
-    data.extrainfo = {id: session.get(APP_CONSTANTS.USERID).toString(), 
-        org: session.get(APP_CONSTANTS.USERORG).toString(), aiappid: data.activeaiapp.id, mode: "editaiapp"};
-    data.extrainfo_base64_json = util.stringToBase64(JSON.stringify(data.extrainfo));
 }
 
-function aiappSelected(divAIApp, aiappid) {
+async function aiappSelected(divAIApp, aiappid) {
     const fileManager = document.querySelector("file-manager#fmaiapp"); divAIApp.classList.toggle('selected'); 
+    const titleDiv = document.querySelector("div#header");
+    
 
     if (!divAIApp.classList.contains('selected')) {  // was deselected, nothing open
         fileManager.classList.remove("visible"); selectedAIAppID = undefined; 
+        titleDiv.innerHTML = await i18n.get("AIWorkshop_Title");
     } else {
+        titleDiv.innerHTML = `${await i18n.get("AIWorkshop_Title")} - ${(await router.getMustache()).render(
+            await i18n.get("AIWorkshop_Subtitle_EditApp"), {aiappid})}`;
         for (const divAIApp of document.querySelectorAll("div.aiappicon")) divAIApp.classList.remove("selected");
         divAIApp.classList.add('selected'); // coming here means it was selected
 
@@ -94,6 +96,22 @@ async function unpublishAIApp() {
     else _showError(await i18n.get("AIWorkshop_AIAppGenericError"));
 }
 
+async function trainAIApp() {
+    if (!selectedAIAppID) return;  // nothing selected
+
+    const fileManager = document.querySelector("file-manager#fmaiapp"); 
+    const titleDiv = document.querySelector("div#header");
+    titleDiv.innerHTML = `${await i18n.get("AIWorkshop_Title")} - ${(await router.getMustache()).render(
+        await i18n.get("AIWorkshop_Subtitle_TrainApp"), {aiappid: selectedAIAppID})}`;
+
+    // now point the file selector's CMS root to this app
+    const extrainfo = {id: session.get(APP_CONSTANTS.USERID).toString(), 
+            org: session.get(APP_CONSTANTS.USERORG).toString(), aiappid: selectedAIAppID, mode: "trainaiapp"};
+    const extrainfo_base64_json = util.stringToBase64(JSON.stringify(extrainfo));
+    fileManager.setAttribute("extrainfo", extrainfo_base64_json);
+    monkshu_env.components["file-manager"].reload("fmaiapp");
+}
+
 async function _prompt(prompt) {
     const answer = await monkshu_env.components["dialog-box"].showDialog(
         `${VIEW_PATH}/dialogs/prompt.html`, true, true, {prompt}, DIALOG_ID, ["prompt"]);
@@ -104,4 +122,4 @@ async function _prompt(prompt) {
 const _showMessage = (message) => monkshu_env.components["dialog-box"].showMessage(message, DIALOG_ID);
 const _showError = (error) => _showMessage(error);
 
-export const main = {initView, aiappSelected, newAIApp, deleteAIApp, publishAIApp, unpublishAIApp};
+export const main = {initView, aiappSelected, newAIApp, deleteAIApp, publishAIApp, unpublishAIApp, trainAIApp};

@@ -4,25 +4,20 @@
  * (C) 2023 Tekmonks Corp.
  */
 
+import {util} from "/framework/js/util.mjs";
+import {router} from "/framework/js/router.mjs";
 import {session} from "/framework/js/session.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
-let activeaiapp;
+let activeaiapp, DIV_RESULT_TEMPLATE, MUSTACHE, VIEW_PATH;
 
-function initView(data) {
-    const isAdmin = data.activeaiapp.is_user_appadmin||session.get(APP_CONSTANTS.CURRENT_USERROLE).toString() == "admin";
+async function initView(data) {
     window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {
             ...(window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME]||{}), search_main: main}; 
-    data.VIEW_PATH = data.view_path;
-    data.show_ai_training = isAdmin;
-    data.collapse_ai_training = false;
-    data.extrainfo = {id: session.get(APP_CONSTANTS.USERID).toString(), 
-        org: session.get(APP_CONSTANTS.USERORG).toString(), aiappid: data.activeaiapp.id, mode: "trainaiapp"};
-    data.extrainfo_base64_json = util.stringToBase64(JSON.stringify(data.extrainfo));
-    data.shownotifications = {action: "monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].search_main.getNotifications()"};
-    data.aiskipfolders_base64_json = data.activeaiapp.interface.skippable_file_patterns?
-        util.stringToBase64(JSON.stringify(data.activeaiapp.interface.skippable_file_patterns)) : undefined;
-    activeaiapp = data.activeaiapp;
+    data.VIEW_PATH = data.viewpath;
+    activeaiapp = util.clone(data.activeaiapp);
+    MUSTACHE = await router.getMustache();
+    VIEW_PATH = data.viewpath;
 }
 
 async function getNotifications() {
@@ -47,7 +42,29 @@ async function search(searchText) {
     const request = {id, org, aiappid: activeaiapp.id, question: searchText, flow: "docsearch_flow"};
     const apiPath = `${APP_CONSTANTS.API_PATH}/${activeaiapp.endpoint}`;
     const queryResult = await apiman.rest(`${apiPath}`, "POST", request, true);
-    if (queryResult && queryResult.result) document.querySelector("span#results").innerText = JSON.stringify(queryResult, null, 2);
+    if (queryResult && queryResult.result) {
+        const resultsUIFormattedObject = _formatResults(queryResult.documents||[]);
+        const formattedHTMLResults = MUSTACHE.render(_getResultsTemplate(), resultsUIFormattedObject);
+        document.querySelector("div#results").innerHTML = formattedHTMLResults;
+    }
+}
+
+function _formatResults(documents) {
+    const formattedDocuments = [];
+    for (const document of documents) formattedDocuments.push({
+        resulticon: `${VIEW_PATH}/img/searchgeneric.svg`,
+        referencelink: document.metadata.referencelink,
+        title: document.metadata.referencelink,
+        textsnippet: document.text
+    });
+    return formattedDocuments;
+}
+
+function _getResultsTemplate() {
+    if (DIV_RESULT_TEMPLATE) return DIV_RESULT_TEMPLATE;
+    const resultsTemplate = document.querySelector("template#resultstemplate");
+    DIV_RESULT_TEMPLATE = resultsTemplate.innerHTML;
+    return DIV_RESULT_TEMPLATE;
 }
 
 export const main = {initView, getNotifications, search};

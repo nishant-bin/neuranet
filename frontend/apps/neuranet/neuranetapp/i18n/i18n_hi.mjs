@@ -40,7 +40,11 @@ export const i18n = {
 "EnterpriseAssist_AIError": "AI error in processing. Please reload the page to start a new assistant request.",
 "EnterpriseAssist_ResponseTemplate": "{{response}}\n\n<span id='aireferences' style='font-size: x-small;font-weight: 100;'>References\n{{#references}}{{.}}\n{{/references}}<span>",
 
+"AIWorkshop_Title": "AI Workshop",
+"AIWorkshop_Subtitle_EditApp": "Editing {{{aiappid}}}",
+"AIWorkshop_Subtitle_TrainApp": "Training {{{aiappid}}}",
 "AIWorkshop_NewAIApp": "New",
+"AIWorkshop_TrainAIApp": "Train",
 "AIWorkshop_DeleteAIApp": "Delete",
 "AIWorkshop_PublishAIApp": "Publish",
 "AIWorkshop_UnpublishAIApp": "Unpublish",
