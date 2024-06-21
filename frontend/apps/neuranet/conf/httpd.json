@@ -22,7 +22,10 @@
         "ignoreAfterMaxHits": 10
     },
     "httpdHeaders": {
-        "Cache-Control": "max-age=604800, must-revalidate, private"
+        "Cache-Control": "max-age=604800, must-revalidate, private",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "*",
+        "Access-Control-Allow-Methods": "OPTIONS,POST,GET"
     },
     "ssl": true,
     "sslKeyFile": "/Users/rvkapoor/Documents/Programs/source/etc/dnsip_privkey.pem",

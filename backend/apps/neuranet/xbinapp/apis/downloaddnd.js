@@ -8,7 +8,7 @@ const jwtTokenManager = require(`${CONSTANTS.LIBDIR}/apiregistry.js`).getExtensi
 
 exports.handleRawRequest = async (jsonReq, servObject, headers, url, _apiconf) => {
 	if (!validateRequest(jsonReq) ) {LOG.error("Validation failure."); _sendError(servObject, "Validation failure."); return;}
-	if (!jwtTokenManager.checkToken(jsonReq.auth)) {LOG.error("Validation failure, wrong AUTH."); _sendError(servObject, "Validation failure."); return;}
+	if (!await jwtTokenManager.checkToken(jsonReq.auth)) {LOG.error("Validation failure, wrong AUTH."); _sendError(servObject, "Validation failure."); return;}
 	
 	LOG.debug("Got DND downloadfile request for path: " + jsonReq.path);
 	const securid = getsecurid.getSecurID(jsonReq);

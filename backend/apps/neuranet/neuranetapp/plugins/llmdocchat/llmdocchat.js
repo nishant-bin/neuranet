@@ -6,7 +6,7 @@
  *  org - User's Org
  *  session_id - The session ID for a previous session if this is a continuation
  *  prompt - The chat prompt
- *  brainid - The brain ID
+ *  aiappid - The brain ID
  *  auto_summary - Set to true to reduce session size but can cause response errors
  *  <anything else> - Used to expand the prompt, including user's queries
  * 
@@ -56,7 +56,7 @@ const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-
  * 					                 to the exact document
  */
 exports.answer = async (params) => {
-	const id = params.id, org = params.org, session_id = params.session_id, brainid = params.brainid||params.aiappid;
+	const id = params.id, org = params.org, session_id = params.session_id, brainid = params.aiappid;
 
 	LOG.debug(`Got LLM_History chat request from ID ${id} of org ${org}. Incoming params are ${JSON.stringify(params)}`);
 
@@ -95,7 +95,7 @@ exports.answer = async (params) => {
 		if (params.matchers_for_reference_links && metadataThis[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY]) 
 				for (const matcher of params.matchers_for_reference_links) { 
 			let reflink = metadataThis[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY], match = reflink.match(new RegExp(matcher));
-			if (match) metadataThis[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY] = match[1];
+			if (match) metadataThis[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY] = match.slice(1).join("/");
 		}
 		metadatasForResponse.push(metadataThis) 
 	};

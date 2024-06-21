@@ -94,12 +94,13 @@ docsearch_flow:
       query: "{{{query}}}"                  # inbuilt variable contains the user's query
       metadata: null
       topK_tfidf: 3
-      cutoff_score_tfidf: 0.75
+      cutoff_score_tfidf_js: request.cutoff_score_tfidf || 0.40
       topK_vectors: 3
       min_distance_vectors: 0
       aiappid: "{{{aiappid}}}"  
       bridges_js: return (request.bridges||[aiappid])
-      metadata_filter_function: "{{{request.metadata_filter_function}}}"           
+      metadata_filter_function: "{{{request.metadata_filter_function}}}"
+      punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
     out: airesponse.documents
 
   - command: docvectorsearch.search         # if forced return true, else for non double-byte (cn and ja) return true
@@ -110,7 +111,7 @@ docsearch_flow:
     in: 
       query: "{{{query}}}"
       topK_tfidf: 3
-      cutoff_score_tfidf: 0.75
+      cutoff_score_tfidf_js: request.cutoff_score_tfidf || 0.40
       topK_vectors: 3
       min_distance_vectors: 0
       embeddings_model: 
@@ -120,6 +121,7 @@ docsearch_flow:
       aiappid: "{{{aiappid}}}"  
       bridges_js: return (request.bridges||[aiappid])
       metadata_filter_function: "{{{request.metadata_filter_function}}}"
+      punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
     out: airesponse.documents
 
 

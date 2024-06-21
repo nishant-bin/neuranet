@@ -323,10 +323,12 @@ exports.update = async (oldmetadata, newmetadata, db) => {
  * @param {number} cutoff_score The cutoff score relative to the top document. From 0 to 1.
  * @param {object} options An object with values below
  *                  {
- *                      ignoreCoord: Do not use coord scores, 
+ *                      ignore_coord: Do not use coord scores, true or false, 
  *                      filter_metadata_last: If set to true, then TD.IDF search is performed first, 
  *                                            then metadata filtering. Default is false,
- *                      max_coord_boost: Maximum boost from coord scores. Default is 10%.
+ *                      max_coord_boost: Maximum boost from coord scores. Default is 10%.,
+ *                      punish_verysmall_documents: If set to true then very small documents are punished 
+ *                                                  as their total information content may be small
  *                  }
  * @param {object} db The database to use
  * @param {string} lang The language for the query, if set to null it is auto-detected
@@ -351,20 +353,21 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
     for (const queryWord of queryWords) {const docHashesWithThisWord = db.iindex.getDocumentHashesForWord(queryWord); 
         for (const docHash of docHashesWithThisWord) if (!relevantDocs.includes(docHash)) relevantDocs.push(docHash)};
     for (const docHash of relevantDocs) {
-        const document = db.tfidfDocStore.data(docHash);
+        const document = db.tfidfDocStore.data(docHash); if (!document) {LOG.warn(`Document is null for hash ${docHash}, ignoring.`); continue;}
         if (filter_function && (!options.filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
+        const tfAdjustmentFactor = options.punish_verysmall_documents ? _getVerySmallDocumentPunishment(docHash, db) : 1;
 
         let scoreThisDoc = 0, tfScoreThisDoc = 0, queryWordsFoundInThisDoc = 0;
         for (const queryWord of queryWords) {
             if (!db.iindex.getWordObject(queryWord)) continue; // query word not found in the vocabulary
-            const tf = db.iindex.getWordCountForDocument(queryWord, docHash)/document.length, 
-                    idf = 1+Math.log10(db.tfidfDocStore.doclength()/(db.iindex.getCountOfDocumentsWithWord(queryWord)+1)), 
-                    tfidf = tf*idf;
-            tfScoreThisDoc += tf; scoreThisDoc += tfidf; if (tf) queryWordsFoundInThisDoc++;
+            const tf = db.iindex.getWordCountForDocument(queryWord, docHash)/document.length, tfAdusted = tf*tfAdjustmentFactor,
+                idf = 1+Math.log10(db.tfidfDocStore.doclength()/(db.iindex.getCountOfDocumentsWithWord(queryWord)+1)), 
+                tfidf = tfAdusted*idf;
+            tfScoreThisDoc += tfAdusted; scoreThisDoc += tfidf; if (tfAdusted) queryWordsFoundInThisDoc++;
         }
 
         const max_coord_boost = options.max_coord_boost||DEFAULT_MAX_COORD_BOOST, 
-        coordScore = (!options.ignoreCoord) ? 1+(max_coord_boost*queryWordsFoundInThisDoc/queryWords.length) : 1;
+        coordScore = (!options.ignore_coord) ? 1+(max_coord_boost*queryWordsFoundInThisDoc/queryWords.length) : 1;
         scoreThisDoc = scoreThisDoc*coordScore; // add in coord scoring
         scoredDocs.push({metadata: document.metadata, score: scoreThisDoc, coord_score: coordScore, tf_score: tfScoreThisDoc,
             tfidf_score: scoreThisDoc/coordScore, query_tokens_found: queryWordsFoundInThisDoc, total_query_tokens: queryWords.length}); 
@@ -438,6 +441,17 @@ function _getLangNormalizedWords(document, lang, db, autocorrect=false, fastSpli
     }
     LOG.info(`Ending getting normalized words for the document.`);
     return words;
+}
+
+function _getVerySmallDocumentPunishment(dochash, db) {
+    const thisDocLength = db.tfidfDocStore.data(dochash).length;
+    let totalDocLength = 0; for (const hash of db.tfidfDocStore.entries()) totalDocLength += db.tfidfDocStore.data(hash).length;
+    const averageDocLength = totalDocLength/db.tfidfDocStore.entries().length;
+    const cappedPercentThidDocLengthToAverageLength = Math.min(thisDocLength/averageDocLength,1);
+    const weightedDistanceOfThisDocLengthFromAverage = 1-cappedPercentThidDocLengthToAverageLength, 
+        squaredWeightedDistance = weightedDistanceOfThisDocLengthFromAverage**2;
+    const punishment = 1-squaredWeightedDistance;  // this function punishes very small documents hard, but decays quickly
+    return punishment;
 }
 
 const _getDocumentHashIndex = (metadata, db) => {

@@ -48,13 +48,15 @@ const REASONS = llmflowrunner.REASONS;
  */
 exports.search = async function(params, _llmstepDefinition) {
 	const id = params.id, org = params.org, query = params.query, aiModelObjectForSearch = {...params},
-		brainids = params.bridges?Array.isArray(params.bridges)?params.bridges:[params.bridges]:[params.aiappid], 
+		brainids = params.bridges ? (Array.isArray(params.bridges)?params.bridges:[params.bridges]) : [params.aiappid], 
 		primary_brain = params.aiappid, 
 		metadata_filter_function = params.metadata_filter_function ? new Function("metadata", params.metadata_filter_function) : undefined;
 	if (!aiModelObjectForSearch.autocorrect_query) aiModelObjectForSearch.autocorrect_query = true;
-	const autoCorrectQuery = params.request.autocorrect_query !== undefined ? params.request.autocorrect_query : aiModelObjectForSearch.autocorrect_query;
-	const topK = params.request.topk || aiModelObjectForSearch.topK_tfidf;
-	const cutoff_score_tfidf = params.request.cutoff_score_tfidf || aiModelObjectForSearch.cutoff_score_tfidf;
+	const autoCorrectQuery = params.autocorrect_query !== undefined ? params.autocorrect_query : aiModelObjectForSearch.autocorrect_query;
+	const topK_tfidf = params.topK_tfidf || aiModelObjectForSearch.topK_tfidf;
+	const cutoff_score_tfidf = params.cutoff_score_tfidf || aiModelObjectForSearch.cutoff_score_tfidf;
+	const tfidfSearchOptions = {punish_verysmall_documents: params.punish_verysmall_documents||false, 
+		ignore_coord: params.ignore_coord, max_coord_boost: params.max_coord_boost};
 
     const tfidfDBs = []; for (const brainidThis of brainids) tfidfDBs.push(...await aidbfs.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainidThis));
 	if (!tfidfDBs.length) {	// no TF.IDF DB worked or found
@@ -63,8 +65,8 @@ exports.search = async function(params, _llmstepDefinition) {
 	}
 	let tfidfScoredDocuments = []; 
 	for (const tfidfDB of tfidfDBs) { 
-		const searchResults = await tfidfDB.query(query, topK, metadata_filter_function, cutoff_score_tfidf, 
-			undefined, undefined, autoCorrectQuery);
+		const searchResults = await tfidfDB.query(query, topK_tfidf, metadata_filter_function, cutoff_score_tfidf, 
+			tfidfSearchOptions, undefined, autoCorrectQuery);
 		if (searchResults && searchResults.length) tfidfScoredDocuments.push(...searchResults);
 		else LOG.warn(`No TF.IDF search documents found for query ${query} for id ${id} org ${org} and brainid ${brainids}.`);
 	}
@@ -72,7 +74,7 @@ exports.search = async function(params, _llmstepDefinition) {
 
 	// now we need to rerank these documents according to their TF score only (IDF is not material for this collection)
 	tfidfDBs[0].sortForTF(tfidfScoredDocuments); tfidfScoredDocuments = tfidfScoredDocuments.slice(0, 
-		(topK < tfidfScoredDocuments.length ? topK : tfidfScoredDocuments.length))
+		(topK_tfidf < tfidfScoredDocuments.length ? topK_tfidf : tfidfScoredDocuments.length))
 
 	const documentsToUseDocIDs = []; for (const tfidfScoredDoc of tfidfScoredDocuments) 
 		documentsToUseDocIDs.push(tfidfScoredDoc.metadata[NEURANET_CONSTANTS.NEURANET_DOCID]);
@@ -103,8 +105,8 @@ exports.search = async function(params, _llmstepDefinition) {
 		const errMsg = `Can't instantiate any vector DBs user ID ${id} due to ${err}. Giving up.`;
 		params.return_error(errMsg, REASONS.INTERNAL); return;
 	}
-	let vectorResults = []; const topK_vectors = params.request.topk || aiModelObjectForSearch.topK_vectors;
-	const min_distance_vectors = params.request.min_distance_vectors || aiModelObjectForSearch.min_distance_vectors;
+	let vectorResults = []; const topK_vectors = params.topK_vectors || aiModelObjectForSearch.topK_vectors;
+	const min_distance_vectors = params.min_distance_vectors || aiModelObjectForSearch.min_distance_vectors;
 	for (const vectordb of vectordbs) vectorResults.push(...(await vectordb.query(vectorForUserPrompts, topK_vectors, 
 		min_distance_vectors, metadata => documentsToUseDocIDs.includes(metadata[NEURANET_CONSTANTS.NEURANET_DOCID]))));
 	if ((!vectorResults) || (!vectorResults.length)) {
