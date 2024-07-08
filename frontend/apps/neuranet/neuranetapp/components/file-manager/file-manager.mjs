@@ -652,14 +652,18 @@ const _updateQuotaBars = async (element, quotabarIDs) => {
 
 const _addExtraInfo = (req, hostOrElement) => {
    const incomingExtraInfo = _getHostAttribute(hostOrElement, "extrainfo"); if (!incomingExtraInfo) return req; 
-   try{req.extraInfo = JSON.parse(util.base64ToString(_getHostAttribute(hostOrElement, "extrainfo")));} catch (err) {
-      LOG.error(`Extrainfo ${_getHostAttribute(hostOrElement, "extrainfo")} is not proper.`); 
+   try{req.extraInfo = JSON.parse(util.base64ToString(incomingExtraInfo));} catch (err) {
+      LOG.error(`Extrainfo ${incomingExtraInfo} is not proper.`); 
    }
    return req;
 }
+
 const _getHostAttribute = (hostOrElement, attributeName) => {
-   const host = file_manager.getHostElementByContainedElement(hostOrElement);
-   const attrValue = host.getAttribute(attributeName); return attrValue;
+   try{const host = file_manager.getHostElementByContainedElement(hostOrElement);
+       const attrValue = host.getAttribute(attributeName); return attrValue;}catch(error){
+      LOG.error(`Failed to get host attribute value with ${hostOrElement}`);
+      return file_manager.getHostElementByID("fm").getAttribute(attributeName); // Forced to get the attribute value from the file manager element for the attributeName
+   }
 }
 
 export const file_manager = { trueWebComponentMode: true, elementConnected, elementRendered, handleClick, 
