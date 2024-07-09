@@ -43,7 +43,7 @@
 			"testDescription":"rename the file, and ask the queries" 
 		},
 		{
-			"aiindex": ["Technology Allocation.docx", "Technology Allocation.docx" ],
+			"aiindex": ["Technology Allocation.docx", "Technology Allocation.docx", true ],
 			"aisearch": ["Guidelines for Proper Care of the Laptop", "explain employee laptop & accessories"],
 			"testDescription":"Re-uploaded the  the file , and ask the queries"
 		},

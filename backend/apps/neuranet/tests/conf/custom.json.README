@@ -25,6 +25,7 @@ One can also create a new json file for testcases with the same convention and u
 1. argv[0] = testname ("custom" in this case) {required}
 2. argv[1] = CSV_Report_file_name (Ex: report.csv) {optional, if not provided use a default naming convention for file creation}.
 3. argv[2] = PATH_to_save_generated_CSV_Report (Ex: /home/deep/Download) {optional, generates the reports in the tests directory if not provifded}.
+Note that for the aiindex case you can also pass a boolean value at the end for asynchronous, it is false by-default and ingest documents in parallel without await.
 
 # Common Convention for All test Files:
 
@@ -34,8 +35,6 @@ One can also create a new json file for testcases with the same convention and u
 
 ## Note:
 For test files: {
-      test_nodesqlparser.js, 
-      test_sandox.js, 
       test_tfidftest.js, 
       test_vectoringest.js, 
       test_vectorsearch.js, 

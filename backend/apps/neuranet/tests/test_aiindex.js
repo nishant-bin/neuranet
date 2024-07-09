@@ -17,10 +17,10 @@ exports.runTestsAsync = async function(argv) {
         LOG.console(`Skipping AI DB index test case, not called.\n`)
         return;
     }
-    if (!argv[1]) {
-        LOG.console("Missing test file/s path/s.\n");
-        return;
-    } 
+
+    if (!argv[1]) { LOG.console("Missing test file/s path/s.\n"); return; }
+
+    let async = argv.pop(); if(typeof async!=='boolean') argv.push(async);
     const filesToTest = argv.slice(1).map(path => `${__dirname}/assets/${path}`);
 
     LOG.console(`Test case for AI DB indexing called to index the files ${filesToTest.join(", ")}.\n`);
@@ -42,10 +42,11 @@ exports.runTestsAsync = async function(argv) {
             data: base64FileData,
             id: TEST_ID, org: TEST_ORG, encoding: "base64", __forceDBFlush: true,
             aiappid: TEST_APP}; 
-        indexingPromises.push(indexFile(jsonReq));
+        if(!async) indexingPromises.push(indexFile(jsonReq));
+        else indexingPromises.push(await indexFile(jsonReq));
     }
 
-    await Promise.all(indexingPromises);    // wait for all files to finish
+    if(!async) await Promise.all(indexingPromises);    // wait for all files to finish
 
     setInterval(_=>{}, 1000);
     return finalResults === filesToTest.length;
