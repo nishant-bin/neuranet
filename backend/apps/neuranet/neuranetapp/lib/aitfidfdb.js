@@ -494,7 +494,7 @@ function _initBlackboardHooks() {
     }, blackboardOptions);
 
     blackboard.subscribe(TFIDFDB_DELETE_DOC_TOPIC, async msg => {
-        const {creation_data, hash} = msg;
+        const {creation_data, hash, iindex} = msg;
         const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
             creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
             creation_data.mem_only))._getRawDB();
