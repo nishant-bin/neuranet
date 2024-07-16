@@ -609,7 +609,7 @@ async function _setDBVectorObject(dbToFill, vectorObject, isBeingCreated=false, 
 async function _deleteDBVectorObject(dbToUse, hash, publish=true) {
     delete dbToUse.index[hash];
     dbToUse.modifiedts = Date.now();
-    const indexFileThisVector = await _getIndexFileForVector(dbToFill, hash, true);
+    const indexFileThisVector = await _getIndexFileForVector(dbToUse, hash, true);
     const textFileThisVector = await _get_db_index_text_file(dbToUse, hash);
 
     await memfs.unlinkIfExists(indexFileThisVector); await memfs.unlinkIfExists(textFileThisVector);
