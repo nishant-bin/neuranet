@@ -600,7 +600,7 @@ async function _setDBVectorObject(dbToFill, vectorObject, isBeingCreated=false, 
 
     dbToFill.index[vectorObject.hash] = vectorObject; dbToFill.memused += serverutils.objectMemSize(vectorObject);
 
-    if (publish) blackboard.publish(VECTORDB_ADD_VECTOR_TOPIC, {dbpath: dbToFill.dbpath,    // if not from blackboard then let other cluster memebers know
+    if (publish) blackboard.publish(VECTORDB_ADD_VECTOR_TOPIC, {dbpath: dbToFill.path,    // if not from blackboard then let other cluster memebers know
         metadata_docid_key: dbToFill[METADATA_DOCID_KEY], multithreaded: dbToFill.multithreaded, vectorObject});  
 
     _log_info(`Data added, now the memory used for vector database is ${dbToFill.memused} bytes.`, dbToFill.path);
@@ -610,10 +610,10 @@ async function _deleteDBVectorObject(dbToUse, hash, publish=true) {
     delete dbToUse.index[hash];
     dbToUse.modifiedts = Date.now();
     const indexFileThisVector = await _getIndexFileForVector(dbToUse, hash, true);
-    const textFileThisVector = await _get_db_index_text_file(dbToUse, hash);
+    const textFileThisVector = _get_db_index_text_file(dbToUse, hash);
 
     await memfs.unlinkIfExists(indexFileThisVector); await memfs.unlinkIfExists(textFileThisVector);
-    if (publish) blackboard.publish(VECTORDB_DELETE_VECTOR_TOPIC, {dbpath: dbToUse.dbpath, 
+    if (publish) blackboard.publish(VECTORDB_DELETE_VECTOR_TOPIC, {dbpath: dbToUse.path, 
         metadata_docid_key: dbToUse[METADATA_DOCID_KEY], multithreaded: dbToUse.multithreaded, hash});    
 }
 
@@ -628,7 +628,7 @@ function _initBlackboardHooks() {
             _log_warning(`Unable to locate database for blackboard add vector event. Trying to initialize.`, dbpath);
             await exports.initAsync(dbpath, metadata_docid_key, multithreaded);
         }
-        if (dbs[_get_db_index(dbpath)]) _setDBVectorObject(dbs[_get_db_index(dbpath)], vectorObject, false, false);
+        if (dbs[_get_db_index(dbpath)]) await _setDBVectorObject(dbs[_get_db_index(dbpath)], vectorObject, false, false);
         else _log_error(`Unable to set vector as database not found and init failed.`, dbpath);
     }, blackboardOptions);
 
