@@ -1,4 +1,6 @@
 {
     "autosave": true,
-    "autosave_frequency": 36000000
+    "autosave_frequency": 36000000,
+    "distributed": true,
+    "cluster_timeout": 500
 }

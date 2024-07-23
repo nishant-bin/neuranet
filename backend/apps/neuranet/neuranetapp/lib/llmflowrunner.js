@@ -30,9 +30,11 @@ exports.DEFAULT_LLM_FLOW = "llm_flow";
 exports.answer = async function(query, id, org, aiappid, request, flow_section=exports.DEFAULT_LLM_FLOW) {
     const working_memory = {
         __error: false, __error_message: "", __error_reason: exports.REASONS.OK, query, id, org, 
-        queryJSON: JSON.stringify(query), aiappid, request, return_error: function(message, reason, working_memory) {
+        aiappdir: aiapp.getAppDir(id, org, aiappid), queryJSON: JSON.stringify(query), aiappid, request, 
+        return_error: function(message, reason, working_memory) {
             working_memory.__error = true; working_memory.__error_message = message; LOG.error(message); 
-            working_memory.__error_reason = reason; }
+            working_memory.__error_reason = reason; 
+        }
     };
 
     let llmflowCommands; try {llmflowCommands = await aiapp.getAIAppObject(id, org, aiappid, flow_section)} catch (err) {
@@ -51,7 +53,9 @@ exports.answer = async function(query, id, org, aiappid, request, flow_section=e
         for (const [key, value] of Object.entries(llmflowCommandDefinition.in)) {
             if (key.endsWith(NOINFLATE)) callParams[aiapp.extractRawKeyName(key)] = value;
             else if (key.endsWith(JSCODE)) {
-                const thisvalue = await _runJSCode(value, working_memory);
+                const thisvalue = await _runJSCode(mustache.render(value.toString(), working_memory), {
+                    NEURANET_CONSTANTS, require: function() {
+                        const module = require(...arguments); return module}, ...working_memory});
                 callParams[aiapp.extractRawKeyName(key)] = thisvalue;
             } else callParams[key] = typeof value === "object" ? JSON.parse(
                 mustache.render(JSON.stringify(value), working_memory)) : typeof value === "string" ? 

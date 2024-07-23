@@ -50,7 +50,8 @@ exports.search = async function(params, _llmstepDefinition) {
 	const id = params.id, org = params.org, query = params.query, aiModelObjectForSearch = {...params},
 		brainids = params.bridges ? (Array.isArray(params.bridges)?params.bridges:[params.bridges]) : [params.aiappid], 
 		primary_brain = params.aiappid, 
-		metadata_filter_function = params.metadata_filter_function ? new Function("metadata", params.metadata_filter_function) : undefined;
+		metadata_filter_function = params.metadata_filter_function ? new Function("metadata", params.metadata_filter_function) : undefined,
+		final_sort_function = params.final_sort_function ? new Function("results", params.final_sort_function) : undefined;
 	if (!aiModelObjectForSearch.autocorrect_query) aiModelObjectForSearch.autocorrect_query = true;
 	const autoCorrectQuery = params.autocorrect_query !== undefined ? params.autocorrect_query : aiModelObjectForSearch.autocorrect_query;
 	const topK_tfidf = params.topK_tfidf || aiModelObjectForSearch.topK_tfidf;
@@ -71,10 +72,6 @@ exports.search = async function(params, _llmstepDefinition) {
 		else LOG.warn(`No TF.IDF search documents found for query ${query} for id ${id} org ${org} and brainid ${brainids}.`);
 	}
 	if (tfidfScoredDocuments.length == 0) return _formatResults(params, []);	// no knowledge
-
-	// now we need to rerank these documents according to their TF score only (IDF is not material for this collection)
-	tfidfDBs[0].sortForTF(tfidfScoredDocuments); tfidfScoredDocuments = tfidfScoredDocuments.slice(0, 
-		(topK_tfidf < tfidfScoredDocuments.length ? topK_tfidf : tfidfScoredDocuments.length))
 
 	const documentsToUseDocIDs = []; for (const tfidfScoredDoc of tfidfScoredDocuments) 
 		documentsToUseDocIDs.push(tfidfScoredDoc.metadata[NEURANET_CONSTANTS.NEURANET_DOCID]);
@@ -107,23 +104,39 @@ exports.search = async function(params, _llmstepDefinition) {
 	}
 	let vectorResults = []; const topK_vectors = params.topK_vectors || aiModelObjectForSearch.topK_vectors;
 	const min_distance_vectors = params.min_distance_vectors || aiModelObjectForSearch.min_distance_vectors;
-	for (const vectordb of vectordbs) vectorResults.push(...(await vectordb.query(vectorForUserPrompts, topK_vectors, 
+	for (const vectordb of vectordbs) vectorResults.push(...(await vectordb.query(vectorForUserPrompts, undefined, 
 		min_distance_vectors, metadata => documentsToUseDocIDs.includes(metadata[NEURANET_CONSTANTS.NEURANET_DOCID]))));
 	if ((!vectorResults) || (!vectorResults.length)) {
 		LOG.warn(`No vector search documents found for query ${query} for id ${id} org ${org} and brainid ${brainids}.`);
-		return _formatResults(params, [])
+		return _formatResults(params, []);
 	}
 
-	// slice the vectors after resorting as we combined DBs
-	vectordbs[0].sort(vectorResults); vectorResults = vectorResults.slice(0, 
-		(topK_vectors < vectorResults.length ? topK_vectors : vectorResults.length))
+	const _getTFIDFDocForDocID = id => {for (const tfidfScoredDoc of tfidfScoredDocuments) 
+		if (tfidfScoredDoc.metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == id) return tfidfScoredDoc; };
+	// slice the vectors after resorting as we combined DBs so results are unsorted
+	vectordbs[0].sort(vectorResults); for (const vectorResult of vectorResults) {	// infuse back td.idf metrics into the results
+		const tfIDFResultForThisVector = _getTFIDFDocForDocID(vectorResult.metadata[NEURANET_CONSTANTS.NEURANET_DOCID]);
+		if (tfIDFResultForThisVector) {
+			vectorResult.tfidf_scaled_score = tfIDFResultForThisVector.score;
+			vectorResult.coord_score = tfIDFResultForThisVector.coord_score;
+			vectorResult.tf_score = tfIDFResultForThisVector.tf_score; vectorResult.tfidf_score = tfIDFResultForThisVector.tfidf_score;
+			vectorResult.query_tokens_found = tfIDFResultForThisVector.query_tokens_found; 
+			vectorResult.total_query_tokens = tfIDFResultForThisVector.total_query_tokens;
+		}
+	}
+	if (final_sort_function) vectorResults = final_sort_function(vectorResults);
+
+	vectorResults = vectorResults.slice(0, 
+		(topK_vectors < vectorResults.length ? topK_vectors : vectorResults.length));
 	
 	return _formatResults(params, vectorResults);
 }
 
 function _formatResults(params, searchResultsTopK) {
-	const searchResults = []; for (const searchResultTopKThis of searchResultsTopK) 
-		if (!params.request.llm_format) searchResults.push({text: searchResultTopKThis.text, metadata: searchResultTopKThis.metadata});
+	const searchResults = []; for (const searchResultTopKThis of searchResultsTopK) {
+		const clonedResult = {...searchResultTopKThis}; delete clonedResult.vector;
+		if (!params.request.llm_format) searchResults.push(clonedResult);
 		else searchResults.push(searchResultTopKThis.text);
+	}
     return params.request.llm_format?searchResults.join("\n\n"):searchResults;
 }

@@ -49,7 +49,7 @@ exports.ingest = async function(fileindexer) {
                 await fileindexer.addFileToAI(pregenStep.cmspath, pregenResult.lang) : {result: false}; 
             _informProgress(++currentStep);
 
-            if (!indexResult.result) LOG.error(`Pregen failed at step ${pregenStep.label} in adding generated file ${pregenStep.cmspath}.`);
+            if (!indexResult) LOG.error(`Pregen failed at step ${pregenStep.label} in adding generated file ${pregenStep.cmspath}.`);
             else LOG.info(`Pregen succeeded at step ${pregenStep.label} in adding generated file ${pregenStep.cmspath}.`);
         } else LOG.error(`Pregen failed at step ${pregenStep.label} in generate for file ${pregenStep.cmspath}.`);
     }
@@ -62,10 +62,10 @@ exports.ingest = async function(fileindexer) {
     const rootIndexerResultAI = await fileindexer.addFileToAI(); 
     await fileindexer.end(); _informProgress(totalPregentSteps);
 
-    if (!rootIndexerResultCMS.result) LOG.error(`Pregen failed at adding original file for file ${fileindexer.cmspath}'s extracted text.`);
-    if (!rootIndexerResultAI.result) LOG.error(`Pregen failed at adding original file to AI ${fileindexer.cmspath}.`);
+    if (!rootIndexerResultCMS) LOG.error(`Pregen failed at adding original file for file ${fileindexer.cmspath}'s extracted text.`);
+    if (!rootIndexerResultAI) LOG.error(`Pregen failed at adding original file to AI ${fileindexer.cmspath}.`);
     else LOG.info(`Pregen succeeded at adding original file for file ${fileindexer.cmspath}.`);
-    return rootIndexerResultAI.result;  // adding original file to AI is the the only important thing
+    return rootIndexerResultAI;  // adding original file to AI is the the only important thing
 }
 
 /**

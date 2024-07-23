@@ -23,7 +23,7 @@ exports.runTestsAsync = async function(argv) {
     if(!argv[2]) { LOG.console("Missing test file Data.\n"); return; }
     const data = argv[2], cmsRelativePath = `${AI_UPLOAD_CMS_PATH}/${fileName}`;
     
-    LOG.console(`Test case for Creat File called to create the file ${fileName}.\n`);
+    LOG.console(`Test case for Create File called to create the file ${fileName}.\n`);
 
     const headers = { xbin_id: TEST_ID, xbin_org: TEST_ORG};
     let result = await createfile.doService({path: cmsRelativePath, isDirectory}, "", headers);

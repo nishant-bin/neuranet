@@ -2,7 +2,7 @@
 # match. The file documents rest of the commands and syntax.
 
 ---
-id: tkmaiapp                                # the AI application name / ID
+id: rssearchaiapp                           # the AI application name / ID
 interface:                                  # the interface details
   type: enterpriseassist                    # this is for the frontend can be chat, translate or search interfaces
   label: AI assistant                       # the label for the app icon on the UI
@@ -23,63 +23,63 @@ generated_files_path: _neuranet_generated
 pregen_flow: 
   - command: rephrasedoc.generate           # module and entry function can be used using module.entry
     in: 
-      label: Simplified
+      label: Decription
 
       prompt: |
-        Rephrase the document below in simple language in less than {{{words}}} words.
-        {{{fragment}}}
-      prompt_zh: |
-        用少于 {{{words}}} 个单词的简单语言重新表述以下文档。
+        The following is a fund document's classification. Generate text describing this fund in details including the risk of the fund, how does it diversify the risk, age profile of the recommended investors, the type of investments the fund makes, the currency it operates in, the type of market it invests in and other standard fund descriptive details. The generated text should contain the keywords from the classification where ever possible.
         {{{fragment}}}
       prompt_ja: |
-        以下の文書を {{{words}}} 語以内で簡単な言葉で言い換えてください。
-        {{{fragment}}}
-      prompt_hi: |
-        नीचे दिए गए दस्तावेज़ को सरल भाषा में {{{words}}} से कम शब्दों में दोबारा लिखें।
+        以下は、ファンドのリスク、リスクを分散する方法、推奨される投資家の年齢プロフィール、ファンドが行う投資の種類、運用通貨など、このファンドを詳細に説明するテキストを生成します。投資する市場の種類とその他の標準的なファンドの説明の詳細。生成されたテキストには、可能な限り分類のキーワードが含まれている必要があります。
         {{{fragment}}}
 
       models: 
         - name: simplellm-gpt35-turbo
           type: chat
-          model_overrides:                  # this allows us to override model params on a per AI app basis, can be a nested path e.g. driver.host if we are calling API at a different host name etc          
-            read_ai_response_from_samples: true
         - name: embedding-openai-ada002
           type: embeddings
-          model_overrides:                      
-            read_ai_response_from_samples: true
-      words_promptparam: 700
-      pregenfile_prefix: summary
+      pregenfile_prefix: description
       pregenfile_dir: _neuranet_generated
       pregenfile_ext: txt
       encoding: utf8
 
-  - command: rephrasedoc                    # entry function name is skipped as the default is generate anyways
+  - command: rephrasedoc.generate           # module and entry function can be used using module.entry
     in: 
-      label: Rephrased
+      label: Positioning
 
-      prompt: |                             # these can be prompt, prompt_docISOLanguage, prompt_fragment_fragmentISOLanguage
-        Infer the document and rephrase it in a more generic context that most people without expertise or knowledge can understand.
-        {{{fragment}}}
-      prompt_zh: |
-        文書を推測し、専門知識や知識を持たないほとんどの人が理解できる、より一般的な文脈で言い換えます。
+      prompt: |
+        The following is a fund document's classification. Generate text describing who should be buying this fund including their age group, risk tolerance and other characteristics.
         {{{fragment}}}
       prompt_ja: |
-        文書を推測し、専門知識や知識を持たないほとんどの人が理解できる、より一般的な文脈で言い換えます。
-        {{{fragment}}}
-      prompt_hi: |
-        दस्तावेज़ का अनुमान लगाएं और इसे अधिक सामान्य संदर्भ में दोबारा लिखें जिसे विशेषज्ञता या ज्ञान के बिना अधिकांश लोग समझ सकें।
+        以下はファンド文書の分類です。年齢層、リスク許容度、その他の特性を含め、誰がこのファンドを購入すべきかを説明するテキストを生成します。
         {{{fragment}}}
 
       models: 
         - name: simplellm-gpt35-turbo
           type: chat
-          model_overrides:                  # this allows us to override model params on a per AI app basis, can be a nested path e.g. driver.host if we are calling API at a different host name etc          
-            read_ai_response_from_samples: true
         - name: embedding-openai-ada002
           type: embeddings
-          model_overrides:                      
-            read_ai_response_from_samples: true
-      pregenfile_prefix: reworded
+      pregenfile_prefix: positioning
+      pregenfile_dir: _neuranet_generated
+      pregenfile_ext: txt
+      encoding: utf8
+
+  - command: rephrasedoc.generate           # module and entry function can be used using module.entry
+    in: 
+      label: Alternate
+
+      prompt: |
+        The following is a fund document's characteristics. Generate text with all possible alternate keywords for this document.
+        {{{fragment}}}
+      prompt_ja: |
+        以下は、ファンド文書の特性です。この文書のすべての代替キーワードを含むテキストを生成します。以下はファンド文書の特徴であり、誰がこのファンドを購入すべきかを説明するテキストを生成します。
+        {{{fragment}}}
+
+      models: 
+        - name: simplellm-gpt35-turbo
+          type: chat
+        - name: embedding-openai-ada002
+          type: embeddings
+      pregenfile_prefix: alternate
       pregenfile_dir: _neuranet_generated
       pregenfile_ext: txt
       encoding: utf8
@@ -91,91 +91,59 @@ llm_flow:
       query: "{{{query}}}"
       session_id: "{{{request.session_id}}}" # request is inbuilt variable contains user's request params
       aiappid: "{{{aiappid}}}"              # inbuilt variable contains the ai app ID
+      keywords_js: |
+        let lang = "en"; try { 
+          lang = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetect.js`).detect("{{{question}}}")||"en" 
+        } catch (err) {}; // lang remains as English in case of issues
+        try {return require(`{{{aiappdir}}}/keywords_${lang}.json`).join(", ");} catch (err) {
+          LOG.error(`Error in query expansion params - ${err}`); return ""; 
+        }
       model: 
         name: simplellm-gpt35-turbo
-        model_overrides: 
-          read_ai_response_from_samples: true
       prompt_noinflate: |
-        Given the following conversation and a question, rephrase the question to include all relevant keywords and context from the conversation.
-        Conversation:
-        {{#session}}
-        {{{role}}}: {{{content}}}
-        {{/session}}
+        Given the following keyword list and a question, rephrase the question to include all relevant keywords from the list.
+        Keyword list:
+        {{#keywords}}
+        {{.}}
+        {{/keywords}}
 
         Question: {{{question}}}
 
-        The standalone question is:
-      prompt_zh_noinflate: |
-        给定以下对话和问题，重新表述问题以包含对话中的所有相关关键字和上下文。
-        对话：
-        {{#session}}
-        {{{role}}}: {{{content}}}
-        {{/session}}
-
-        问题：{{{question}}}
-
-        独立的问题是：
+        The rephrased question is:
       prompt_ja_noinflate: |
-        次の会話と質問がある場合、会話の関連するキーワードとコンテキストをすべて含めて質問を言い換えます。
-        会話：
-        {{#session}}
-        {{{role}}}: {{{content}}}
-        {{/session}}
+        次のキーワード リストと質問が与えられた場合、リスト内のすべての関連キーワードを含めるように質問を言い換えます。
+        キーワードリスト:
+        {{#keywords}}
+        {{.}}
+        {{/keywords}}
 
         質問: {{{question}}}
 
-        独立した質問は次のとおりです:
-      prompt_hi_noinflate: |
-        निम्नलिखित वार्तालाप और एक प्रश्न को देखते हुए, वार्तालाप से सभी प्रासंगिक कीवर्ड और संदर्भ को शामिल करने के लिए प्रश्न को दोबारा लिखें।
-        बातचीत:
-        {{#session}}
-        {{{role}}}: {{{content}}}
-        {{/session}}
-
-        प्रश्न: {{{question}}
-
-        स्टैंडअलोन प्रश्न यह है:
+        言い換えた質問は次のとおりです。
     out: query
 
-  - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
-    condition_js: |
-      if (request.force_nonllm_search) return true;
-      const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang(queryJSON); if ((lang == "zh") || (lang == "ja")) return true; else return false;
-    in: 
-      query: "{{{query}}}"                  # inbuilt variable contains the user's query
-      topK_tfidf: 3
-      cutoff_score_tfidf_js: request.cutoff_score_tfidf || 0.40
-      topK_vectors: 3
-      min_distance_vectors: 0
-      aiappid: "{{{aiappid}}}"  
-      bridges_js: return (request.bridges||[aiappid])
-      metadata_filter_function: "{{{request.metadata_filter_function}}}"
-      punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
-    out: documentsfound
-
-  - command: docvectorsearch.search         # for all languages except Chinese and Japanese, the condition below 
-    condition_js: |
-      if (request.force_llm_search) return true;
-      const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang(queryJSON); if ((lang == "zh") || (lang == "ja")) return false; else return true;
+  - command: docvectorsearch.search         # ran when request desires llm search
     in: 
       query: "{{{query}}}"
-      topK_tfidf: 3
+      topK_tfidf: 100
       cutoff_score_tfidf_js: request.cutoff_score_tfidf || 0.40
-      topK_vectors: 3
+      topK_vectors: 10
       min_distance_vectors: 0
       embeddings_model: 
         name: embedding-openai-ada002
-        model_overrides:                    
-          read_ai_response_from_samples: true
       aiappid: "{{{aiappid}}}"  
       bridges_js: return (request.bridges||[aiappid])
       metadata_filter_function: "{{{request.metadata_filter_function}}}"
+      final_sort_function: |
+        results.sort((doc1, doc2) => doc1.similarity < doc2.similarity ? 1 : 
+          doc1.similarity > doc2.similarity ? -1 : 0);
+        return results;
       punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
-    out: documentsfound
+    out: airesponse.documents
 
   - command: llm_history_chat               # default function entry is answer so entry function name is skipped
+    condition_js: |
+      if (request.dochat) return true; else return false;
     in: 
       session_id: "{{{request.session_id}}}" 
       auto_summary: false                   # controls session auto-summary, setting to true will lead to random errors but shorter sessions        
@@ -197,18 +165,6 @@ llm_flow:
         {{/documents}}
 
         The answer is:
-      prompt_zh_noinflate: |                # means do not inflate this at the flow engine - the calling command will use it as is
-        仅使用下面提供的文件回答以下问题。
-        问题：
-        {{{question}}}
-
-        文件：
-        {{#documents}}
-        {{{content}}}
-
-        {{/documents}}
-
-        答案是：
       prompt_ja_noinflate: |                   
         以下に提供される文書のみを使用して、次の質問に答えてください。
         質問：
@@ -221,78 +177,23 @@ llm_flow:
         {{/documents}}
 
         答えは次のとおりです:
-      prompt_hi_noinflate: |                   # means do not inflate this at the flow engine - the calling command will use it as is
-        निम्नलिखित प्रश्न का उत्तर केवल नीचे दिए गए दस्तावेज़ों का उपयोग करके दें।
-        सवाल:
-        {{{question}}}
-
-        दस्तावेज़:
-        {{#documents}}
-        {{{content}}}
-
-        {{/documents}}
-
-        जवाब है:
       model: 
         name: chat-knowledgebase-gpt35-turbo
-        model_overrides: 
-          read_ai_response_from_samples: true
     out: airesponse                         # the final response must output to this property - airesponse for LLM flows
-
-
-docsearch_flow:
-  - command: doctfidfsearch.search          # if forced return true, else for double-byte (cn and ja) return true
-    condition_js: |
-      if (request.force_nonllm_search) return true; 
-      const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang(queryJSON); if ((lang == "zh") || (lang == "ja")) return true; else return false;
-    in: 
-      query: "{{{query}}}"                  # inbuilt variable contains the user's query
-      metadata: null
-      topK_tfidf: 3
-      cutoff_score_tfidf_js: request.cutoff_score_tfidf || 0.40
-      topK_vectors: 3
-      min_distance_vectors: 0
-      aiappid: "{{{aiappid}}}"  
-      bridges_js: return (request.bridges||[aiappid])
-      metadata_filter_function: "{{{request.metadata_filter_function}}}"
-      punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
-    out: airesponse.documents
-
-  - command: docvectorsearch.search         # if forced return true, else for non double-byte (cn and ja) return true
-    condition_js: |
-      if (request.force_llm_search) return true; 
-      const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang(queryJSON); if ((lang == "zh") || (lang == "ja")) return false; else return true;
-    in: 
-      query: "{{{query}}}"
-      topK_tfidf: 3
-      cutoff_score_tfidf_js: request.cutoff_score_tfidf || 0.40
-      topK_vectors: 3
-      min_distance_vectors: 0
-      embeddings_model: 
-        name: embedding-openai-ada002
-        model_overrides:                    
-          read_ai_response_from_samples: true
-      aiappid: "{{{aiappid}}}"  
-      bridges_js: return (request.bridges||[aiappid])
-      metadata_filter_function: "{{{request.metadata_filter_function}}}"
-      punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
-    out: airesponse.documents
-
 
 global_models:
   - name: embedding-openai-ada002
-    model_overrides:                    
-      read_ai_response_from_samples: true
+    model_overrides:         
+      request.model: text-embedding-3-large # better embedding model for non-English        
+      read_ai_response_from_samples: false
 
   - name: chat-knowledgebase-gpt35-turbo
     model_overrides:                    
-      read_ai_response_from_samples: true
+      read_ai_response_from_samples: false
 
   - name: simplellm-gpt35-turbo
     model_overrides:                    
-      read_ai_response_from_samples: true
+      read_ai_response_from_samples: false
 
 
 modules: 

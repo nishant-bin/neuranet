@@ -137,7 +137,7 @@ async function _ingestfile(pathIn, id, org, lang, extraInfo) {
         filePluginResult = await _searchForFilePlugin(indexer);
     if (filePluginResult.plugin) return {result: await filePluginResult.plugin.ingest(indexer)};
     if (filePluginResult.error) return {result: false, cause: "Plugin validation failed."}
-    else {const result = await indexer.addFileToAI(cmspath, lang); await indexer.end(); return result;}
+    else {const result = await indexer.addFileToAI(); await indexer.end(); return result;}
 }
 
 async function _uningestfile(pathIn, id, org, extraInfo) {
@@ -205,8 +205,9 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
         },
         getContents: async function(encoding) { return await this.getTextContents(encoding)},
         start: function(){},
-        end: async function() { try {await aidbfs.flush(id, org, this.aiappid); return true;} catch (err) {
-            LOG.error(`Error ending AI databases. The error is ${err}`); return false;} },
+        end: function(){},
+        flush: async function() { try {await aidbfs.flush(id, org, this.aiappid); return true;} catch (err) {
+            LOG.error(`Error flushing AI databases. The error is ${err}`); return false;} },
         //addfile, removefile, renamefile - all follow the same high level logic
         addFileToAI: async function(cmsPathThisFile=this.cmspath, langFile=this.lang, metadata) {
             try {
@@ -215,10 +216,10 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
                 // update AI databases
                 const aiDBIngestResult = await aidbfs.ingestfile(fullPath, cmsPathThisFile, id, org, this.aiappid, 
                     langFile, _=>this.getTextReadstream(fullPath), metadata||brainhandler.getMetadata(this.extrainfo));  // update AI databases
-                if (aiDBIngestResult?.result) return CONSTANTS.TRUE_RESULT; else return CONSTANTS.FALSE_RESULT;
+                if (aiDBIngestResult?.result) return true; else return false;
             } catch (err) {
                 LOG.error(`Error writing file ${cmsPathThisFile} for ID ${id} and org ${org} due to ${err}.`);
-                return CONSTANTS.FALSE_RESULT;
+                return false;
             }
         },
         removeFileFromAI: async function(cmsPathFile=this.cmspath) {

@@ -7,7 +7,7 @@
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const llmflow = require(`${NEURANET_CONSTANTS.APIDIR}/llmflow.js`);
 
-const TEST_ID = "test@tekmonks.com", TEST_ORG = "Tekmonks", TEST_APP = "tkmaiapp";
+const TEST_ID = "test@tekmonks.com", TEST_ORG = "Tekmonks", TEST_APP = require(`${__dirname}/conf/testing.json`).aiapp;
 
 exports.runTestsAsync = async function(argv) {
     if ((!argv[0]) || (argv[0].toLowerCase() != "aianswer")) {

@@ -1,0 +1,40 @@
+{
+    "type of security": {
+        "wordlist": [
+            "stocks", "bonds", "bank loans", "convertible bonds", "REIT", 
+            "real estate investment trust", "hybrid securities", "gold", "master limited partnership ", "mlp",
+            "crude oil"
+        ],
+        "minwords": 1,
+        "maxwords": 1
+    }, 
+    
+    "country":  {
+        "wordlist": [
+            "global", "japan", "domestic", "emerging market", "developed country", 
+            "north american", "turkey", "mexico", "india", "russia", "brazil", "indonesia", "south africa", 
+            "china", "australia", "new zealand", "latin america", "hong kong", "europe", "usa", "US", 
+            "united states of america", "asia", "southeast asia", "oceania", "canada"
+        ],
+        "minwords": 1,
+        "maxwords": 1
+    },
+    
+    "risk":  {
+        "wordlist": [
+            "hedged", "unhedged", "currency diverify", "exchange rate risk reduced ", "high rating", 
+            "low rating", "broad area", "medium risk", "high risk", "low risk", "balanced", "broad area", 
+            "wide area"
+        ],
+        "minwords": 1,
+        "maxwords": 1
+    },
+
+    "other":  {
+        "wordlist": [
+            "reduced allocation", "usd denominated", "multi-currency denominated", "small cap", "large cap"
+        ],
+        "minwords": 1,
+        "maxwords": 1
+    }
+}

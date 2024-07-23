@@ -66,7 +66,7 @@ exports.process = async function(data, promptOrPromptFile, apiKey, model, dontIn
 
     LOG.info(`Calling AI engine for request ${JSON.stringify(data)} and prompt ${JSON.stringify(prompt)}`);
     if (verboseLogging) LOG.info(`The prompt object for this call is ${JSON.stringify(promptObject)}.`);
-    if (modelObject.read_ai_response_from_samples) LOG.info("Reading sample response as requested by the model.");
+    if (modelObject.read_ai_response_from_samples) LOG.info("*************>> Reading sample response as requested by the model. <<*************");
 
     let response, retries = 0;
     const _postAIRequest = _ => rest.postHttps(modelObject.driver.host, modelObject.driver.port, 

@@ -7,7 +7,7 @@
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const llmflow = require(`${NEURANET_CONSTANTS.APIDIR}/llmflow.js`);
 
-const TEST_ID = "test@tekmonks.com", TEST_ORG = "Tekmonks", TEST_APP = "tkmaiapp";
+const TEST_ID = "test@tekmonks.com", TEST_ORG = "Tekmonks", TEST_APP = require(`${__dirname}/conf/testing.json`).aiapp;
 
 exports.runTestsAsync = async function(argv) {
     if ((!argv[0]) || (argv[0].toLowerCase() != "aisearch")) {
@@ -22,10 +22,10 @@ exports.runTestsAsync = async function(argv) {
     let responseCounts = 0; for (const query of queries) {
         LOG.console(`\nQuery: ${query}\n`);
         try{
-            const jsonReq = {id: TEST_ID, org: TEST_ORG, aiappid: TEST_APP, question: query, flow: "docsearch_flow"};
+            const jsonReq = {id: TEST_ID, org: TEST_ORG, aiappid: TEST_APP, question: query, flow: "llm_flow"};
             const queryResult = await llmflow.doService(jsonReq);
             if (((!queryResult) || (!queryResult.result))) {
-                LOG.console({result:false, err:queryResult.reason||"Search failed."}); }
+                LOG.console({result:false, err:queryResult.error||queryResult.reason||"Search failed."}); }
             else {
                 const output = "Results\n"+JSON.stringify(queryResult, null, 2); responseCounts++;
                 LOG.info(output); LOG.console(`${output}\n`);

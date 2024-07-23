@@ -68,8 +68,8 @@ const memfs = CONSTANTS?.LIBDIR ? require(`${CONSTANTS.LIBDIR}/memfs.js`) : fs.p
 
 const dbs = {}, DB_INDEX_NAME = "dbindex", METADATA_DOCID_KEY="aidbdocidkey", METADATA_DOCID_KEY_DEFAULT="aidb_docid",
     VECTORDB_ADD_VECTOR_TOPIC = "vectordb.adddoc", VECTORDB_DELETE_VECTOR_TOPIC = "vectordb.rmdoc",
-    DB_INDEX_OBJECT_TEMPLATE = {index:{}, modifiedts:Date.now(), savedts: 0, multithreaded: false, memused: 0, path: ""}, 
-    workers = [];
+    VECTORDB_QUERY_TOPIC = "vectordb.query", workers = [],
+    DB_INDEX_OBJECT_TEMPLATE = {index:{}, modifiedts:Date.now(), savedts: 0, multithreaded: false, memused: 0, path: ""};
 
 let dbs_worker, workers_initialized = false, blackboard_initialized = false;
 
@@ -153,12 +153,14 @@ exports.save_db = async (db_path_out, force) => {
     if ((db_to_save.modifiedts < db_to_save.savedts) && (!force)) return;  // no need
 
     try {
+        const memFSPromises = [];
         for (const indexHash of Object.keys(db_to_save.index)) {
             const vectorObject = _getDBVectorObject(db_to_save, indexHash);
             const ndjsonLine = JSON.stringify(vectorObject) + "\n";
             const indexFile = await _getIndexFileForVector(db_to_save, indexHash, true);
-            await memfs.appendFile(indexFile, ndjsonLine);
+            memFSPromises.push(memfs.appendFile(indexFile, ndjsonLine));
         }
+        await Promise.all(memFSPromises); await memfs.flush();
         db_to_save.savedts = Date.now();    
     } catch (err) {_log_error("Error saving the database index in save_db call", db_path_out, err);}
 }
@@ -194,7 +196,7 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
         
         try {await memfs.writeFile(_get_db_index_text_file(dbToUse, vectorHash), text||"", "utf8");}
         catch (err) {
-            _deleteDBVectorObject(dbToUse, hash);
+            _deleteDBVectorObject(dbToUse, vectorHash);
             _log_error(`Vector DB text file ${_get_db_index_text_file(dbToUse, vectorHash)} could not be saved`, db_path, err);
             return false;
         }
@@ -283,11 +285,20 @@ exports.delete = async (vector, metadata, db_path) => {
  * @returns An array of {vector, similarity, metadata, text} objects matching the results.
  */
 exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, db_path, 
-        filter_metadata_last, benchmarkIterations) {
+        filter_metadata_last, benchmarkIterations, _forceSingleNode) {
     const dbToUse = serverutils.clone(dbs[_get_db_index(db_path)]); _log_info(`Searching ${Object.values(dbToUse.index).length} vectors.`, db_path);
-    const _searchSimilarities = async _ => dbToUse.multithreaded ? await _search_multithreaded(db_path, 
-        vectorToFindSimilarTo, (!filter_metadata_last)?metadata_filter_function:undefined) : _search_singlethreaded(
-            dbToUse, vectorToFindSimilarTo, (!filter_metadata_last)?metadata_filter_function:undefined);
+    const _searchSimilarities = async _ => {
+        const similaritiesOtherReplicas = dbToUse.distributed && (!_forceSingleNode) ? await _getDistributedSimilarities(
+            {vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, db_path, filter_metadata_last, 
+                benchmarkIterations}) : [];
+        const similaritiesThisReplica = dbToUse.multithreaded ? await _search_multithreaded(
+                db_path, vectorToFindSimilarTo, (!filter_metadata_last)?metadata_filter_function:undefined) :
+            _search_singlethreaded(dbToUse, vectorToFindSimilarTo, 
+                (!filter_metadata_last)?metadata_filter_function:undefined);
+        const similaritiesFinal = [...similaritiesOtherReplicas, ...similaritiesThisReplica];
+        return similaritiesFinal;
+    }
+
     let similarities; if (benchmarkIterations) {
         _log_error(`Vector DB is in benchmarking mode. Performance will be affected. Iterations = ${benchmarkIterations}. DB index size = ${Object.values(dbToUse.index).length} vectors. Total simulated index size to be searched = ${parseInt(process.env.__ORG_MONKSHU_VECTORDB_BENCHMARK_ITERATIONS)*Object.values(dbToUse.index).length} vectors.`, db_path);
         for (let i = 0; i < benchmarkIterations; i++) similarities = await _searchSimilarities();
@@ -642,6 +653,23 @@ function _initBlackboardHooks() {
         if (dbs[_get_db_index(dbpath)]) _deleteDBVectorObject(dbs[_get_db_index(dbpath)], hash, false);
         else _log_error(`Unable to delete vector as database not found and init failed.`, dbpath);
     }, blackboardOptions);
+
+    blackboard.subscribe(VECTORDB_QUERY_TOPIC, async msg => {
+        const {query_params, blackboardcontrol} = msg;
+        const similarities = await exports.query(...query_params, true);
+        blackboard.sendReply(VECTORDB_QUERY_TOPIC, blackboardcontrol, {reply: similarities});
+    }, blackboardOptions);
+}
+
+function _getDistributedSimilarities(query_params) {
+    if (blackboard.getDistribuedClusterSize() == 0) return [];   // single node deployment
+
+    return new Promise(resolve => blackboard.getReply(VECTORDB_QUERY_TOPIC, {query_params}, 
+        conf.cluster_timeout, replies => {
+            const similarities = []; for (const similaritiesThisReplica of replies||[]) similarities.concat(similaritiesThisReplica);
+            resolve(similarities);
+        }
+    ));
 }
 
 const _log_warning = (message, db_path) => (global.LOG||console).warn(

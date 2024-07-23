@@ -39,7 +39,8 @@ const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-
  * @returns {string} The expanded query or the original query if the expansion failed.
  */
 exports.expand = async (params) => {
-	const id = params.id, org = params.org, session_id = params.session_id, query_in = params.query, brainid = params.brainid||params.aiappid;
+	const id = params.id, org = params.org, session_id = params.session_id, query_in = params.query, 
+		brainid = params.brainid||params.aiappid, forceExpansion = params.force_expansion;
 
 	LOG.debug(`Got query expansion for query ${query_in} from ID ${id} of org ${org}.`);
 
@@ -49,7 +50,7 @@ exports.expand = async (params) => {
 	}
 
 	const chatsession = llmchat.getUsersChatSession(id, session_id).chatsession;
-    if (!chatsession.length) {
+    if (!chatsession.length && (!forceExpansion)) {
         LOG.info(`Query expansion is returning the original query '${query_in}' due to no existing session for the user ${id} of org ${org}.`)
         return query_in;
     }
@@ -73,7 +74,7 @@ exports.expand = async (params) => {
 	let expandedQuery; if (finalSessionObject.length > 0) {
         expandedQuery = await simplellm.prompt_answer(
             params[`prompt_${languageDetectedForQuestion}`] || params.prompt, id, org, brainid,
-			{session: finalSessionObject, question: query_in}, aiModelObjectForChat);
+			{session: finalSessionObject, question: query_in, ...params}, aiModelObjectForChat);
 		if (!expandedQuery) LOG.error("Couldn't expand the query, continuing with the originial query.");
     }
 

@@ -42,7 +42,8 @@ const VOCABULARY_FILE="vocabulary", IINDEX_FILE="iindex", METADATA_DOCID_KEY="do
     METADATA_LANGID_KEY="langid.key", METADATA_DOCID_KEY_DEFAULT = "aidb_docid", METADATA_LANGID_KEY_DEFAULT = "aidb_langid", 
     MIN_STOP_WORD_IDENTIFICATION_LENGTH = 5, MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95, 
     DEFAULT_MAX_COORD_BOOST = 0.10, TFIDFDB_ADD_DOC_TOPIC = "tfidf.adddoc", TFIDFDB_DELETE_DOC_TOPIC = "tfidf.rmdoc",
-    TFIDFDB_UPDATE_DOC_TOPIC = "tfidf.updatedoc";
+    TFIDFDB_UPDATE_DOC_TOPIC = "tfidf.updatedoc", TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC = "tfidf.tfidfDocStore.doclength",
+    TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORD_TOPIC = "iindex.getCountOfDocumentsWithWord";
 const IN_MEM_DBS = {}; let blackboard_initialized = false;
 
 // international capable punctuation character regex from: https://stackoverflow.com/questions/7576945/javascript-regular-expression-for-punctuation-international
@@ -60,6 +61,7 @@ const SPLITTERS = new RegExp(/[\s,\.]+/), JP_SEGMENTER = jpsegmenter.getSegmente
  * @param {boolean} autosave Autosave the DB or not. Default is true.
  * @param {number} autosave_frequency The autosave frequency. Default is 500 ms. 
  * @param {boolean} mem_only If true, then the DB is in memory only. Default is false.
+ * @param {boolean} distributed If true, then the DB is distributed, else false
  * @return {object} The database object.
  */
 exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DEFAULT, 
@@ -96,6 +98,8 @@ exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA
             const result = await exports.delete(metadata, db); return result; },
         sortForTF: documents => documents.sort((doc1, doc2) => doc1.tf_score < doc2.tf_score ? 1 : 
             doc1.tf_score > doc2.tf_score ? -1 : 0),
+        sortForCoord: documents => documents.sort((doc1, doc2) => doc1.coord_score < doc2.coord_score ? 1 : 
+            doc1.coord_score > doc2.coord_score ? -1 : 0),
         flush: _ => exports.writeData(dbPathOrMemID, db),      // writeData is async so the caller can await for the flush to complete
         free_memory: _ => {if (save_timer) clearInterval(save_timer); delete IN_MEM_DBS[dbmemid];},
         _getRawDB: _ => db
@@ -110,10 +114,13 @@ exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA
 exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DEFAULT, 
         metadata_langid_key=METADATA_LANGID_KEY_DEFAULT, stopwords_path, no_stemming=false, mem_only=false) => {
 
-    const EMPTY_DB = {tfidfDocStore: {}, iindex: {}}; 
+    const EMPTY_DB = {tfidfDocStore: {}, iindex: {}, distributed: conf.distributed}; 
     EMPTY_DB.tfidfDocStore.entries = _ => Object.keys(EMPTY_DB.tfidfDocStore).filter(key => 
         typeof EMPTY_DB.tfidfDocStore[key] !== "function"); 
-    EMPTY_DB.tfidfDocStore.doclength = _ => EMPTY_DB.tfidfDocStore.entries().length;
+    EMPTY_DB.tfidfDocStore.doclength = async _ => {
+        if (EMPTY_DB.distributed) return (await _distributedSum(EMPTY_DB, TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC))+EMPTY_DB.tfidfDocStore.entries().length;
+        else return EMPTY_DB.tfidfDocStore.entries().length;
+    }
     EMPTY_DB.tfidfDocStore.delete = async documentHash => { 
         delete EMPTY_DB.tfidfDocStore[documentHash]; if (!EMPTY_DB.mem_only) {
             const pathOnDisk = `${EMPTY_DB.pathOrMemID}/${documentHash}`;
@@ -140,7 +147,11 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
         EMPTY_DB.iindex[word] = wordObject;
     }
     EMPTY_DB.iindex.getWordCountForDocument = (word, documentHash) => (EMPTY_DB.iindex[word]?.docs[documentHash])||0;
-    EMPTY_DB.iindex.getCountOfDocumentsWithWord = word => EMPTY_DB.iindex[word]?Object.keys(EMPTY_DB.iindex[word].docs).length:0;
+    EMPTY_DB.iindex.getCountOfDocumentsWithWord = async word => {
+        const countThisDB = EMPTY_DB.iindex[word]?Object.keys(EMPTY_DB.iindex[word].docs).length:0;
+        if (EMPTY_DB.distributed) return (await _distributedSum(EMPTY_DB, TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORD_TOPIC, 
+            {word}))+countThisDB; else countThisDB;
+    }
     EMPTY_DB.iindex.getAllWordObjects = _ => Object.values(EMPTY_DB.iindex).filter(value => typeof value !== "function");
     EMPTY_DB.iindex.getAllWords = _ => Object.keys(EMPTY_DB.iindex).filter(key => typeof EMPTY_DB.iindex[key] !== "function");
     EMPTY_DB.iindex.getWordObject = word => EMPTY_DB.iindex[word];
@@ -201,10 +212,12 @@ exports.loadData = async function(pathIn, dbToLoad) {
  */
 exports.writeData = async (pathIn, db) => {
     let iindexNDJSON = ""; for (const wordObject of db.iindex.getAllWordObjects()) iindexNDJSON += JSON.stringify(wordObject)+"\n";
-    await memfs.writeFile(`${pathIn}/${IINDEX_FILE}`, iindexNDJSON);
-    await memfs.writeFile(`${pathIn}/${VOCABULARY_FILE}`, JSON.stringify(db.iindex.getAllWords(), null, 1)); // we don't use this, only serialized as FYI
-    for (const dbDocHashKey of db.tfidfDocStore.entries()) await memfs.writeFile(
-        `${pathIn}/${dbDocHashKey}`, JSON.stringify(await db.tfidfDocStore.data(dbDocHashKey), null, 4));
+    const memfsWritePromises = [];
+    memfsWritePromises.push(memfs.writeFile(`${pathIn}/${IINDEX_FILE}`, iindexNDJSON));
+    memfsWritePromises.push(memfs.writeFile(`${pathIn}/${VOCABULARY_FILE}`, JSON.stringify(db.iindex.getAllWords(), null, 1))); // we don't use this, only serialized as FYI
+    for (const dbDocHashKey of db.tfidfDocStore.entries()) memfsWritePromises.push(memfs.writeFile(
+        `${pathIn}/${dbDocHashKey}`, JSON.stringify(await db.tfidfDocStore.data(dbDocHashKey), null, 4)));
+    await Promise.all(memfsWritePromises); await memfs.flush();
 }
 
 /**
@@ -243,14 +256,14 @@ exports.ingestStream = exports.createStream = async function(readstream, metadat
     LOG.info(`Starting word counting for ${JSON.stringify(metadata)}`);
 
     return new Promise((resolve, reject) => {
-        readstream.on("data", chunk => {
+        readstream.on("data", async chunk => {
             const docchunk = chunk.toString("utf8");
             if (!lang) {
                 lang = langdetector.getISOLang(docchunk); 
                 if (!metadata[db[METADATA_LANGID_KEY]]) metadata[db[METADATA_LANGID_KEY]] = lang;
                 LOG.info(`Autodetected language ${lang} for ${JSON.stringify(metadata)}.`);
             }
-            const docWords = _getLangNormalizedWords(docchunk, lang, db); newDocument.length += docWords.length;
+            const docWords = await _getLangNormalizedWords(docchunk, lang, db); newDocument.length += docWords.length;
             for (const word of docWords) db.iindex.incrementWordDocumentCount(word, docHash);
         });
 
@@ -348,7 +361,7 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
         return scoredDocs;  // can't do cutoff, topK etc if no query was given
     } 
     
-    const queryWords = _getLangNormalizedWords(query, lang||langdetector.getISOLang(query), db, autocorrect), relevantDocs = [];
+    const queryWords = await _getLangNormalizedWords(query, lang||langdetector.getISOLang(query), db, autocorrect), relevantDocs = [];
     let highestScore = 0; 
     for (const queryWord of queryWords) {const docHashesWithThisWord = db.iindex.getDocumentHashesForWord(queryWord); 
         for (const docHash of docHashesWithThisWord) if (!relevantDocs.includes(docHash)) relevantDocs.push(docHash)};
@@ -361,8 +374,8 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
         for (const queryWord of queryWords) {
             if (!db.iindex.getWordObject(queryWord)) continue; // query word not found in the vocabulary
             const tf = db.iindex.getWordCountForDocument(queryWord, docHash)/document.length, tfAdusted = tf*tfAdjustmentFactor,
-                idf = 1+Math.log10(db.tfidfDocStore.doclength()/(db.iindex.getCountOfDocumentsWithWord(queryWord)+1)), 
-                tfidf = tfAdusted*idf;
+                totalDocLength = await db.tfidfDocStore.doclength(), docsWithThisWord = await db.iindex.getCountOfDocumentsWithWord(queryWord),
+                idf = 1+Math.log10(totalDocLength/(docsWithThisWord+1)), tfidf = tfAdusted*idf;
             tfScoreThisDoc += tfAdusted; scoreThisDoc += tfidf; if (tfAdusted) queryWordsFoundInThisDoc++;
         }
 
@@ -387,7 +400,7 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
     return topKScoredDocs;
 }
 
-function _getLangNormalizedWords(document, lang, db, autocorrect=false, fastSplit=true) {    
+async function _getLangNormalizedWords(document, lang, db, autocorrect=false, fastSplit=true) {    
     LOG.info(`Starting getting normalized words for the document.`); 
     const words = [], segmenter = fastSplit ? {
         segment: documentIn => {
@@ -412,13 +425,13 @@ function _getLangNormalizedWords(document, lang, db, autocorrect=false, fastSpli
             default: return DEFAULT_STEMMER;    
         }
     }
-    const _isStopWord = word => {   // can auto learn stop words if needed, language agnostic
+    const _isStopWord = async word => {   // can auto learn stop words if needed, language agnostic
         if (word.trim() == "") return true; // emptry words are useless
         const dbDocCount = db.tfidfDocStore.doclength(), dbHasStopWords = db._stopwords?.[lang] && db._stopwords[lang].length > 0;
         if ((!dbHasStopWords) && (dbDocCount > MIN_STOP_WORD_IDENTIFICATION_LENGTH)) {   // auto learn stop words if possible
             if (!db._stopwords) db._stopwords = {}; db._stopwords[lang] = [];
             for (const word of db.iindex.getAllWords())
-                if ((db.iindex.getCountOfDocumentsWithWord(word)/dbDocCount) > MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS) 
+                if (((await db.iindex.getCountOfDocumentsWithWord(word))/dbDocCount) > MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS) 
                     db._stopwords[lang].push(word);
         }
         
@@ -431,7 +444,7 @@ function _getLangNormalizedWords(document, lang, db, autocorrect=false, fastSpli
         new natural.Spellcheck(db.iindex.getAllWords()) : undefined;
     for (const segmentThis of Array.from(segmenter.segment(document))) if (segmentThis.isWordLike) {
         const depuntuatedLowerLangWord = segmentThis.segment.replaceAll(PUNCTUATIONS, "").trim().toLocaleLowerCase(lang);
-        if (_isStopWord(depuntuatedLowerLangWord)) continue;    // drop stop words
+        if (await _isStopWord(depuntuatedLowerLangWord)) continue;    // drop stop words
         let stemmedWord = _getStemmer(lang).stem(depuntuatedLowerLangWord);
         if (correctwords && (!db.iindex.getWordObject(stemmedWord))) {
             const correctedWord = spellcheck.getCorrections(stemmedWord, 1)[0];
@@ -501,4 +514,30 @@ function _initBlackboardHooks() {
         db.tfidfDocStore.delete(hash);
         db.iindex.replace(iindex);
     }, blackboardOptions);
+
+    blackboard.subscribe(TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC, async msg => {
+        const {creation_data, blackboardcontrol} = msg;
+        const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
+            creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
+            creation_data.mem_only))._getRawDB();
+        blackboard.sendReply(TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC, blackboardcontrol, {reply: db.tfidfDocStore.doclength()});
+    }, blackboardOptions);
+
+    blackboard.subscribe(TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORD_TOPIC, async msg => {
+        const {creation_data, word, blackboardcontrol} = msg;
+        const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
+            creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
+            creation_data.mem_only))._getRawDB();
+        blackboard.sendReply(TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC, blackboardcontrol, {reply: db.iindex.getCountOfDocumentsWithWord(word)});
+    }, blackboardOptions);
+}
+
+function _distributedSum(db, topic, params) {
+    if (blackboard.getDistribuedClusterSize() == 0) return 0;   // single node deployment
+    return new Promise(resolve => blackboard.getReply(topic, {creation_data: _createDBCreationData(db), ...params}, 
+        conf.cluster_timeout, replies => {
+            let sum = 0; for (const replyObject of replies||[]) sum += replyObject.reply;
+            resolve(sum);
+        }
+    ));
 }

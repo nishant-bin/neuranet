@@ -19,7 +19,7 @@ exports.getISOLang = function(text) {
     if(!text) return "en";  // if no text then return english as default
     const langs_detected = {}, splits = textsplitter.getSplits(text, conf.langdetector_chunk_size);
     for (const split of splits) {
-        const langThisSplit = detect(split);
+        const langThisSplit = detect(split.trim());
         if (langThisSplit) langs_detected[langThisSplit] = (langs_detected[langThisSplit] || 0)+1;
     }
     if (!(Object.keys(langs_detected).length)) return "en";  // default to English

@@ -41,10 +41,12 @@ const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT:
  */
 async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamGenerator, metadata={}) {
     LOG.info(`AI DB FS ingestion of file ${pathIn} for ID ${id} and org ${org} started.`);
+    const timeStart = Date.now();
     if (!(await quota.checkQuota(id, org))) {
 		LOG.error(`Disallowing the ingest call for the path ${pathIn}, as the user ${id} of org ${org} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
+    LOG.info(`Time taken till quota check for ${pathIn} is ${(Date.now()-timeStart)} ms.`);
     
     const aiModelToUseForEmbeddings = MODEL_DEFAULT, 
         aiModelObjectForEmbeddings = await aiapp.getAIModel(aiModelToUseForEmbeddings, undefined, id, org, brainid), 
@@ -57,6 +59,8 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
         LOG.error(`Can't instantiate the vector DB ${vectorDB_ID} for ID ${id} and org ${org}. Unable to continue.`);
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
+    LOG.info(`Time taken till getting Vector DB for ${pathIn} is ${(Date.now()-timeStart)} ms.`);
+
 
     const metadataFinal = {...metadata, id, date_created: Date.now(), fullpath: pathIn}; 
     metadataFinal[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(pathIn); 
@@ -66,14 +70,18 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
 
     // ingest into the TF.IDF DB
     const tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid); 
+    LOG.info(`Time taken till getting TFIDF DB for ${pathIn} is ${(Date.now()-timeStart)} ms.`);
+
     try {        
         LOG.info(`Starting text extraction and TFIDF ingestion of file ${pathIn}.`);
         await tfidfDB.createStream(await _getExtractedTextStream(), metadataFinal);
-        LOG.info(`Ended text extraction and TFIDF ingestion of file ${pathIn}.`);
     } catch (err) {
         LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
         return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
     }
+    LOG.info(`Ended text extraction and TFIDF ingestion of file ${pathIn}.`);
+    LOG.info(`Time taken till TFIDF ingestion for ${pathIn} is ${(Date.now()-timeStart)} ms.`);
+
 
     // ingest into the vector DB
     LOG.info(`Starting Vector DB ingestion of file ${pathIn}.`);
@@ -88,6 +96,7 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
         return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
     }
     LOG.info(`Ended Vector DB ingestion of file ${pathIn}.`);
+    LOG.info(`Time taken till Vector DB ingestion for ${pathIn} is ${(Date.now()-timeStart)} ms.`);
 
     LOG.info(`AI DB FS ingestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
     return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
