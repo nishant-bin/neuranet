@@ -256,7 +256,7 @@ exports.ingestStream = exports.createStream = async function(readstream, metadat
 
         readstream.on("end", _ => {
             blackboard.publish(TFIDFDB_ADD_DOC_TOPIC, {creation_data: _createDBCreationData(db), 
-                iindex: db.iindex.getSerializableObject(), docHash, newDocument});
+                iindex: db.iindex.getSerializableObject(), hash: docHash, document: newDocument});
             resolve(metadata);
         });
 
@@ -279,7 +279,7 @@ exports.delete = async function(metadata, db) {
         for (const wordObject of db.iindex.getAllWordObjects()) db.iindex.deleteDocumentFromWordObject(wordObject, docHash);
         db.tfidfDocStore.delete(_getDocumentHashIndex(metadata, db));       // we don't await as it causes multi-threading for cascading deletes, the await is only to delete the text file which doesn't matter much
         blackboard.publish(TFIDFDB_DELETE_DOC_TOPIC, {creation_data: _createDBCreationData(db), 
-            iindex: db.iindex.getSerializableObject(), docHash});
+            iindex: db.iindex.getSerializableObject(), hash: docHash});
     }
 
     return metadata;
