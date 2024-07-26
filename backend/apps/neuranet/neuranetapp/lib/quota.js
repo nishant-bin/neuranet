@@ -16,10 +16,14 @@ exports.checkQuota = async function(id, org) {
     const models = Object.keys(NEURANET_CONSTANTS.CONF.ai_models), 
         unixepochNow = Math.floor(new Date().getTime() / 1000), SECONDS_IN_24_HOURS = 86400;
     let totalUsedIn24Hours = 0; for (const model of models) {
-        const modelUsage = await dblayer.getAIModelUsage(id, unixepochNow - SECONDS_IN_24_HOURS, unixepochNow, model),
-            priceOfUsageThisModel = modelUsage * NEURANET_CONSTANTS.CONF.ai_models[model].price_per_unit;
-        totalUsedIn24Hours += priceOfUsageThisModel;
-        LOG.debug(`ID ${id} from org ${org} used ${modelUsage} units of model ${model} in the last 24 hours, which equates to a price of ${priceOfUsageThisModel}.`);
+        try {
+            const modelUsage = await dblayer.getAIModelUsage(id, unixepochNow - SECONDS_IN_24_HOURS, unixepochNow, model),
+                priceOfUsageThisModel = modelUsage * NEURANET_CONSTANTS.CONF.ai_models[model].price_per_unit;
+            totalUsedIn24Hours += priceOfUsageThisModel;
+            LOG.debug(`ID ${id} from org ${org} used ${modelUsage} units of model ${model} in the last 24 hours, which equates to a price of ${priceOfUsageThisModel}.`);
+        } catch (err) {
+            LOG.error(`Bad model definition - ${model}`); throw err;
+        }
     }
 
     if (totalUsedIn24Hours > allowedQuota) {

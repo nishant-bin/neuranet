@@ -26,7 +26,7 @@ const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 
 const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
-	MODEL_DEFAULT = "chat-gpt35-turbo", CHAT_SESSION_UPDATE_TIMESTAMP_KEY = "__last_update",
+	MODEL_DEFAULT = "chat-openai", CHAT_SESSION_UPDATE_TIMESTAMP_KEY = "__last_update",
 	CHAT_SESSION_MEMORY_KEY_PREFIX = "__org_monkshu_neuranet_chatsession", 
 	PROMPT_FILE_WITH_AUTO_SUMMARY = "chat_prompt_auto_summary.txt", PROMPT_FILE_NO_SUMMARY = "chat_prompt_no_summmary.txt",
 	DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode, DEFAULT_MAX_MEMORY_TOKENS = 1000;

@@ -37,7 +37,7 @@ const REASONS = llmflowrunner.REASONS;
  *                          cutoff_score_tfidf Cutoff score for TF-IDF
  *                          topK_vectors TopK for vector search
  *                          min_distance_vectors Cutoff distance for vector search
- *                          embeddings_model The embedding model usually embedding-openai-ada002
+ *                          embeddings_model The embedding model usually embedding-openai
  * 							autocorrect_query Default is true, set to false to turn off
  * @param {Object} _llmstepDefinition Not used.
  * 

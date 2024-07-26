@@ -2,7 +2,7 @@
 # match. The file documents rest of the commands and syntax.
 
 ---
-id: _org_neuranet_default_aiapp_            # the AI application name / ID
+id: _org_neuranet_defaultorg_               # the AI application name / ID
 interface:                                  # the interface details
   type: enterpriseassist                    # this is for the frontend can be chat, translate or search interfaces
   label: AI assistant                       # the label for the app icon on the UI
@@ -39,11 +39,11 @@ pregen_flow:
         {{{fragment}}}
 
       models: 
-        - name: simplellm-gpt35-turbo
+        - name: simplellm-openai
           type: chat
           model_overrides:                  # this allows us to override model params on a per AI app basis, can be a nested path e.g. driver.host if we are calling API at a different host name etc          
             read_ai_response_from_samples: true
-        - name: embedding-openai-ada002
+        - name: embedding-openai
           type: embeddings
           model_overrides:                      
             read_ai_response_from_samples: true
@@ -71,11 +71,11 @@ pregen_flow:
         {{{fragment}}}
 
       models: 
-        - name: simplellm-gpt35-turbo
+        - name: simplellm-openai
           type: chat
           model_overrides:                  # this allows us to override model params on a per AI app basis, can be a nested path e.g. driver.host if we are calling API at a different host name etc          
             read_ai_response_from_samples: true
-        - name: embedding-openai-ada002
+        - name: embedding-openai
           type: embeddings
           model_overrides:                      
             read_ai_response_from_samples: true
@@ -92,7 +92,7 @@ llm_flow:
       session_id: "{{{request.session_id}}}" # request is inbuilt variable contains user's request params
       aiappid: "{{{aiappid}}}"              # inbuilt variable contains the ai app ID
       model: 
-        name: simplellm-gpt35-turbo
+        name: simplellm-openai
         model_overrides: 
           read_ai_response_from_samples: true
       prompt_noinflate: |
@@ -139,9 +139,7 @@ llm_flow:
 
   - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
     condition_js: |
-      if (request.force_nonllm_search) return true;
-      const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang(queryJSON); if ((lang == "zh") || (lang == "ja")) return true; else return false;
+      if (request.force_nonllm_search) return true; else return false;
     in: 
       query: "{{{query}}}"                  # inbuilt variable contains the user's query
       topK_tfidf: 3
@@ -156,9 +154,7 @@ llm_flow:
 
   - command: docvectorsearch.search         # for all languages except Chinese and Japanese, the condition below 
     condition_js: |
-      if (request.force_llm_search) return true;
-      const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang(queryJSON); if ((lang == "zh") || (lang == "ja")) return false; else return true;
+      if (request.force_nonllm_search) return false; else return true;
     in: 
       query: "{{{query}}}"
       topK_tfidf: 3
@@ -166,7 +162,7 @@ llm_flow:
       topK_vectors: 3
       min_distance_vectors: 0
       embeddings_model: 
-        name: embedding-openai-ada002
+        name: embedding-openai
         model_overrides:                    
           read_ai_response_from_samples: true
       aiappid: "{{{aiappid}}}"  
@@ -234,7 +230,7 @@ llm_flow:
 
         जवाब है:
       model: 
-        name: chat-knowledgebase-gpt35-turbo
+        name: chat-knowledgebase-openai
         model_overrides: 
           read_ai_response_from_samples: true
     out: airesponse                         # the final response must output to this property - airesponse for LLM flows
@@ -243,9 +239,7 @@ llm_flow:
 docsearch_flow:
   - command: doctfidfsearch.search          # if forced return true, else for double-byte (cn and ja) return true
     condition_js: |
-      if (request.force_nonllm_search) return true; 
-      const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang(queryJSON); if ((lang == "zh") || (lang == "ja")) return true; else return false;
+      if (request.force_nonllm_search) return true; else return false;
     in: 
       query: "{{{query}}}"                  # inbuilt variable contains the user's query
       metadata: null
@@ -261,9 +255,7 @@ docsearch_flow:
 
   - command: docvectorsearch.search         # if forced return true, else for non double-byte (cn and ja) return true
     condition_js: |
-      if (request.force_llm_search) return true; 
-      const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
-      const lang = langdetector.getISOLang(queryJSON); if ((lang == "zh") || (lang == "ja")) return false; else return true;
+      if (request.force_nonllm_search) return false; else return true;
     in: 
       query: "{{{query}}}"
       topK_tfidf: 3
@@ -271,7 +263,7 @@ docsearch_flow:
       topK_vectors: 3
       min_distance_vectors: 0
       embeddings_model: 
-        name: embedding-openai-ada002
+        name: embedding-openai
         model_overrides:                    
           read_ai_response_from_samples: true
       aiappid: "{{{aiappid}}}"  
@@ -282,15 +274,15 @@ docsearch_flow:
 
 
 global_models:
-  - name: embedding-openai-ada002
+  - name: embedding-openai
     model_overrides:                    
       read_ai_response_from_samples: true
 
-  - name: chat-knowledgebase-gpt35-turbo
+  - name: chat-knowledgebase-openai
     model_overrides:                    
       read_ai_response_from_samples: true
 
-  - name: simplellm-gpt35-turbo
+  - name: simplellm-openai
     model_overrides:                    
       read_ai_response_from_samples: true
 

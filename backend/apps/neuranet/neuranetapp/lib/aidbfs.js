@@ -25,7 +25,7 @@ const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
 const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
-	MODEL_DEFAULT = "embedding-openai-ada002", UNKNOWN_ORG = "unknownorg";
+	MODEL_DEFAULT = "embedding-openai", UNKNOWN_ORG = "unknownorg";
 
 /**
  * Ingests the given file into the AI DBs. It must be a simple text file.

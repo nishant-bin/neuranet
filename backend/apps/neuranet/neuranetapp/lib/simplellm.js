@@ -15,7 +15,7 @@ const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 
-const DEFAULT_SIMPLE_QA_MODEL = "simplellm-gpt35-turbo", DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
+const DEFAULT_SIMPLE_QA_MODEL = "simplellm-openai", DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
 
 /**
  * Sends the given prompt to the indicated LLM and returns its raw response.

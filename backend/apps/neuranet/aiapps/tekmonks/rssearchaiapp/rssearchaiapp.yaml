@@ -33,9 +33,9 @@ pregen_flow:
         {{{fragment}}}
 
       models: 
-        - name: simplellm-gpt35-turbo
+        - name: simplellm-openai
           type: chat
-        - name: embedding-openai-ada002
+        - name: embedding-openai
           type: embeddings
       pregenfile_prefix: description
       pregenfile_dir: _neuranet_generated
@@ -54,9 +54,9 @@ pregen_flow:
         {{{fragment}}}
 
       models: 
-        - name: simplellm-gpt35-turbo
+        - name: simplellm-openai
           type: chat
-        - name: embedding-openai-ada002
+        - name: embedding-openai
           type: embeddings
       pregenfile_prefix: positioning
       pregenfile_dir: _neuranet_generated
@@ -75,9 +75,9 @@ pregen_flow:
         {{{fragment}}}
 
       models: 
-        - name: simplellm-gpt35-turbo
+        - name: simplellm-openai
           type: chat
-        - name: embedding-openai-ada002
+        - name: embedding-openai
           type: embeddings
       pregenfile_prefix: alternate
       pregenfile_dir: _neuranet_generated
@@ -99,7 +99,7 @@ llm_flow:
           LOG.error(`Error in query expansion params - ${err}`); return ""; 
         }
       model: 
-        name: simplellm-gpt35-turbo
+        name: simplellm-openai
       prompt_noinflate: |
         Given the following keyword list and a question, rephrase the question to include all relevant keywords from the list.
         Keyword list:
@@ -130,7 +130,7 @@ llm_flow:
       topK_vectors: 10
       min_distance_vectors: 0
       embeddings_model: 
-        name: embedding-openai-ada002
+        name: embedding-openai
       aiappid: "{{{aiappid}}}"  
       bridges_js: return (request.bridges||[aiappid])
       metadata_filter_function: "{{{request.metadata_filter_function}}}"
@@ -178,20 +178,20 @@ llm_flow:
 
         答えは次のとおりです:
       model: 
-        name: chat-knowledgebase-gpt35-turbo
+        name: chat-knowledgebase-openai
     out: airesponse                         # the final response must output to this property - airesponse for LLM flows
 
 global_models:
-  - name: embedding-openai-ada002
+  - name: embedding-openai
     model_overrides:         
       request.model: text-embedding-3-large # better embedding model for non-English        
       read_ai_response_from_samples: false
 
-  - name: chat-knowledgebase-gpt35-turbo
+  - name: chat-knowledgebase-openai
     model_overrides:                    
       read_ai_response_from_samples: false
 
-  - name: simplellm-gpt35-turbo
+  - name: simplellm-openai
     model_overrides:                    
       read_ai_response_from_samples: false
 

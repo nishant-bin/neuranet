@@ -12,7 +12,7 @@ const textsplitter = require(`${NEURANET_CONSTANTS.LIBDIR}/textsplitter.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
 
 const PROMPT_PARAM = "_promptparam", CHAT_MODEL = "chat", EMBEDDINGS_MODEL = "embeddings", 
-    CHAT_MODEL_DEFAULT = "simplellm-gpt35-turbo", EMBEDDINGS_MODEL_DEFAULT = "embedding-openai-ada002";
+    CHAT_MODEL_DEFAULT = "simplellm-openai", EMBEDDINGS_MODEL_DEFAULT = "embedding-openai";
 
 async function generate(fileindexer, generatorDefinition) {
     let chatModelDefinition, embeddingsModelDefinition; for (const model of (generatorDefinition.models||[])) {

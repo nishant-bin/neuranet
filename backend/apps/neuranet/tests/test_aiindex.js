@@ -1,6 +1,8 @@
 /**
  * Tests the vector and TF.IDF DB ingestions and algorithms within them.
  * 
+ * Input must be fully qualified paths to the files to ingest.
+ * 
  * (C) 2023 Tekmonks. All rights reserved.
  */
 
@@ -20,8 +22,8 @@ exports.runTestsAsync = async function(argv) {
 
     if (!argv[1]) { LOG.console("Missing test file/s path/s.\n"); return; }
 
-    let async = argv.pop(); if(typeof async!=='boolean') argv.push(async);
-    const filesToTest = argv.slice(1).map(path => `${__dirname}/assets/${path}`);
+    let serialIngestion = argv.pop(); if (typeof serialIngestion !== 'boolean') argv.push(serialIngestion);
+    const filesToTest = argv.slice(1);
 
     LOG.console(`Test case for AI DB indexing called to index the files ${filesToTest.join(", ")}.\n`);
 
@@ -40,18 +42,17 @@ exports.runTestsAsync = async function(argv) {
     };
 
     const  indexingPromises = [], processFile = async (fileToParse, flush) => {
-        const base64FileData = (await fspromises.readFile(fileToParse)).toString("base64");
+        const fileData = await fspromises.readFile(fileToParse), base64FileData = fileData.toString("base64");
         const jsonReq = {filename: path.basename(fileToParse), 
             data: base64FileData,
             id: TEST_ID, org: TEST_ORG, encoding: "base64", __forceDBFlush: flush,
             aiappid: TEST_APP}; 
-        if(!async) indexingPromises.push(indexFile(jsonReq));
-        else indexingPromises.push(await indexFile(jsonReq));
+        await indexFileAPIRequest(jsonReq)
     }
-    for (const fileToParse of filesToTest.slice(0, -1)) indexingPromises.push(processFile(fileToParse, false));
-    const lastFile = filesToTest[filesToTest.length-1]; indexingPromises.push(processFile(lastFile, true)); // write out the DB to the disk
+    for (const fileToParse of filesToTest.slice(0, -1)) indexingPromises.push(serialIngestion?await processFile(fileToParse, false):processFile(fileToParse, false));
+    const lastFile = filesToTest[filesToTest.length-1]; indexingPromises.push(serialIngestion?await processFile(lastFile, true):processFile(lastFile, true)); // write out the DB to the disk
 
-    if(!async) await Promise.all(indexingPromises);    // wait for all files to finish
+    if (!serialIngestion) await Promise.all(indexingPromises);    // wait for all files to finish if not using serial ingestion in the first place
 
     return finalResults === filesToTest.length;
 }

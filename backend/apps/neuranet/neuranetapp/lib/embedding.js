@@ -4,7 +4,7 @@
  * Output is 
  * {embedding: The vector, error: null on success or error reason on error, reason: OK, or other reasons on failure}
  * 
- * The default model is embedding-openai-ada002.
+ * The default model is embedding-openai.
  *  
  * (C) 2023 TekMonks. All rights reserved.
  */
@@ -14,7 +14,7 @@ const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 
-const MODEL_DEFAULT = "embedding-openai-ada002", EMBEDDING_PROMPT = `${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/embedding_prompt.txt`,
+const MODEL_DEFAULT = "embedding-openai", EMBEDDING_PROMPT = `${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/embedding_prompt.txt`,
     REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", LIMIT: "limit"}
 
 async function createEmbeddingVector(id, org, aiappid, text, model) {

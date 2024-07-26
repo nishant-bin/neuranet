@@ -41,7 +41,7 @@ const conf = require(`${NEURANET_CONSTANTS?.CONFDIR||(__dirname+"/conf")}/aidb.j
 const VOCABULARY_FILE="vocabulary", IINDEX_FILE="iindex", METADATA_DOCID_KEY="docid.key", 
     METADATA_LANGID_KEY="langid.key", METADATA_DOCID_KEY_DEFAULT = "aidb_docid", METADATA_LANGID_KEY_DEFAULT = "aidb_langid", 
     MIN_STOP_WORD_IDENTIFICATION_LENGTH = 5, MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95, 
-    DEFAULT_MAX_COORD_BOOST = 0.10, TFIDFDB_ADD_DOC_TOPIC = "tfidf.adddoc", TFIDFDB_DELETE_DOC_TOPIC = "tfidf.rmdoc",
+    DEFAULT_MAX_COORD_BOOST = 0.10, TFIDFDB_DELETE_DOC_TOPIC = "tfidf.rmdoc",
     TFIDFDB_UPDATE_DOC_TOPIC = "tfidf.updatedoc", TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC = "tfidf.tfidfDocStore.doclength",
     TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORD_TOPIC = "iindex.getCountOfDocumentsWithWord";
 const IN_MEM_DBS = {}; let blackboard_initialized = false;
@@ -117,8 +117,8 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
     const EMPTY_DB = {tfidfDocStore: {}, iindex: {}, distributed: conf.distributed}; 
     EMPTY_DB.tfidfDocStore.entries = _ => Object.keys(EMPTY_DB.tfidfDocStore).filter(key => 
         typeof EMPTY_DB.tfidfDocStore[key] !== "function"); 
-    EMPTY_DB.tfidfDocStore.doclength = async _ => {
-        if (EMPTY_DB.distributed) return (await _distributedSum(EMPTY_DB, TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC))+EMPTY_DB.tfidfDocStore.entries().length;
+    EMPTY_DB.tfidfDocStore.doclength = async local => {
+        if ((!local) && (EMPTY_DB.distributed)) return (await _distributedSum(EMPTY_DB, TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC))+EMPTY_DB.tfidfDocStore.entries().length;
         else return EMPTY_DB.tfidfDocStore.entries().length;
     }
     EMPTY_DB.tfidfDocStore.delete = async documentHash => { 
@@ -147,9 +147,9 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
         EMPTY_DB.iindex[word] = wordObject;
     }
     EMPTY_DB.iindex.getWordCountForDocument = (word, documentHash) => (EMPTY_DB.iindex[word]?.docs[documentHash])||0;
-    EMPTY_DB.iindex.getCountOfDocumentsWithWord = async word => {
+    EMPTY_DB.iindex.getCountOfDocumentsWithWord = async (word, local) => {
         const countThisDB = EMPTY_DB.iindex[word]?Object.keys(EMPTY_DB.iindex[word].docs).length:0;
-        if (EMPTY_DB.distributed) return (await _distributedSum(EMPTY_DB, TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORD_TOPIC, 
+        if ((!local) && (EMPTY_DB.distributed)) return (await _distributedSum(EMPTY_DB, TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORD_TOPIC, 
             {word}))+countThisDB; else countThisDB;
     }
     EMPTY_DB.iindex.getAllWordObjects = _ => Object.values(EMPTY_DB.iindex).filter(value => typeof value !== "function");
@@ -267,11 +267,7 @@ exports.ingestStream = exports.createStream = async function(readstream, metadat
             for (const word of docWords) db.iindex.incrementWordDocumentCount(word, docHash);
         });
 
-        readstream.on("end", _ => {
-            blackboard.publish(TFIDFDB_ADD_DOC_TOPIC, {creation_data: _createDBCreationData(db), 
-                iindex: db.iindex.getSerializableObject(), hash: docHash, document: newDocument});
-            resolve(metadata);
-        });
+        readstream.on("end", _ => resolve(metadata));
 
         readstream.on("error", async error => {
             LOG.info(`Error ingesting ${JSON.stringify(metadata)} due to error ${error.toString()}.`);
@@ -284,16 +280,15 @@ exports.ingestStream = exports.createStream = async function(readstream, metadat
  * Deletes the given document from the database.
  * @param {object} metadata The metadata for the document to delete.
  * @param {object} db The incoming database
+ * @param {boolean} publish Update other cluster members
  */
-exports.delete = async function(metadata, db) {
+exports.delete = async function(metadata, db, publish=true) {
     const docHash = _getDocumentHashIndex(metadata, db), document = await db.tfidfDocStore.data(docHash);
     
     if (document) {
         for (const wordObject of db.iindex.getAllWordObjects()) db.iindex.deleteDocumentFromWordObject(wordObject, docHash);
         db.tfidfDocStore.delete(_getDocumentHashIndex(metadata, db));       // we don't await as it causes multi-threading for cascading deletes, the await is only to delete the text file which doesn't matter much
-        blackboard.publish(TFIDFDB_DELETE_DOC_TOPIC, {creation_data: _createDBCreationData(db), 
-            iindex: db.iindex.getSerializableObject(), hash: docHash});
-    }
+    } else if (publish) blackboard.publish(TFIDFDB_DELETE_DOC_TOPIC, {creation_data: _createDBCreationData(db), metadata});  // not found here, but maybe other DBs have it
 
     return metadata;
 }
@@ -303,12 +298,18 @@ exports.delete = async function(metadata, db) {
  * @param {object} oldmetadata The old metadata - used to locate the document.
  * @param {object} newmetadata The new metadata
  * @param {object} db The database to operate on
+ * @param {boolean} publish Update other cluster members
  * @returns 
  */
-exports.update = async (oldmetadata, newmetadata, db) => {
+exports.update = async (oldmetadata, newmetadata, db, publish=true) => {
     const oldhash = _getDocumentHashIndex(oldmetadata, db), newhash = _getDocumentHashIndex(newmetadata, db),
         document = await db.tfidfDocStore.data(oldhash);
-    if (!document) return false;    // not found
+    if ((!document) && publish) {
+        blackboard.publish(TFIDFDB_UPDATE_DOC_TOPIC, {creation_data: _createDBCreationData(db), 
+            oldmetadata, newmetadata});
+        return true;    // not found here, but maybe other DBs have it
+    }
+
     document.metadata = _deepclone(newmetadata); document.date_modified = Date.now();
 
     await db.tfidfDocStore.delete(oldhash); db.tfidfDocStore.add(newhash, document); 
@@ -319,9 +320,6 @@ exports.update = async (oldmetadata, newmetadata, db) => {
             db.iindex.addDocumentForWordObject(wordObject, newhash, countofThisWordInDoc);
         }
     }
-
-    blackboard.publish(TFIDFDB_UPDATE_DOC_TOPIC, {creation_data: _createDBCreationData(db), 
-        iindex: db.iindex.getSerializableObject(), oldhash, newhash, document});
 
     return newmetadata;
 }
@@ -427,12 +425,15 @@ async function _getLangNormalizedWords(document, lang, db, autocorrect=false, fa
     }
     const _isStopWord = async word => {   // can auto learn stop words if needed, language agnostic
         if (word.trim() == "") return true; // emptry words are useless
-        const dbDocCount = db.tfidfDocStore.doclength(), dbHasStopWords = db._stopwords?.[lang] && db._stopwords[lang].length > 0;
-        if ((!dbHasStopWords) && (dbDocCount > MIN_STOP_WORD_IDENTIFICATION_LENGTH)) {   // auto learn stop words if possible
-            if (!db._stopwords) db._stopwords = {}; db._stopwords[lang] = [];
-            for (const word of db.iindex.getAllWords())
-                if (((await db.iindex.getCountOfDocumentsWithWord(word))/dbDocCount) > MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS) 
-                    db._stopwords[lang].push(word);
+        const dbHasStopWords = db._stopwords?.[lang] && db._stopwords[lang].length > 0;
+        if (!dbHasStopWords) {   // auto learn stop words if possible
+            const dbDocCount = db.tfidfDocStore.doclength();
+            if (dbDocCount > MIN_STOP_WORD_IDENTIFICATION_LENGTH) {
+                if (!db._stopwords) db._stopwords = {}; db._stopwords[lang] = [];
+                for (const word of db.iindex.getAllWords())
+                    if (((await db.iindex.getCountOfDocumentsWithWord(word))/dbDocCount) > MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS) 
+                        db._stopwords[lang].push(word);
+            }   
         }
         
         if (!db._stopwords?.[lang]) return false;   // nothing to do
@@ -488,31 +489,21 @@ const _createDBCreationData = db => {
 
 function _initBlackboardHooks() {
     const blackboardOptions = {}; blackboardOptions[blackboard.EXTERNAL_ONLY] = true;
-    blackboard.subscribe(TFIDFDB_ADD_DOC_TOPIC, async msg => {
-        const {creation_data, hash, document, iindex} = msg;
-        const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
-            creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
-            creation_data.mem_only))._getRawDB();
-        db.tfidfDocStore.add(hash, document);
-        db.iindex.replace(iindex);
-    }, blackboardOptions);
 
     blackboard.subscribe(TFIDFDB_UPDATE_DOC_TOPIC, async msg => {
-        const {creation_data, oldhash, newhash, document, iindex} = msg;
+        const {creation_data, oldmetadata, newmetadata} = msg;
         const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
             creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
             creation_data.mem_only))._getRawDB();
-        db.tfidfDocStore.update(oldhash, newhash, document);
-        db.iindex.replace(iindex);
+        exports.update(oldmetadata, newmetadata, db, false);
     }, blackboardOptions);
 
     blackboard.subscribe(TFIDFDB_DELETE_DOC_TOPIC, async msg => {
-        const {creation_data, hash, iindex} = msg;
+        const {creation_data, metadata} = msg;
         const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
             creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
             creation_data.mem_only))._getRawDB();
-        db.tfidfDocStore.delete(hash);
-        db.iindex.replace(iindex);
+        exports.delete(metadata, db, false);
     }, blackboardOptions);
 
     blackboard.subscribe(TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC, async msg => {
@@ -520,7 +511,8 @@ function _initBlackboardHooks() {
         const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
             creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
             creation_data.mem_only))._getRawDB();
-        blackboard.sendReply(TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC, blackboardcontrol, {reply: db.tfidfDocStore.doclength()});
+        blackboard.sendReply(TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC, blackboardcontrol, 
+            {reply: await db.tfidfDocStore.doclength(true)});
     }, blackboardOptions);
 
     blackboard.subscribe(TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORD_TOPIC, async msg => {
@@ -528,7 +520,8 @@ function _initBlackboardHooks() {
         const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
             creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
             creation_data.mem_only))._getRawDB();
-        blackboard.sendReply(TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC, blackboardcontrol, {reply: db.iindex.getCountOfDocumentsWithWord(word)});
+        blackboard.sendReply(TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORD_TOPIC, blackboardcontrol, 
+            {reply: await db.iindex.getCountOfDocumentsWithWord(word, true)});
     }, blackboardOptions);
 }
 

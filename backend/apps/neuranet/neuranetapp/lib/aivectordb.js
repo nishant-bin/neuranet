@@ -67,8 +67,7 @@ const conf = require(`${NEURANET_CONSTANTS?.CONFDIR||(__dirname+"/conf")}/aidb.j
 const memfs = CONSTANTS?.LIBDIR ? require(`${CONSTANTS.LIBDIR}/memfs.js`) : fs.promises;  // use uncached fs if not under monkshu
 
 const dbs = {}, DB_INDEX_NAME = "dbindex", METADATA_DOCID_KEY="aidbdocidkey", METADATA_DOCID_KEY_DEFAULT="aidb_docid",
-    VECTORDB_ADD_VECTOR_TOPIC = "vectordb.adddoc", VECTORDB_DELETE_VECTOR_TOPIC = "vectordb.rmdoc",
-    VECTORDB_QUERY_TOPIC = "vectordb.query", workers = [],
+    VECTORDB_DELETE_VECTOR_TOPIC = "vectordb.rmdoc", VECTORDB_QUERY_TOPIC = "vectordb.query", workers = [],
     DB_INDEX_OBJECT_TEMPLATE = {index:{}, modifiedts:Date.now(), savedts: 0, multithreaded: false, memused: 0, path: ""};
 
 let dbs_worker, workers_initialized = false, blackboard_initialized = false;
@@ -257,14 +256,10 @@ exports.update = async (vector, oldmetadata, newmetadata, text, embedding_genera
  */
 exports.delete = async (vector, metadata, db_path) => {
     const dbToUse = dbs[_get_db_index(db_path)], hash = _get_vector_hash(vector, metadata, dbToUse); 
-    if (!_getDBVectorObject(dbToUse, hash)) {
-        _log_error("Delete called on a vector which is not part of the database", db_path, "Vector not found");
-        return false; // not found
-    }
 
     try {
-        await _deleteDBVectorObject(dbToUse, hash);
-        if (dbToUse.multithreaded) await _update_db_for_worker_threads();
+        const deletedVectorFromThisDB = await _deleteDBVectorObject(dbToUse, hash);
+        if (dbToUse.multithreaded && deletedVectorFromThisDB) await _update_db_for_worker_threads();
         return true;
     } catch (err) {
         _log_error(`Vector or the associated text file ${_get_db_index_text_file(dbToUse, hash)} could not be deleted`, db_path, err);
@@ -601,7 +596,7 @@ async function _getIndexFileForVector(db, hash, forWriting) {
     return indexFile;
 }
 
-async function _setDBVectorObject(dbToFill, vectorObject, isBeingCreated=false, publish=true) {
+async function _setDBVectorObject(dbToFill, vectorObject, isBeingCreated=false) {
 
     const indexFileThisVector = await _getIndexFileForVector(dbToFill, vectorObject.hash, isBeingCreated);
     if (isBeingCreated) {
@@ -611,37 +606,29 @@ async function _setDBVectorObject(dbToFill, vectorObject, isBeingCreated=false, 
 
     dbToFill.index[vectorObject.hash] = vectorObject; dbToFill.memused += serverutils.objectMemSize(vectorObject);
 
-    if (publish) blackboard.publish(VECTORDB_ADD_VECTOR_TOPIC, {dbpath: dbToFill.path,    // if not from blackboard then let other cluster memebers know
-        metadata_docid_key: dbToFill[METADATA_DOCID_KEY], multithreaded: dbToFill.multithreaded, vectorObject});  
-
     _log_info(`Data added, now the memory used for vector database is ${dbToFill.memused} bytes.`, dbToFill.path);
 }
 
 async function _deleteDBVectorObject(dbToUse, hash, publish=true) {
+    if ((!dbToUse.index[hash]) && publish) { // we do not have this vector, maybe someone else does
+        blackboard.publish(VECTORDB_DELETE_VECTOR_TOPIC, {dbpath: dbToUse.path, 
+            metadata_docid_key: dbToUse[METADATA_DOCID_KEY], multithreaded: dbToUse.multithreaded, hash}); 
+        return false; 
+    }
+
     delete dbToUse.index[hash];
     dbToUse.modifiedts = Date.now();
     const indexFileThisVector = await _getIndexFileForVector(dbToUse, hash, true);
     const textFileThisVector = _get_db_index_text_file(dbToUse, hash);
 
     await memfs.unlinkIfExists(indexFileThisVector); await memfs.unlinkIfExists(textFileThisVector);
-    if (publish) blackboard.publish(VECTORDB_DELETE_VECTOR_TOPIC, {dbpath: dbToUse.path, 
-        metadata_docid_key: dbToUse[METADATA_DOCID_KEY], multithreaded: dbToUse.multithreaded, hash});    
+    return true;
 }
 
 const _getDBVectorObject = (dbToUse, hash) => dbToUse.index[hash];  
 
 function _initBlackboardHooks() {
     const blackboardOptions = {}; blackboardOptions[blackboard.EXTERNAL_ONLY] = true;
-    blackboard.subscribe(VECTORDB_ADD_VECTOR_TOPIC, async msg => {
-        const {dbpath, multithreaded, vectorObject, metadata_docid_key} = msg;
-        if (!dbpath) {LOG.error(`Missing DB path for message ${JSON.stringify(msg)}`); return;}
-        if (!dbs[_get_db_index(dbpath)]) {
-            _log_warning(`Unable to locate database for blackboard add vector event. Trying to initialize.`, dbpath);
-            await exports.initAsync(dbpath, metadata_docid_key, multithreaded);
-        }
-        if (dbs[_get_db_index(dbpath)]) await _setDBVectorObject(dbs[_get_db_index(dbpath)], vectorObject, false, false);
-        else _log_error(`Unable to set vector as database not found and init failed.`, dbpath);
-    }, blackboardOptions);
 
     blackboard.subscribe(VECTORDB_DELETE_VECTOR_TOPIC, async msg => {
         const {dbpath, multithreaded, hash, metadata_docid_key} = msg;
@@ -666,7 +653,7 @@ function _getDistributedSimilarities(query_params) {
 
     return new Promise(resolve => blackboard.getReply(VECTORDB_QUERY_TOPIC, {query_params}, 
         conf.cluster_timeout, replies => {
-            const similarities = []; for (const similaritiesThisReplica of replies||[]) similarities.concat(similaritiesThisReplica);
+            const similarities = []; for (const replyObject of replies||[]) similarities.concat(replyObject.reply);
             resolve(similarities);
         }
     ));

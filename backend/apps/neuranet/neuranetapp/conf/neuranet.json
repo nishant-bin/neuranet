@@ -1,6 +1,6 @@
 {
 "crypt_key":"82577als2141rwq294938wasj3029ldwpz",
-"ai_model_default": "chat-gpt35-turbo",
+"ai_model_default": "chat-openai",
 "debug_mode": true,
 "multithreaded": false,
 "verbose_log": false,
@@ -10,14 +10,14 @@
 "java_home": "/Users/rvkapoor/Documents/Programs/source/java",
 
 "ai_models": {
-    "chat-gpt35-turbo": {
-        "name": "chat-gpt35-turbo",
+    "chat-openai": {
+        "name": "chat-openai",
         "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
             "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
             "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "max_requests_per_second":50, 
             "http_retry_codes": ["*"]}, 
         "request":{ 
-            "model": "gpt-3.5-turbo-1106", "temperature": 0.7, "stream": false, "max_tokens": 16384, 
+            "model": "gpt-4o-mini", "temperature": 0.7, "stream": false, "max_tokens": 16384, 
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
         "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
@@ -36,18 +36,18 @@
         "max_memory_tokens": 12000
     },
 
-    "chat-knowledgebase-gpt35-turbo": {
-        "name": "chat-knowledgebase-gpt35-turbo",
+    "chat-knowledgebase-openai": {
+        "name": "chat-knowledgebase-openai",
         "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
             "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
             "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "max_requests_per_second":50, 
             "http_retry_codes": ["*"]}, 
         "request":{ 
-            "model": "gpt-3.5-turbo-1106", "temperature": 0.7, "stream": false, "max_tokens": 16384, 
+            "model": "gpt-4o-mini", "temperature": 0.7, "stream": false, "max_tokens": 16384, 
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
         "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
-        "embeddings_model": "embedding-openai-ada002",
+        "embeddings_model": "embedding-openai",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
         "response_finishreason": "data.choices[0].finish_reason",
@@ -65,18 +65,18 @@
         "max_memory_tokens": 12000
     },
 
-    "chat-knowledgebase-gpt4-turbo": {
-        "name": "chat-knowledgebase-gpt4-turbo",
+    "chat-knowledgebase-openai-lux": {
+        "name": "chat-knowledgebase-openai-lux",
         "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
             "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
             "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "max_requests_per_second":50, 
             "http_retry_codes": ["*"]}, 
         "request":{ 
-            "model": "gpt-4-1106-preview", "temperature": 0.7, "stream": false, "max_tokens": 128000, 
+            "model": "gpt-4o", "temperature": 0.7, "stream": false, "max_tokens": 128000, 
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
         "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
-        "embeddings_model": "embedding-openai-ada002",
+        "embeddings_model": "embedding-openai",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
         "response_finishreason": "data.choices[0].finish_reason",
@@ -94,18 +94,18 @@
         "max_memory_tokens": 12000
     },
 
-    "simplellm-gpt35-turbo": {
-        "name": "simplellm-gpt35-turbo",
+    "simplellm-openai": {
+        "name": "simplellm-openai",
         "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
             "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
             "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "max_requests_per_second":50, 
             "http_retry_codes": ["*"]}, 
         "request":{ 
-            "model": "gpt-3.5-turbo-1106", "temperature": 0.7, "stream": false, "max_tokens": 16384, 
+            "model": "gpt-4o-mini", "temperature": 0.7, "stream": false, "max_tokens": 16384, 
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
         "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
-        "embeddings_model": "embedding-openai-ada002",
+        "embeddings_model": "embedding-openai",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
         "response_finishreason": "data.choices[0].finish_reason",
@@ -122,14 +122,14 @@
         "price_per_unit": "0.000002"
     },
 
-    "embedding-openai-ada002": {
-        "name": "embedding-openai-ada002",
+    "embedding-openai": {
+        "name": "embedding-openai",
         "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
             "path":"/v1/embeddings", "backoffwait": 120, "backoffexponent": 2, 
             "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "max_requests_per_second":50, 
             "http_retry_codes": ["*"]}, 
         "request":{ 
-            "model": "text-embedding-ada-002", 
+            "model": "text-embedding-3-small", 
             "input":"${__ORG_NEURANET_PROMPT__}",
             "max_tokens": 16384
         },
@@ -161,7 +161,7 @@
             "model": "meta-llama/Llama-2-7b-chat-hf", "temperature": 0.7, "stream": false, "max_tokens":4096 , 
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
-        "embeddings_model": "embedding-openai-ada002",
+        "embeddings_model": "embedding-openai",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
         "response_finishreason": "data.choices[0].finish_reason",
@@ -190,7 +190,7 @@
             "model": "mistralai/Mistral-7B-Instruct-v0.1", "temperature": 0.7, "stream": false, "max_tokens":4096 , 
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
-        "embeddings_model": "embedding-openai-ada002",
+        "embeddings_model": "embedding-openai",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
         "response_finishreason": "data.choices[0].finish_reason",
@@ -220,7 +220,7 @@
             "model": "Open-Orca/Mistral-7B-OpenOrca", "temperature": 0.7, "stream": false, "max_tokens":4096 , 
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
-        "embeddings_model": "embedding-openai-ada002",
+        "embeddings_model": "embedding-openai",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
         "response_finishreason": "data.choices[0].finish_reason",
@@ -250,7 +250,7 @@
             "model": "HuggingFaceH4/zephyr-7b-beta", "temperature": 0.7, "stream": false, "max_tokens":4096 , 
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
-        "embeddings_model": "embedding-openai-ada002",
+        "embeddings_model": "embedding-openai",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
         "response_finishreason": "data.choices[0].finish_reason",
@@ -280,7 +280,7 @@
             "model": "Qwen/Qwen1.5-4B-Chat", "temperature": 0.7, "stream": false, "max_tokens":4096 , 
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
-        "embeddings_model": "embedding-openai-ada002",
+        "embeddings_model": "embedding-openai",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
         "response_finishreason": "data.choices[0].finish_reason",
@@ -310,7 +310,7 @@
             "model": "Qwen/Qwen1.5-7B-Chat", "temperature": 0.7, "stream": false, "max_tokens":4096 , 
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
-        "embeddings_model": "embedding-openai-ada002",
+        "embeddings_model": "embedding-openai",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
         "response_finishreason": "data.choices[0].finish_reason",
