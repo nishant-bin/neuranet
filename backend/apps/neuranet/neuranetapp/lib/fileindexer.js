@@ -5,6 +5,9 @@
  * 
  * Bridge between drive documents including XBin and Neuranet knowledgebases.
  * 
+ * Listens to local XBin cluster events - so any file op will be emitted to the
+ * entire local cluster and will update (and sync) all local AI DBs - independently.
+ * 
  * (C) 2023 Tekmonks Corp. All rights reserved.
  * License: See enclosed LICENSE file.
  */
@@ -34,9 +37,9 @@ exports.initSync = _ => {
     conf = JSON.parse(confRendered);
     if (!conf.enabled) return;  // file indexer is disabled
     
-    const blackboardOptions = {}; blackboardOptions[blackboard.LOCAL_ONLY] = true;  // only operate on local CMS' events
-    if (!NEURANET_CONSTANTS.CONF.disable_xbin) blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message), blackboardOptions);
-    if (!NEURANET_CONSTANTS.CONF.disable_private_cms) blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, message => _handleFileEvent(message), blackboardOptions);
+    const bboptions = {}; bboptions[blackboard.LOCAL_CLUSTER_ONLY] = true;  // only operate on local CMS' events
+    if (!NEURANET_CONSTANTS.CONF.disable_xbin) blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message), bboptions);
+    if (!NEURANET_CONSTANTS.CONF.disable_private_cms) blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, message => _handleFileEvent(message), bboptions);
     _initPluginsAsync(); 
 }
 

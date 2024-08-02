@@ -2,7 +2,7 @@
 # match. The file documents rest of the commands and syntax.
 
 ---
-id: _org_neuranet_defaultorg_               # the AI application name / ID
+id: _org_neuranet_default_aiapp_            # the AI application name / ID
 interface:                                  # the interface details
   type: enterpriseassist                    # this is for the frontend can be chat, translate or search interfaces
   label: AI assistant                       # the label for the app icon on the UI
@@ -42,11 +42,9 @@ pregen_flow:
         - name: simplellm-openai
           type: chat
           model_overrides:                  # this allows us to override model params on a per AI app basis, can be a nested path e.g. driver.host if we are calling API at a different host name etc          
-            read_ai_response_from_samples: true
         - name: embedding-openai
           type: embeddings
           model_overrides:                      
-            read_ai_response_from_samples: true
       words_promptparam: 700
       pregenfile_prefix: summary
       pregenfile_dir: _neuranet_generated
@@ -74,11 +72,9 @@ pregen_flow:
         - name: simplellm-openai
           type: chat
           model_overrides:                  # this allows us to override model params on a per AI app basis, can be a nested path e.g. driver.host if we are calling API at a different host name etc          
-            read_ai_response_from_samples: true
         - name: embedding-openai
           type: embeddings
           model_overrides:                      
-            read_ai_response_from_samples: true
       pregenfile_prefix: reworded
       pregenfile_dir: _neuranet_generated
       pregenfile_ext: txt
@@ -93,8 +89,6 @@ llm_flow:
       aiappid: "{{{aiappid}}}"              # inbuilt variable contains the ai app ID
       model: 
         name: simplellm-openai
-        model_overrides: 
-          read_ai_response_from_samples: true
       prompt_noinflate: |
         Given the following conversation and a question, rephrase the question to include all relevant keywords and context from the conversation.
         Conversation:
@@ -137,8 +131,8 @@ llm_flow:
         स्टैंडअलोन प्रश्न यह है:
     out: query
 
-  - command: doctfidfsearch.search          # only for Chinese and Japanese languages, the condition below ensures that
-    condition_js: |
+  - command: doctfidfsearch.search          # only if forced, perfrom a non-llm search
+    condition_js: |                         # _js means run the code - assign value to the property
       if (request.force_nonllm_search) return true; else return false;
     in: 
       query: "{{{query}}}"                  # inbuilt variable contains the user's query
@@ -150,9 +144,9 @@ llm_flow:
       bridges_js: return (request.bridges||[aiappid])
       metadata_filter_function: "{{{request.metadata_filter_function}}}"
       punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
-    out: documentsfound
+    out: airesponse.documents
 
-  - command: docvectorsearch.search         # for all languages except Chinese and Japanese, the condition below 
+  - command: docvectorsearch.search         # unless forced, this is the default
     condition_js: |
       if (request.force_nonllm_search) return false; else return true;
     in: 
@@ -163,15 +157,15 @@ llm_flow:
       min_distance_vectors: 0
       embeddings_model: 
         name: embedding-openai
-        model_overrides:                    
-          read_ai_response_from_samples: true
       aiappid: "{{{aiappid}}}"  
       bridges_js: return (request.bridges||[aiappid])
       metadata_filter_function: "{{{request.metadata_filter_function}}}"
       punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
-    out: documentsfound
+    out: airesponse.documents
 
   - command: llm_history_chat               # default function entry is answer so entry function name is skipped
+    condition_js: |
+      if (request.nochat) return false; else return true;
     in: 
       session_id: "{{{request.session_id}}}" 
       auto_summary: false                   # controls session auto-summary, setting to true will lead to random errors but shorter sessions        
@@ -180,7 +174,7 @@ llm_flow:
       matchers_for_reference_links: 
         - (.+)\/_neuranet_generated\/summary_(.+)\.txt
         - (.+)\/_neuranet_generated\/reworded_(.+)\.txt
-      documents_js: return documentsfound   # the _js means the value of this property is the inline JS code
+      documents_js: return airesponse.documents  
       prompt_noinflate: |                   # means do not inflate this at the flow engine - the calling command will use it as is
         Answer the following question only using the documents provided below.
         Question:
@@ -231,47 +225,7 @@ llm_flow:
         जवाब है:
       model: 
         name: chat-knowledgebase-openai
-        model_overrides: 
-          read_ai_response_from_samples: true
     out: airesponse                         # the final response must output to this property - airesponse for LLM flows
-
-
-docsearch_flow:
-  - command: doctfidfsearch.search          # if forced return true, else for double-byte (cn and ja) return true
-    condition_js: |
-      if (request.force_nonllm_search) return true; else return false;
-    in: 
-      query: "{{{query}}}"                  # inbuilt variable contains the user's query
-      metadata: null
-      topK_tfidf: 3
-      cutoff_score_tfidf_js: request.cutoff_score_tfidf || 0.40
-      topK_vectors: 3
-      min_distance_vectors: 0
-      aiappid: "{{{aiappid}}}"  
-      bridges_js: return (request.bridges||[aiappid])
-      metadata_filter_function: "{{{request.metadata_filter_function}}}"
-      punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
-    out: airesponse.documents
-
-  - command: docvectorsearch.search         # if forced return true, else for non double-byte (cn and ja) return true
-    condition_js: |
-      if (request.force_nonllm_search) return false; else return true;
-    in: 
-      query: "{{{query}}}"
-      topK_tfidf: 3
-      cutoff_score_tfidf_js: request.cutoff_score_tfidf || 0.40
-      topK_vectors: 3
-      min_distance_vectors: 0
-      embeddings_model: 
-        name: embedding-openai
-        model_overrides:                    
-          read_ai_response_from_samples: true
-      aiappid: "{{{aiappid}}}"  
-      bridges_js: return (request.bridges||[aiappid])
-      metadata_filter_function: "{{{request.metadata_filter_function}}}"
-      punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
-    out: airesponse.documents
-
 
 global_models:
   - name: embedding-openai

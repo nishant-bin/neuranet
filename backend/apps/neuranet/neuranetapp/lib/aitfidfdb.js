@@ -43,7 +43,8 @@ const VOCABULARY_FILE="vocabulary", IINDEX_FILE="iindex", METADATA_DOCID_KEY="do
     MIN_STOP_WORD_IDENTIFICATION_LENGTH = 5, MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95, 
     DEFAULT_MAX_COORD_BOOST = 0.10, TFIDFDB_DELETE_DOC_TOPIC = "tfidf.rmdoc",
     TFIDFDB_UPDATE_DOC_TOPIC = "tfidf.updatedoc", TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC = "tfidf.tfidfDocStore.doclength",
-    TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORD_TOPIC = "iindex.getCountOfDocumentsWithWord";
+    TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORD_TOPIC = "iindex.getCountOfDocumentsWithWord", 
+    TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORDS_TOPIC = "iindex.getCountOfDocumentsWithWords";
 const IN_MEM_DBS = {}; let blackboard_initialized = false;
 
 // international capable punctuation character regex from: https://stackoverflow.com/questions/7576945/javascript-regular-expression-for-punctuation-international
@@ -151,6 +152,16 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
         const countThisDB = EMPTY_DB.iindex[word]?Object.keys(EMPTY_DB.iindex[word].docs).length:0;
         if ((!local) && (EMPTY_DB.distributed)) return (await _distributedSum(EMPTY_DB, TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORD_TOPIC, 
             {word}))+countThisDB; else countThisDB;
+    }
+    EMPTY_DB.iindex.getCountOfDocumentsWithWords = async (words, local) => {
+        const localDocWordCounts = {}; for (const word of words) localDocWordCounts[word] = 
+            EMPTY_DB.iindex.getCountOfDocumentsWithWord(word, true);
+        const finalDocWordCounts = {...localDocWordCounts}; if ((!local) && (EMPTY_DB.distributed)) {
+            const distribuedDocWordCounts = await _distributedSum(EMPTY_DB, 
+                TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORDS_TOPIC, {words}, true);
+            for (const word of words) finalDocWordCounts[word] += distribuedDocWordCounts[word]||0;
+        }
+        return finalDocWordCounts;
     }
     EMPTY_DB.iindex.getAllWordObjects = _ => Object.values(EMPTY_DB.iindex).filter(value => typeof value !== "function");
     EMPTY_DB.iindex.getAllWords = _ => Object.keys(EMPTY_DB.iindex).filter(key => typeof EMPTY_DB.iindex[key] !== "function");
@@ -288,7 +299,10 @@ exports.delete = async function(metadata, db, publish=true) {
     if (document) {
         for (const wordObject of db.iindex.getAllWordObjects()) db.iindex.deleteDocumentFromWordObject(wordObject, docHash);
         db.tfidfDocStore.delete(_getDocumentHashIndex(metadata, db));       // we don't await as it causes multi-threading for cascading deletes, the await is only to delete the text file which doesn't matter much
-    } else if (publish) blackboard.publish(TFIDFDB_DELETE_DOC_TOPIC, {creation_data: _createDBCreationData(db), metadata});  // not found here, but maybe other DBs have it
+    } else if (publish) {
+        const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
+        blackboard.publish(TFIDFDB_DELETE_DOC_TOPIC, {creation_data: _createDBCreationData(db), metadata}, bboptions);  // not found here, but maybe other DBs have it
+    }
 
     return metadata;
 }
@@ -305,8 +319,9 @@ exports.update = async (oldmetadata, newmetadata, db, publish=true) => {
     const oldhash = _getDocumentHashIndex(oldmetadata, db), newhash = _getDocumentHashIndex(newmetadata, db),
         document = await db.tfidfDocStore.data(oldhash);
     if ((!document) && publish) {
+        const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
         blackboard.publish(TFIDFDB_UPDATE_DOC_TOPIC, {creation_data: _createDBCreationData(db), 
-            oldmetadata, newmetadata});
+            oldmetadata, newmetadata}, bboptions);
         return true;    // not found here, but maybe other DBs have it
     }
 
@@ -368,11 +383,12 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
         if (filter_function && (!options.filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
         const tfAdjustmentFactor = options.punish_verysmall_documents ? _getVerySmallDocumentPunishment(docHash, db) : 1;
 
-        let scoreThisDoc = 0, tfScoreThisDoc = 0, queryWordsFoundInThisDoc = 0;
+        let scoreThisDoc = 0, tfScoreThisDoc = 0, queryWordsFoundInThisDoc = 0, 
+            documentsWithWordsCount = await db.iindex.getCountOfDocumentsWithWords(queryWords);
         for (const queryWord of queryWords) {
             if (!db.iindex.getWordObject(queryWord)) continue; // query word not found in the vocabulary
             const tf = db.iindex.getWordCountForDocument(queryWord, docHash)/document.length, tfAdusted = tf*tfAdjustmentFactor,
-                totalDocLength = await db.tfidfDocStore.doclength(), docsWithThisWord = await db.iindex.getCountOfDocumentsWithWord(queryWord),
+                totalDocLength = await db.tfidfDocStore.doclength(), docsWithThisWord = documentsWithWordsCount[queryWord],
                 idf = 1+Math.log10(totalDocLength/(docsWithThisWord+1)), tfidf = tfAdusted*idf;
             tfScoreThisDoc += tfAdusted; scoreThisDoc += tfidf; if (tfAdusted) queryWordsFoundInThisDoc++;
         }
@@ -488,7 +504,7 @@ const _createDBCreationData = db => {
 }
 
 function _initBlackboardHooks() {
-    const blackboardOptions = {}; blackboardOptions[blackboard.EXTERNAL_ONLY] = true;
+    const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
 
     blackboard.subscribe(TFIDFDB_UPDATE_DOC_TOPIC, async msg => {
         const {creation_data, oldmetadata, newmetadata} = msg;
@@ -496,7 +512,7 @@ function _initBlackboardHooks() {
             creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
             creation_data.mem_only))._getRawDB();
         exports.update(oldmetadata, newmetadata, db, false);
-    }, blackboardOptions);
+    }, bboptions);
 
     blackboard.subscribe(TFIDFDB_DELETE_DOC_TOPIC, async msg => {
         const {creation_data, metadata} = msg;
@@ -504,7 +520,7 @@ function _initBlackboardHooks() {
             creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
             creation_data.mem_only))._getRawDB();
         exports.delete(metadata, db, false);
-    }, blackboardOptions);
+    }, bboptions);
 
     blackboard.subscribe(TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC, async msg => {
         const {creation_data, blackboardcontrol} = msg;
@@ -513,7 +529,7 @@ function _initBlackboardHooks() {
             creation_data.mem_only))._getRawDB();
         blackboard.sendReply(TFIDFDB_DOCSTORE_DOCLENGTH_TOPIC, blackboardcontrol, 
             {reply: await db.tfidfDocStore.doclength(true)});
-    }, blackboardOptions);
+    }, bboptions);
 
     blackboard.subscribe(TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORD_TOPIC, async msg => {
         const {creation_data, word, blackboardcontrol} = msg;
@@ -522,15 +538,31 @@ function _initBlackboardHooks() {
             creation_data.mem_only))._getRawDB();
         blackboard.sendReply(TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORD_TOPIC, blackboardcontrol, 
             {reply: await db.iindex.getCountOfDocumentsWithWord(word, true)});
-    }, blackboardOptions);
+    }, bboptions);
+
+    blackboard.subscribe(TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORDS_TOPIC, async msg => {
+        const {creation_data, words, blackboardcontrol} = msg;
+        const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
+            creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
+            creation_data.mem_only))._getRawDB();
+        blackboard.sendReply(TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORDS_TOPIC, blackboardcontrol, 
+            {reply: await db.iindex.getCountOfDocumentsWithWords(words, true)});
+    }, bboptions);
 }
 
-function _distributedSum(db, topic, params) {
-    if (blackboard.getDistribuedClusterSize() == 0) return 0;   // single node deployment
+function _distributedSum(db, topic, params, keyedObjectReplies) {
+    if (blackboard.getCurrentClusterSizeOnline() == 0) return keyedObjectReplies?0:{};   // single node deployment or cluster offline
+
     return new Promise(resolve => blackboard.getReply(topic, {creation_data: _createDBCreationData(db), ...params}, 
         conf.cluster_timeout, replies => {
-            let sum = 0; for (const replyObject of replies||[]) sum += replyObject.reply;
-            resolve(sum);
+            if (!keyedObjectReplies) {
+                let sum = 0; for (const replyObject of replies||[]) sum += replyObject.reply;
+                resolve(sum);
+            } else {
+                const finalObject = {}; for (const replyObject of replies||[]) for (const key of Object.keys(replyObject))
+                    finalObject[key] += (finalObject[key]||0) + replyObject[key];
+                return finalObject;
+            }
         }
     ));
 }

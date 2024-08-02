@@ -9,6 +9,18 @@
  * Together these two AI DBs comprise the Neuranet knowledgebase which is 
  * then used for in-context training when the user is interacting with the AI. 
  * 
+ * 
+ * Neuranet Distributed DB design 
+ * 	- Xbin Publishes the event to the entire distributed cluster, NFS volume is shared
+ * 	- Neuranet (fileindexer) - catches only the local events for the cluster and each 
+ *    local cluster node proceeses them independently, thus local cluster eventually syncs
+ * 	- This causes disjoint distributed AI DB across the distributed cluster 
+ * 	- So queries need entire distributed cluster to respond (allows large DBs and distributed processing)
+ * 	
+ * 	- Delete and updates - the server receiving the XBin event may not have the files in the AI DB, as the DBs are disjoint so they need to be send to the external cluster members to sync 
+ * 	
+ * 	- Create can always be local as DBs are disjoint by design
+ * 
  * (C) 2023 TekMonks. All rights reserved.
  * License: See the enclosed LICENSE file.
  */

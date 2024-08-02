@@ -244,7 +244,7 @@ exports.read = async (vector, metadata, notext, db_path) => {
 exports.update = async (vector, oldmetadata, newmetadata, text, embedding_generator, db_path) => {
     if (!vector) {_log_error("Update called without a proper index vector", db_path, "Vector to update not provided"); return false;}
     
-    await exports.delete(vector, oldmetadata, db_path);  // delete or try to delete first
+    await exports.delete(vector, oldmetadata, db_path);  // delete or try to delete first - this will remove it from which ever vector DB has it (including distributed)
     return await exports.create(vector, newmetadata, text, embedding_generator, db_path);  // add it back
 }
 
@@ -258,7 +258,7 @@ exports.delete = async (vector, metadata, db_path) => {
     const dbToUse = dbs[_get_db_index(db_path)], hash = _get_vector_hash(vector, metadata, dbToUse); 
 
     try {
-        const deletedVectorFromThisDB = await _deleteDBVectorObject(dbToUse, hash);
+        const deletedVectorFromThisDB = await _deleteDBVectorObject(dbToUse, hash); // will return true if was found and delete on the local DB
         if (dbToUse.multithreaded && deletedVectorFromThisDB) await _update_db_for_worker_threads();
         return true;
     } catch (err) {
@@ -611,8 +611,9 @@ async function _setDBVectorObject(dbToFill, vectorObject, isBeingCreated=false) 
 
 async function _deleteDBVectorObject(dbToUse, hash, publish=true) {
     if ((!dbToUse.index[hash]) && publish) { // we do not have this vector, maybe someone else does
+        const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
         blackboard.publish(VECTORDB_DELETE_VECTOR_TOPIC, {dbpath: dbToUse.path, 
-            metadata_docid_key: dbToUse[METADATA_DOCID_KEY], multithreaded: dbToUse.multithreaded, hash}); 
+            metadata_docid_key: dbToUse[METADATA_DOCID_KEY], multithreaded: dbToUse.multithreaded, hash}, bboptions); 
         return false; 
     }
 
@@ -628,7 +629,7 @@ async function _deleteDBVectorObject(dbToUse, hash, publish=true) {
 const _getDBVectorObject = (dbToUse, hash) => dbToUse.index[hash];  
 
 function _initBlackboardHooks() {
-    const blackboardOptions = {}; blackboardOptions[blackboard.EXTERNAL_ONLY] = true;
+    const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
 
     blackboard.subscribe(VECTORDB_DELETE_VECTOR_TOPIC, async msg => {
         const {dbpath, multithreaded, hash, metadata_docid_key} = msg;
@@ -639,17 +640,17 @@ function _initBlackboardHooks() {
         }
         if (dbs[_get_db_index(dbpath)]) _deleteDBVectorObject(dbs[_get_db_index(dbpath)], hash, false);
         else _log_error(`Unable to delete vector as database not found and init failed.`, dbpath);
-    }, blackboardOptions);
+    }, bboptions);
 
     blackboard.subscribe(VECTORDB_QUERY_TOPIC, async msg => {
         const {query_params, blackboardcontrol} = msg;
         const similarities = await exports.query(...query_params, true);
         blackboard.sendReply(VECTORDB_QUERY_TOPIC, blackboardcontrol, {reply: similarities});
-    }, blackboardOptions);
+    }, bboptions);
 }
 
 function _getDistributedSimilarities(query_params) {
-    if (blackboard.getDistribuedClusterSize() == 0) return [];   // single node deployment
+    if (blackboard.getCurrentClusterSizeOnline() == 0) return [];   // single node deployment or cluster offline
 
     return new Promise(resolve => blackboard.getReply(VECTORDB_QUERY_TOPIC, {query_params}, 
         conf.cluster_timeout, replies => {

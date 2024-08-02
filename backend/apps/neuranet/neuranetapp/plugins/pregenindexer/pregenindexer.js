@@ -9,9 +9,11 @@
  * License: See the enclosed LICENSE file.
  */
 
+const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+
 const path = require("path");
 const conf = require(`${__dirname}/pregenindexer.json`);
-const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 
@@ -26,7 +28,7 @@ exports.canHandle = async fileindexer => {
 }
 
 /**
- * Will ingest the given file and generate the corresponding pregen (GARAGe) files for it.
+ * Will ingest the given file and generate the corresponding pregen files for it.
  * @param {object} fileindexer The file indexer object
  * @returns true on success or false on failure
  */
@@ -38,10 +40,13 @@ exports.ingest = async function(fileindexer) {
     await fileindexer.start(); 
     let currentStep = 0; for (const pregenStep of pregenSteps) {
         if (!await _condition_to_run_met(pregenStep)) continue;    // run only if condition is satisfied
-        const pregenResult = await pregenStep.generate(fileindexer); _informProgress(++currentStep);
+        
+        const fileAlreadyGenerated = await serverutils.exists(pregenStep.cmspath);   // other cluster members may have already generated the file
+        const pregenResult = fileAlreadyGenerated ? {result: true} :   
+            await pregenStep.generate(fileindexer); _informProgress(++currentStep);
 
         if (pregenResult.result) {
-            const addGeneratedFileToCMSResult = await fileindexer.addFileToCMSRepository(
+            const addGeneratedFileToCMSResult = fileAlreadyGenerated ? true : await fileindexer.addFileToCMSRepository(
                 pregenResult.contentBufferOrReadStream(), pregenStep.cmspath, pregenStep.comment, true);
             _informProgress(++currentStep);
 
