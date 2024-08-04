@@ -48,6 +48,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 			message => { if (message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED && 
 				_areCMSPathsSame(message.cmspath, finalCMSPath)) resolve(message); }));
 		const extrainfo = brainhandler.createExtraInfo(id, org, aiappid);
+		extrainfo[fileindexer.DO_NOT_FLUSH_AIDB] = true;	// unless told to flush we do not do it, speeds up mass unindexing
 		if (!(await fileindexer.deleteFileFromCMSRepository(id, org, finalCMSPath, extrainfo))) {
 			LOG.error(`CMS error deleting document for request ${JSON.stringify(jsonReq)}`); 
 			return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};

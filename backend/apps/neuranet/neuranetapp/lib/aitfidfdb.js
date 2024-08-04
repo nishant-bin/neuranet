@@ -155,7 +155,7 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
     }
     EMPTY_DB.iindex.getCountOfDocumentsWithWords = async (words, local) => {
         const localDocWordCounts = {}; for (const word of words) localDocWordCounts[word] = 
-            EMPTY_DB.iindex.getCountOfDocumentsWithWord(word, true);
+            await EMPTY_DB.iindex.getCountOfDocumentsWithWord(word, true);
         const finalDocWordCounts = {...localDocWordCounts}; if ((!local) && (EMPTY_DB.distributed)) {
             const distribuedDocWordCounts = await _distributedSum(EMPTY_DB, 
                 TFIDFDB_IINDEX_COUNT_DOCS_WITH_WORDS_TOPIC, {words}, true);
@@ -443,7 +443,7 @@ async function _getLangNormalizedWords(document, lang, db, autocorrect=false, fa
         if (word.trim() == "") return true; // emptry words are useless
         const dbHasStopWords = db._stopwords?.[lang] && db._stopwords[lang].length > 0;
         if (!dbHasStopWords) {   // auto learn stop words if possible
-            const dbDocCount = db.tfidfDocStore.doclength();
+            const dbDocCount = await db.tfidfDocStore.doclength();
             if (dbDocCount > MIN_STOP_WORD_IDENTIFICATION_LENGTH) {
                 if (!db._stopwords) db._stopwords = {}; db._stopwords[lang] = [];
                 for (const word of db.iindex.getAllWords())
@@ -551,7 +551,7 @@ function _initBlackboardHooks() {
 }
 
 function _distributedSum(db, topic, params, keyedObjectReplies) {
-    if (blackboard.getCurrentClusterSizeOnline() == 0) return keyedObjectReplies?0:{};   // single node deployment or cluster offline
+    if (blackboard.getCurrentClusterSizeOnline() == 0) return keyedObjectReplies?{}:0;   // single node deployment or cluster offline
 
     return new Promise(resolve => blackboard.getReply(topic, {creation_data: _createDBCreationData(db), ...params}, 
         conf.cluster_timeout, replies => {
@@ -561,7 +561,7 @@ function _distributedSum(db, topic, params, keyedObjectReplies) {
             } else {
                 const finalObject = {}; for (const replyObject of replies||[]) for (const key of Object.keys(replyObject))
                     finalObject[key] += (finalObject[key]||0) + replyObject[key];
-                return finalObject;
+                resolve(finalObject);
             }
         }
     ));

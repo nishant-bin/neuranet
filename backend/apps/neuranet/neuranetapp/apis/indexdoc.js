@@ -60,6 +60,7 @@ exports.doService = async (jsonReq, _servObject, _headers, _url) => {
 			}
 		));
 		const extrainfo = brainhandler.createExtraInfo(id, org, aiappid, metadata, NEURANET_CONSTANTS.AIAPPMODES.TRAIN);
+		extrainfo[fileindexer.DO_NOT_FLUSH_AIDB] = true;	// unless told to flush we do not do it, speeds up mass indexing
 		if (!await fileindexer.addFileToCMSRepository(id, org, Buffer.from(data, encoding||"utf8"), 
 			finalCMSPath, comment, extrainfo)) {
 
