@@ -211,7 +211,7 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
         },
         getContents: async function(encoding) { return await this.getTextContents(encoding)},
         start: function(){},
-        end: function(){if (extraInfo[module.exports.DO_NOT_FLUSH_AIDB]) return; else aidbfs.flush(id, org, this.aiappid);},
+        end: function(){if (extraInfo && extraInfo[module.exports.DO_NOT_FLUSH_AIDB]) return; else aidbfs.flush(id, org, this.aiappid);},
         flush: async function() { try {await aidbfs.flush(id, org, this.aiappid); return true;} catch (err) {
             LOG.error(`Error flushing AI databases. The error is ${err}`); return false;} },
         //addfile, removefile, renamefile - all follow the same high level logic
