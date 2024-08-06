@@ -25,7 +25,12 @@ exports.runTestsAsync = async function(argv) {
     
     LOG.console(`Test case for Create File called to create the file ${fileName}.\n`);
 
-    const headers = { xbin_id: TEST_ID, xbin_org: TEST_ORG};
+    let userObj = argv.pop();
+    if (typeof userObj === 'object') { const userConf = require(`${__dirname}/conf/testing.json`)[userObj.user];
+        userObj = { ...userConf, aiappid: userObj["aiapp"] };} else { argv.push(userObj); userObj = undefined; }
+    
+    const headers = { xbin_id: userObj?.id || TEST_ID, xbin_org: userObj?.org || TEST_ORG};
+
     let result = await createfile.doService({path: cmsRelativePath, isDirectory}, "", headers);
     if(!result) { LOG.console("file creation failed\n"); return false; }
     else LOG.console(`file:'${fileName}' created\n`); LOG.info(`file:'${fileName}' created`);

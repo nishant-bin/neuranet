@@ -15,6 +15,11 @@ exports.runTestsAsync = async function(argv) {
         return;
     }
     if (!argv[1]) { LOG.console("Missing search query.\n"); return; } 
+    
+    let userObj = argv.pop();
+    if (typeof userObj === 'object') {const userConf = require(`${__dirname}/conf/testing.json`)[userObj.user];
+        userObj = { ...userConf, aiappid: userObj["aiapp"] }; } else { argv.push(userObj); userObj = undefined; }
+
     const queries = argv.slice(1).map(query =>  query.trim());
     
     LOG.console(`Test case for AI Search called to ask the queries ${JSON.stringify(queries)}.\n`);
@@ -22,7 +27,8 @@ exports.runTestsAsync = async function(argv) {
     let responseCounts = 0; for (const query of queries) {
         LOG.console(`\nQuery: ${query}\n`);
         try{
-            const jsonReq = {id: TEST_ID, org: TEST_ORG, aiappid: TEST_APP, question: query};
+            const jsonReq = {id: userObj?.id || TEST_ID, org: userObj?.org || TEST_ORG, aiappid: userObj?.aiappid || TEST_APP,
+                question: query, flow: "llm_flow" };
             const queryResult = await llmflow.doService(jsonReq);
             if (((!queryResult) || (!queryResult.result))) {
                 LOG.console({result:false, err:queryResult.reason||"Search failed."}); }

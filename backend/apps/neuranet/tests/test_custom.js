@@ -19,11 +19,13 @@ exports.runTestsAsync = async function(argv) {
 	let testResults = []; for (const [i, testcase] of customTestcases.entries()) {
 		LOG.console(`----------Case:${i+1}--------\n`);
 		let resultCount = 0, testNames = Object.keys(testcase);
-		for (const testName of testNames) {
+		for (let testName of testNames) {
 			if(typeof testcase[testName] !== 'object') continue;
 			try {
-				const module = require(`${__dirname}/${_getModuleName(testName)}`);
+				const testNameWithoutIndex = testName.split('_').slice(0,-1).join("_");
 				testcase[testName].unshift(testName);
+				const module = require(`${__dirname}/${_getModuleName( testNameWithoutIndex || testName)}`);
+				testcase[testName][0] = testNameWithoutIndex ?  testNameWithoutIndex : testName
 				const result = await module.runTestsAsync(testcase[testName]);
 				if(result) resultCount++; }
 			catch(err){ LOG.console(`${testName} Failed, error:${err.message}\n`); }	

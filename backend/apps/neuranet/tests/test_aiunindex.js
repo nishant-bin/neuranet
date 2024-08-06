@@ -19,6 +19,11 @@ exports.runTestsAsync = async function(argv) {
         LOG.console("Missing test file/s name/s.\n");
         return;
     } 
+    
+    let userObj = argv.pop();
+    if (typeof userObj === 'object') { const userConf = require(`${__dirname}/conf/testing.json`)[userObj.user];  userObj = { ...userConf, aiappid: userObj["aiapp"] };} 
+    else {argv.push(userObj);userObj = undefined; }  
+    
     const filesToTest = argv.slice(1);
 
     LOG.console(`Test case for AI DB unindexing called to unindex the files ${filesToTest.join(", ")}.\n`);
@@ -35,7 +40,8 @@ exports.runTestsAsync = async function(argv) {
         }
     };
     for (const fileToParse of filesToTest) {
-        const jsonReq = {filename: path.basename(fileToParse), id: TEST_ID, org: TEST_ORG, aiappid: TEST_APP, __forceDBFlush: true}; 
+        const jsonReq = {filename: path.basename(fileToParse), id: userObj?.id || TEST_ID, org: userObj?.org || TEST_ORG,
+            aiappid: userObj?.aiappid || TEST_APP, __forceDBFlush: true };
         unindexingPromises.push(unindexFile(jsonReq));
     }
 
