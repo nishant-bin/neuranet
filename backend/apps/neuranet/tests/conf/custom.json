@@ -51,6 +51,78 @@
             "aicreate": ["test.pdf", "The English Wikipedia is the primary[a] English-language edition of Wikipedia, an online encyclopedia. It was created by Jimmy Wales and Larry Sanger on 15 January 2001, as Wikipedia's first edition. English Wikipedia is hosted alongside other language editions by the Wikimedia Foundation, an American nonprofit organization. Its content is written independently of other editions[1] in various varieties of English, aiming to stay consistent within articles. Its internal newspaper is The Signpost. English Wikipedia is the most-read version of Wikipedia,[2][3] accounting for 48% of Wikipedia's cumulative traffic, with the remaining percentage split among the other languages.[4] The English Wikipedia has the most articles of any edition, at 6,821,927 as of May 2024.[5] It contains 10.8% of articles in all Wikipedias,[5] although it lacks millions of articles found in other editions.[1] The edition's one-billionth edit was made on 13 January 2021.[6] English Wikipedia, often as a stand-in for Wikipedia overall, has been praised for its enablement of the democratization of knowledge, extent of coverage, unique structure, culture, and reduced degree of commercial bias. It has been criticized for exhibiting systemic bias, particularly gender bias against women and ideological bias.[7][8] While its reliability was frequently criticized in the 2000s, it has improved over time, receiving greater praise in the late 2010s and early 2020s,[9][7][10][b] having become an important fact-checking site.[11][12] English Wikipedia has been characterized as having less cultural bias than other language editions due to its broader editor base.[2] Articles Screenshot of Wikipedia's article on Earth, 18 January 2023 pening English Wikipedia's main page with Mozilla Firefox 99 on Ubuntu 20.04 Editors of the English Wikipedia have pioneered some ideas as conventions, policies or features which were later adopted by Wikipedia editions in some of the other languages. These ideas include \"featured articles\",[13] the neutral-point-of-view policy,[14] navigation templates,[15] the sorting of short \"stub\" articles into sub-categories,[16] dispute resolution mechanisms such as mediation and arbitration,[17] and weekly collaborations.[18] It surpassed six million articles on 23 January 2020.[19] In November 2022, the total volume of the compressed texts of its articles amounted to 20 gigabytes.[20] The edition's one-billionth edit was made on 13 January 2021 by Ser Amantio di Nicolao (Steven Pruitt) who as of that date is the user with the highest number of edits on the English Wikipedia, at over four million.[6] Currently, there are 6,821,927 articles created with 916,845 files. The encyclopedia is home to 10.8% of articles in all Wikipedias (down from more than 50% in 2003).[21][22] The English Wikipedia currently has 47,377,967 registered accounts of which 859 are administrators. Wikipedians The countries in which the English Wikipedia is the most popular language version of Wikipedia are shown in red. Popularity of English Wikipedia worldwide as of October 2022 Number of editors on the English Wikipedia over time Edits to English Wikipedia by country as of January 2022 English Wikipedia (marked blue in the graph) is the most-read version of Wikipedia, accounting for 48% of the website's global traffic as of 2021.The English Wikipedia is the most edited Wikipedia's language version of all time. The English Wikipedia reached 4,000,000 registered user accounts on 1 April 2007,[23] over a year since the millionth Wikipedian registered an account in February 2006.[24] Over 1,100,000 editors have edited Wikipedia more than 10 times.[25] Over 30,000 editors perform more than 5 edits per month, and over 3,000 perform more than 100 edits per month.[26] On 1 March 2014, The Economist, in an article titled \"The Future of Wikipedia\", cited a trend analysis concerning data published by the Wikimedia Foundation stating that \"[t]he number of editors for the English-language version has fallen by a third in seven years.\"[27] The attrition rate for active editors in English Wikipedia was cited by The Economist as substantially in contrast to statistics for Wikipedia in other languages (non-English Wikipedia). The Economist reported that the number of contributors with an average of five or more edits per month was relatively constant since 2008 for Wikipedia in other languages at approximately 42,000 editors within narrow seasonal variances of about 2,000 editors up or down. The number of active editors in English Wikipedia, by \"sharp\" comparison, was cited as peaking in 2007 at approximately 50,000 and dropping to 30,000 by the start of 2014."],
             "aisearch": ["Explain about english language"],
             "testDescription": "Checking CreateFile with big data and then ask a Query"
-        }
+        },
+		{
+			"aiindex": ["Technology Allocation.docx", {"user":"admin1", "aiapp":"tkmaiapp"}],
+			"aisearch_admin1": ["Guidelines for Proper Care of the Laptop", "explain employee laptop & accessories", {"user":"admin1", "aiapp":"tkmaiapp"} ],
+			"aisearch_admin2": ["Guidelines for Proper Care of the Laptop", "explain employee laptop & accessories", {"user":"admin2", "aiapp":"tkmaiapp"} ],
+			"testDescription":"One administrator uploaded a document, and another administrator queried it."
+
+		},
+		{
+			"aiindex": ["3.缴款通知及挂牌业务资金划转单.pdf",  {"user":"admin1", "aiapp":"tkmaiapp"}],
+			"airename": ["3.缴款通知及挂牌业务资金划转单.pdf", "43.缴款通知及挂牌业务资金划转单.pdf", {"user":"admin2", "aiapp":"tkmaiapp"}],
+			"aisearch_admin1": ["北金所账户的账号是多少？", {"user":"admin1", "aiapp":"tkmaiapp"}],
+			"aisearch_admin2": ["北金所账户的账号是多少？", {"user":"admin2", "aiapp":"tkmaiapp"}],
+			"testDescription":"One administrator uploaded a document, another renamed it, and both admins queried it."
+		},
+		{
+			"aiindex": ["Leave Management Policy 2024.docx",  {"user":"admin1", "aiapp":"tkmaiapp"}],
+			"aiunindex": ["Leave Management Policy 2024.docx", {"user":"admin2", "aiapp":"tkmaiapp"} ],
+			"testDescription":"One administrator uploaded a document, another admin deleted it "
+		},
+		{
+			"aiindex": ["4.绍兴市科技创业投资有限公司2022年度第一期理财直接融资工具注册要素表.pdf", {"user":"admin1", "aiapp":"tkmaiapp"}],
+			"aisearch": ["请简要介绍绍兴市科技创业投资有限公司的注册通知书和理财直接融资工具的基本信息。", "担保机构的全称是绍兴高新技术产业开发区迪荡新城投资发展有限公司局，其信用级别是多少？", {"user":"normaluser1", "aiapp":"tkmaiapp"} ],
+			"testDescription":"An administrator uploaded a document, and a normal user(not admin) queried it."
+		},
+		{
+			"aiapp":["new","newappid", {"user":"admin1", "aiapp":"newappid"}],
+			"aiapp_publish":["publish","newappid", {"user":"admin1", "aiapp":"newappid"}],
+			"aiindex": ["1.投后管理指引.docx", {"user":"admin1", "aiapp":"newappid"}],
+			"aisearch_admin1": [" 本公司制定投后管理业务指引的目的是什么？", {"user":"admin1", "aiapp":"newappid"} ],
+			"aisearch_admin2": [" 本公司制定投后管理业务指引的目的是什么？", {"user":"admin2", "aiapp":"newappid"} ],
+			"aiapp_unpublish":["unpublish","newappid", {"user":"admin2", "aiapp":"newappid"} ],
+			"aiapp_delete":["delete","newappid", {"user":"admin2", "aiapp":"newappid"} ],
+			"testDescription":"Create a new AI app, publish it, upload a document by one admin, have two admins query the document, and then unpublish and delete the app by another admin."
+
+		},
+		{
+			"aiapp":["new","newappid", {"user":"admin1", "aiapp":"newappid"}],
+			"aiapp_publish":["publish","newappid", {"user":"admin1", "aiapp":"newappid"}],
+			"aiindex": ["Leave Management Policy 2024.docx", {"user":"admin1", "aiapp":"newappid"}],
+			"aisearch": ["Explain Leave Management policy", {"user":"normaluser1", "aiapp":"newappid"} ],
+			"aiapp_unpublish":["unpublish","newappid",  {"user":"admin2", "aiapp":"newappid"}],
+			"aiapp_delete":["delete","newappid",  {"user":"admin2", "aiapp":"newappid"}],
+			"testDescription":"Create a new AI app, publish it, upload a document by an admin, have a normal user query the document, and then unpublish and delete the app by another admin."
+
+		},
+		{
+			"aiapp":["new","newappid"],
+			"aiapp_publish":["publish","newappid"],
+			"aiindex": ["3.缴款通知及挂牌业务资金划转单.pdf", {"user":"admin1", "aiapp":"newappid"}],
+			"aiunindex": ["3.缴款通知及挂牌业务资金划转单.pdf", {"user":"admin2", "aiapp":"newappid"} ],
+			"aiapp_unpublish":["unpublish","newappid"],
+			"aiapp_delete":["delete","newappid"],
+			"testDescription":"Create a new AI app, publish it, upload a document by one admin, and delete it by another admin."
+		},
+		{
+			"aiapp":["new","newappid"],
+			"aiapp_publish":["publish","newappid"],
+			"aiindex": ["Technology Allocation.docx", {"user":"admin1", "aiapp":"newappid"}],
+			"airename": ["Technology Allocation.docx", "Technology Allocation document.docx", {"user":"admin2", "aiapp":"newappid"}],
+			"aiapp_unpublish":["unpublish","newappid"],
+			"aiapp_delete":["delete","newappid"],
+			"testDescription":"Create a new AI app, publish it, upload a document by one admin, and rename it by another admin."
+		},
+		{
+			"aiapp":["new","newappid"],
+			"aiapp_publish":["publish","newappid"],
+            "aicreate": ["test.pdf", "The English Wikipedia is the primary[a] English-language edition of Wikipedia, an online encyclopedia. It was created by Jimmy Wales and Larry Sanger on 15 January 2001, as Wikipedia's first edition. English Wikipedia is hosted alongside other language editions by the Wikimedia Foundation, an American nonprofit organization. Its content is written independently of other editions[1] in various varieties of English, aiming to stay consistent within articles. Its internal newspaper is The Signpost. English Wikipedia is the most-read version of Wikipedia,[2][3] accounting for 48% of Wikipedia's cumulative traffic, with the remaining percentage split among the other languages.[4] The English Wikipedia has the most articles of any edition, at 6,821,927 as of May 2024.[5] It contains 10.8% of articles in all Wikipedias,[5] although it lacks millions of articles found in other editions.[1] The edition's one-billionth edit was made on 13 January 2021.[6] English Wikipedia, often as a stand-in for Wikipedia overall, has been praised for its enablement of the democratization of knowledge, extent of coverage, unique structure, culture, and reduced degree of commercial bias. It has been criticized for exhibiting systemic bias, particularly gender bias against women and ideological bias.[7][8] While its reliability was frequently criticized in the 2000s, it has improved over time, receiving greater praise in the late 2010s and early 2020s,[9][7][10][b] having become an important fact-checking site.[11][12] English Wikipedia has been characterized as having less cultural bias than other language editions due to its broader editor base.[2] Articles Screenshot of Wikipedia's article on Earth, 18 January 2023 pening English Wikipedia's main page with Mozilla Firefox 99 on Ubuntu 20.04 Editors of the English Wikipedia have pioneered some ideas as conventions, policies or features which were later adopted by Wikipedia editions in some of the other languages. These ideas include \"featured articles\",[13] the neutral-point-of-view policy,[14] navigation templates,[15] the sorting of short \"stub\" articles into sub-categories,[16] dispute resolution mechanisms such as mediation and arbitration,[17] and weekly collaborations.[18] It surpassed six million articles on 23 January 2020.[19] In November 2022, the total volume of the compressed texts of its articles amounted to 20 gigabytes.[20] The edition's one-billionth edit was made on 13 January 2021 by Ser Amantio di Nicolao (Steven Pruitt) who as of that date is the user with the highest number of edits on the English Wikipedia, at over four million.[6] Currently, there are 6,821,927 articles created with 916,845 files. The encyclopedia is home to 10.8% of articles in all Wikipedias (down from more than 50% in 2003).[21][22] The English Wikipedia currently has 47,377,967 registered accounts of which 859 are administrators. Wikipedians The countries in which the English Wikipedia is the most popular language version of Wikipedia are shown in red. Popularity of English Wikipedia worldwide as of October 2022 Number of editors on the English Wikipedia over time Edits to English Wikipedia by country as of January 2022 English Wikipedia (marked blue in the graph) is the most-read version of Wikipedia, accounting for 48% of the website's global traffic as of 2021.The English Wikipedia is the most edited Wikipedia's language version of all time. The English Wikipedia reached 4,000,000 registered user accounts on 1 April 2007,[23] over a year since the millionth Wikipedian registered an account in February 2006.[24] Over 1,100,000 editors have edited Wikipedia more than 10 times.[25] Over 30,000 editors perform more than 5 edits per month, and over 3,000 perform more than 100 edits per month.[26] On 1 March 2014, The Economist, in an article titled \"The Future of Wikipedia\", cited a trend analysis concerning data published by the Wikimedia Foundation stating that \"[t]he number of editors for the English-language version has fallen by a third in seven years.\"[27] The attrition rate for active editors in English Wikipedia was cited by The Economist as substantially in contrast to statistics for Wikipedia in other languages (non-English Wikipedia). The Economist reported that the number of contributors with an average of five or more edits per month was relatively constant since 2008 for Wikipedia in other languages at approximately 42,000 editors within narrow seasonal variances of about 2,000 editors up or down. The number of active editors in English Wikipedia, by \"sharp\" comparison, was cited as peaking in 2007 at approximately 50,000 and dropping to 30,000 by the start of 2014.",{"user":"admin1", "aiapp":"newappid"}],
+            "aisearch": ["Explain about english language"],
+			"aiapp_unpublish":["unpublish","newappid"],
+			"aiapp_delete":["delete","newappid"],
+			"testDescription":"Create a new aiapp, publish the app, Check CreateFile with big data and then ask a Query"
+		}
 	]
 }

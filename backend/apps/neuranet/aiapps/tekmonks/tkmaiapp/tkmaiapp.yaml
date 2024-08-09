@@ -234,11 +234,11 @@ global_models:
 
   - name: chat-knowledgebase-openai
     model_overrides:                    
-      read_ai_response_from_samples: true
+      read_ai_response_from_samples: false
 
   - name: simplellm-openai
     model_overrides:                    
-      read_ai_response_from_samples: true
+      read_ai_response_from_samples: false
 
 
 modules: 
