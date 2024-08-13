@@ -1,3 +1,7 @@
 {
-    "aiapp": "tkmaiapp"
+    "aiapp": "tkmaiapp",
+    "host": "testhost1.app",
+    "port": 9090,
+    "protocol": "https",
+    "headers" : {"x-api-key": "fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389"}
 }

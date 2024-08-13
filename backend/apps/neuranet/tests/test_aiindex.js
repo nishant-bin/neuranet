@@ -8,11 +8,13 @@
 
 const path = require("path");
 const fspromises = require("fs").promises;
+const rest = require(`${CONSTANTS.LIBDIR}/rest.js`);
+const conf = require(`${__dirname}/conf/testing.json`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const indexdoc = require(`${NEURANET_CONSTANTS.APIDIR}/indexdoc.js`);
 
-const TEST_ID = "test@tekmonks.com", TEST_ORG = "Tekmonks", TEST_APP = require(`${__dirname}/conf/testing.json`).aiapp;
+const TEST_ID = "test@tekmonks.com", TEST_ORG = "Tekmonks", TEST_APP = conf.aiapp;
 
 exports.runTestsAsync = async function(argv) {
     if ((!argv[0]) || (argv[0].toLowerCase() != "aiindex")) {
@@ -21,6 +23,11 @@ exports.runTestsAsync = async function(argv) {
     }
 
     if (!argv[1]) { LOG.console("Missing test file/s path/s.\n"); return; }
+    const lastArg = argv[argv.length-1];
+    if (lastArg?.toLowerCase() == "servertest") {
+        process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+        argv = argv.slice(0, -1);
+    }
 
     let serialIngestion = argv.pop(); if (typeof serialIngestion !== 'boolean') argv.push(serialIngestion);
     const filesToTest = argv.slice(1);
@@ -31,7 +38,10 @@ exports.runTestsAsync = async function(argv) {
     
     let finalResults = 0; 
     const indexFileAPIRequest = async jsonReq => {
-        const result = await indexdoc.doService(jsonReq);
+        const result = lastArg?.toLowerCase() == "servertest" ? 
+            (await rest[conf.protocol.toLowerCase()=="https"?"postHttps":"post"](conf.host, conf.port, 
+                "/apps/neuranet/indexdoc", conf.headers, jsonReq, {rejectUnauthorized: false})).data : 
+            await indexdoc.doService(jsonReq);
         if (result?.result) {
             const successMsg = `Test indexing of ${jsonReq.filename} succeeded.\n`;
             LOG.info(successMsg); LOG.console(successMsg); finalResults++;

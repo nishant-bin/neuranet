@@ -39,7 +39,7 @@ exports.getCMSRoot = async function(headersOrLoginIDAndOrg, extraInfo) {
 	if (!loginID) throw "No login for CMS root"; 
 	const org = headersOrLoginIDAndOrgIsHeaders ? (login.getOrg(headersOrLoginIDAndOrg)||"unknown") : headersOrLoginIDAndOrg.xbin_org;
 	let cmsRootToReturn = _getPathForIDAndOrg(loginID, org);
-	LOG.info(`CMS raw root located at ${cmsRootToReturn} for ID ${loginID}.`);
+	LOG.debug(`CMS raw root located at ${cmsRootToReturn} for ID ${loginID}.`);
 	if (CMSPATH_MODIFIERS.length) for (cmsPathModifier of CMSPATH_MODIFIERS) 
 		cmsRootToReturn = await cmsPathModifier(cmsRootToReturn, loginID, org, extraInfo);
 	cmsRootToReturn = path.resolve(cmsRootToReturn);

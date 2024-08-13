@@ -65,12 +65,12 @@ exports.getQuota = async (id, org) => {
 	quota = await db.getQuery("SELECT quota FROM quotas WHERE id=? AND org=? COLLATE NOCASE", 
 		[NEURANET_CONSTANTS.DEFAULT_ID, org]);
 	if ((!quota) || (!quota.length)) LOG.warn(`No default quota found for org ${org}.`); 
-	else {LOG.warn(`Using default quota of ${quota[0].quota} for org ${org}.`); return _parseQuota(quota);}
+	else {LOG.debug(`Using default quota of ${quota[0].quota} for org ${org}.`); return _parseQuota(quota);}
 
 	quota = await db.getQuery("SELECT quota FROM quotas WHERE id=? AND org=? COLLATE NOCASE", 
 		[NEURANET_CONSTANTS.DEFAULT_ID, NEURANET_CONSTANTS.DEFAULT_ORG]);
 	if ((!quota) || (!quota.length)) {LOG.error(`No default quota found at all.`); return -1;}
-	else {LOG.warn(`Using default quota of ${quota[0].quota} for ${id}.`); return _parseQuota(quota);}
+	else {LOG.debug(`Using default quota of ${quota[0].quota} for ${id}.`); return _parseQuota(quota);}
 }
 
 exports.getOrgSettings = async function(org) {

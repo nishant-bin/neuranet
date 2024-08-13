@@ -551,7 +551,7 @@ function _initBlackboardHooks() {
 }
 
 function _distributedSum(db, topic, params, keyedObjectReplies) {
-    if (blackboard.getCurrentClusterSizeOnline() == 0) return keyedObjectReplies?{}:0;   // single node deployment or cluster offline
+    if (blackboard.getCurrentClusterSizeOnline() == 0) return (keyedObjectReplies?{}:0);   // single node deployment or cluster offline
 
     return new Promise(resolve => blackboard.getReply(topic, {creation_data: _createDBCreationData(db), ...params}, 
         conf.cluster_timeout, replies => {
