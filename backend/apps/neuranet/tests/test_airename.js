@@ -21,8 +21,12 @@ exports.runTestsAsync = async function(argv) {
         LOG.console("Missing test file/s path/s.\n");
         return;
     }
-    const jsonReq = { old:`/${AI_UPLOAD_CMS_PATH}/${argv[1]}`, new:`/${AI_UPLOAD_CMS_PATH}/${argv[2]}`, id:TEST_ID, org:TEST_ORG};
-
+    let userObj = argv.pop();
+    if (typeof userObj === 'object') { const userConf = require(`${__dirname}/conf/testing.json`)[userObj.user];
+        userObj = { ...userConf, aiappid: userObj["aiapp"] }; } else { argv.push(userObj); userObj = undefined;}
+    
+    const jsonReq = {old: `/${AI_UPLOAD_CMS_PATH}/${argv[1]}`, new: `/${AI_UPLOAD_CMS_PATH}/${argv[2]}`,
+        id: userObj?.id || TEST_ID, org: userObj?.org || TEST_ORG };
     LOG.console(`Test case for Rename File called to rename the file ${jsonReq.old} to ${jsonReq.new}.\n`);
 
     await dblayer.initDBAsync();    // we need DB before anything else happens

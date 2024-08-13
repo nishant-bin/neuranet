@@ -3,5 +3,8 @@
     "host": "testhost1.app",
     "port": 9090,
     "protocol": "https",
-    "headers" : {"x-api-key": "fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389"}
+    "headers" : {"x-api-key": "fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389"},
+    "admin1":{"id":"testadmin1@tekmonks.com","org":"Tekmonks"},
+    "admin2":{"id":"testadmin2@tekmonks.com","org":"Tekmonks"},
+    "normaluser1":{"id":"normaluser1@tekmonks.com","org":"Tekmonks"}
 }

@@ -29,8 +29,12 @@ exports.runTestsAsync = async function(argv) {
         argv = argv.slice(0, -1);
     }
 
-    let serialIngestion = argv.pop(); if (typeof serialIngestion !== 'boolean') argv.push(serialIngestion);
-    const filesToTest = argv.slice(1);
+    let userObj = argv.pop();
+    if (typeof userObj === 'object') { const userConf = require(`${__dirname}/conf/testing.json`)[userObj.user];
+        userObj = { ...userConf, aiappid: userObj["aiapp"] };} else { argv.push(userObj); userObj = undefined; }
+        
+    let serialIngestion = argv.pop(); if (typeof serialIngestion !== 'boolean') { argv.push(serialIngestion); serialIngestion = undefined; }
+    const filesToTest = argv.slice(1).map(filePath => `${__dirname}/assets/${filePath}`);
 
     LOG.console(`Test case for AI DB indexing called to index the files ${filesToTest.join(", ")}.\n`);
 
@@ -53,10 +57,8 @@ exports.runTestsAsync = async function(argv) {
 
     const  indexingPromises = [], processFile = async (fileToParse, flush) => {
         const fileData = await fspromises.readFile(fileToParse), base64FileData = fileData.toString("base64");
-        const jsonReq = {filename: path.basename(fileToParse), 
-            data: base64FileData,
-            id: TEST_ID, org: TEST_ORG, encoding: "base64", __forceDBFlush: flush,
-            aiappid: TEST_APP}; 
+        const jsonReq = {filename: path.basename(fileToParse), data: base64FileData, id: userObj?.id || TEST_ID,
+            org: userObj?.org || TEST_ORG, encoding: "base64", __forceDBFlush: flush, aiappid: userObj?.aiappid || TEST_APP };
         await indexFileAPIRequest(jsonReq)
     }
     for (const fileToParse of filesToTest.slice(0, -1)) indexingPromises.push(serialIngestion?await processFile(fileToParse, false):processFile(fileToParse, false));
