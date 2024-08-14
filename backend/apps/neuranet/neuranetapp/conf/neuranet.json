@@ -12,8 +12,8 @@
 "ai_models": {
     "chat-openai": {
         "name": "chat-openai",
-        "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
-            "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+        "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, 
+            "path":"/tekmonks.com/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
             "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "max_requests_per_second":50, 
             "http_retry_codes": ["*"]}, 
         "request":{ 
@@ -21,6 +21,7 @@
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
         "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
+        "x_api_key" :"6c1fcadd-dcf0-40b9-ac90-fa4d24c08b46",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
         "response_finishreason": "data.choices[0].finish_reason",
@@ -38,8 +39,8 @@
 
     "chat-knowledgebase-openai": {
         "name": "chat-knowledgebase-openai",
-        "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
-            "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+        "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, 
+            "path":"/tekmonks.com/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
             "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "max_requests_per_second":50, 
             "http_retry_codes": ["*"]}, 
         "request":{ 
@@ -47,6 +48,7 @@
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
         "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
+        "x_api_key" :"6c1fcadd-dcf0-40b9-ac90-fa4d24c08b46",
         "embeddings_model": "embedding-openai",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
@@ -67,8 +69,8 @@
 
     "chat-knowledgebase-openai-lux": {
         "name": "chat-knowledgebase-openai-lux",
-        "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
-            "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+        "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, 
+            "path":"/tekmonks.com/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
             "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "max_requests_per_second":50, 
             "http_retry_codes": ["*"]}, 
         "request":{ 
@@ -76,6 +78,7 @@
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
         "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
+        "x_api_key" :"6c1fcadd-dcf0-40b9-ac90-fa4d24c08b46",
         "embeddings_model": "embedding-openai",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
@@ -96,8 +99,8 @@
 
     "simplellm-openai": {
         "name": "simplellm-openai",
-        "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
-            "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+        "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, 
+            "path":"/tekmonks.com/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
             "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "max_requests_per_second":50, 
             "http_retry_codes": ["*"]}, 
         "request":{ 
@@ -105,6 +108,7 @@
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
         "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
+        "x_api_key" :"6c1fcadd-dcf0-40b9-ac90-fa4d24c08b46",
         "embeddings_model": "embedding-openai",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
@@ -124,8 +128,8 @@
 
     "embedding-openai": {
         "name": "embedding-openai",
-        "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
-            "path":"/v1/embeddings", "backoffwait": 120, "backoffexponent": 2, 
+        "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, 
+            "path":"/tekmonks.com/v1/embeddings", "backoffwait": 120, "backoffexponent": 2, 
             "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "max_requests_per_second":50, 
             "http_retry_codes": ["*"]}, 
         "request":{ 
@@ -134,6 +138,7 @@
             "max_tokens": 16384
         },
         "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
+        "x_api_key" :"6c1fcadd-dcf0-40b9-ac90-fa4d24c08b46",
         "split_separators": {"en":[".","\n"," "], "zh":["。","\n"," ","."], "ja":["。","\n"," ","."], "*":["。",".","\n"," "]},
         "split_joiners": {"*":["\n\n"]},
         "overlap": 0,
