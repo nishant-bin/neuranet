@@ -93,7 +93,7 @@ exports.uningest = async function(fileindexer) {
         genfilesDir = aiappObject.generated_files_path;    const cmsGenTextFilePath = `${path.dirname(fileindexer.cmspath)}/${genfilesDir}/${path.basename(fileindexer.cmspath)}.txt`;
     const rootIndexerResultCMS = await fileindexer.deleteFileFromCMSRepository(cmsGenTextFilePath, true);  // remove the extracted text as well
     const rootIndexerResultAI = await fileindexer.removeFileFromAI(); await fileindexer.end();
-    if (!rootIndexerResultCMS.result) LOG.error(`Pregen failed at removing original file ${fileindexer.cmspath}'s extracted text.`);
+    if (!rootIndexerResultCMS) LOG.error(`Pregen failed at removing original file ${fileindexer.cmspath}'s extracted text.`);
     if (!rootIndexerResultAI.result) LOG.error(`Pregen failed at removing original file (AI DB uningestion failure) ${fileindexer.cmspath}.`);
     else LOG.info(`Pregen succeeded at removing original file ${fileindexer.cmspath}.`);
     return rootIndexerResultAI.result;  // removing original file from AI is the the only important thing
@@ -120,7 +120,7 @@ exports.rename = async function(fileindexer) {
         genfilesDir = aiappObject.generated_files_path;    const cmsGenTextFilePath = `${path.dirname(fileindexer.cmspath)}/${genfilesDir}/${path.basename(fileindexer.cmspath)}.txt`;
     const cmsGenTextFilePathTo = `${path.dirname(fileindexer.cmspathTo)}/${genfilesDir}/${path.basename(fileindexer.cmspathTo)}.txt`;
     const rootIndexerResultCMS = await fileindexer.renameFileFromCMSRepository(cmsGenTextFilePath, cmsGenTextFilePathTo, true);  // rename the extracted text as well
-    if (!rootIndexerResultCMS.result) LOG.error(`Pregen failed at renaming original file ${fileindexer.cmspath}'s extracted text.`);
+    if (!rootIndexerResultCMS) LOG.error(`Pregen failed at renaming original file ${fileindexer.cmspath}'s extracted text.`);
     const rootIndexerResultAI = await fileindexer.renameFileToAI();
     await fileindexer.end(); if (!rootIndexerResultAI.result) LOG.error(`Pregen failed at renaming original file (AI DB rename failure).`);
     return rootIndexerResultAI.result;  // renaming original file to AI is the the only important thing
