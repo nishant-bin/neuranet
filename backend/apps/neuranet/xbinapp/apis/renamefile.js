@@ -53,7 +53,7 @@ exports.renameFile = async function(headersOrIDAndOrg, cmsOldPath, cmsNewPath, e
 					cms.getCMSRootRelativePath(headersOrIDAndOrg, fullpath, extraInfo), ip, id, org, extraInfo);
 				await db.runCmd("UPDATE shares SET fullpath = ? WHERE fullpath = ?", [fullpath, oldfullpath]);	// update shares
 			}, true);
-		} else if (!noevent) _broadcastFileRenamed(oldPath, newPath, cmsOldPath, cmsNewPath, ip, id, org);
+		} else if (!noevent) _broadcastFileRenamed(oldPath, newPath, cmsOldPath, cmsNewPath, ip, id, org, extraInfo);
 
         return CONSTANTS.TRUE_RESULT;
 	} catch (err) {LOG.error(`Error renaming  path: ${oldPath}, error is: ${err}`); return CONSTANTS.FALSE_RESULT;}
