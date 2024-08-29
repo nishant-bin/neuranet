@@ -144,6 +144,7 @@ llm_flow:
       bridges_js: return (request.bridges||[aiappid])
       metadata_filter_function: "{{{request.metadata_filter_function}}}"
       punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
+      bm25_js: "return request.bm25 !== undefined ? request.bm25 : false"
     out: airesponse.documents
 
   - command: docvectorsearch.search         # unless forced, this is the default
@@ -161,6 +162,7 @@ llm_flow:
       bridges_js: return (request.bridges||[aiappid])
       metadata_filter_function: "{{{request.metadata_filter_function}}}"
       punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
+      bm25_js: "return request.bm25 !== undefined ? request.bm25 : false"
     out: airesponse.documents
 
   - command: llm_history_chat               # default function entry is answer so entry function name is skipped

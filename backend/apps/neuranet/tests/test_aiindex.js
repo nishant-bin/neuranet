@@ -34,7 +34,7 @@ exports.runTestsAsync = async function(argv) {
         userObj = { ...userConf, aiappid: userObj["aiapp"] };} else { argv.push(userObj); userObj = undefined; }
         
     let serialIngestion = argv.pop(); if (typeof serialIngestion !== 'boolean') { argv.push(serialIngestion); serialIngestion = undefined; }
-    const filesToTest = argv.slice(1).map(filePath => `${__dirname}/assets/${filePath}`);
+    const filesToTest = argv.slice(1);
 
     LOG.console(`Test case for AI DB indexing called to index the files ${filesToTest.join(", ")}.\n`);
 

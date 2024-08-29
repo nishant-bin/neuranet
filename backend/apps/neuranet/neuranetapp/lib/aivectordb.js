@@ -652,8 +652,8 @@ function _initBlackboardHooks() {
 function _getDistributedSimilarities(query_params) {
     if (blackboard.getCurrentClusterSizeOnline() == 0) return [];   // single node deployment or cluster offline
 
-    return new Promise(resolve => blackboard.getReply(VECTORDB_QUERY_TOPIC, {query_params}, 
-        conf.cluster_timeout, replies => {
+    return new Promise(resolve => blackboard.getReply(VECTORDB_QUERY_TOPIC, {query_params},  
+        conf.cluster_timeout, undefined, replies => {
             const similarities = []; for (const replyObject of replies||[]) similarities.concat(replyObject.reply);
             resolve(similarities);
         }

@@ -43,7 +43,7 @@ exports.getCMSRoot = async function(headersOrLoginIDAndOrg, extraInfo) {
 	if (CMSPATH_MODIFIERS.length) for (cmsPathModifier of CMSPATH_MODIFIERS) 
 		cmsRootToReturn = await cmsPathModifier(cmsRootToReturn, loginID, org, extraInfo);
 	cmsRootToReturn = path.resolve(cmsRootToReturn);
-	LOG.info(`Located final CMS home as ${cmsRootToReturn} for id ${loginID} of org ${org}.`);
+	LOG.debug(`Located final CMS home as ${cmsRootToReturn} for id ${loginID} of org ${org}.`);
 
 	if (!SAFE_CMS_PATHS[cmsRootToReturn]) try {	// ensure directory exists if we have not already done so
 		await fspromises.access(cmsRootToReturn, fs.F_OK); SAFE_CMS_PATHS[cmsRootToReturn] = true; } catch (err) { 

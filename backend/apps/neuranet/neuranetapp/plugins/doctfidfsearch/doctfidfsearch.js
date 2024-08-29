@@ -35,6 +35,7 @@ const REASONS = llmflowrunner.REASONS, TEMP_MEM_TFIDF_ID = "_com_tekmonks_neuran
  *                          topK_vectors TopK for vector search
  * 							autocorrect_query Default is true, set to false to turn off
  * 							punish_verysmall_documents If true smaller documents rank lower
+ * 							bm25 If true BM25 adjustment is made to the rankings
  * @param {Object} _llmstepDefinition Not used, optional.
  * 
  * @returns The search returns array of {metadata, text} objects matching the 
@@ -50,7 +51,7 @@ exports.search = async function(params, _llmstepDefinition) {
 	const topK_tfidf = params.topK_tfidf || aiModelObjectForSearch.topK_tfidf;
 	const cutoff_score_tfidf = params.cutoff_score_tfidf || aiModelObjectForSearch.cutoff_score_tfidf;
 	const tfidfSearchOptions = {punish_verysmall_documents: params.punish_verysmall_documents||false, 
-		ignore_coord: params.ignore_coord, max_coord_boost: params.max_coord_boost};
+		ignore_coord: params.ignore_coord, max_coord_boost: params.max_coord_boost, bm25: params.bm25||false};
 
     const tfidfDBs = []; for (const brainidThis of brainids) tfidfDBs.push(...await aidbfs.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainidThis));
 	if (!tfidfDBs.length) {	// no TF.IDF DB worked or found

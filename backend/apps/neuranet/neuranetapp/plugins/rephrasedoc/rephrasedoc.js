@@ -43,6 +43,7 @@ async function generate(fileindexer, generatorDefinition) {
     const queueAnswer = async (promptToUse, promptData, sequence) => {
         const rephrasedSplit = await simplellm.prompt_answer(promptToUse, fileindexer.id, fileindexer.org, 
             fileindexer.aiappid, promptData, modelObject);
+        if (!rephrasedSplit) throw `SimpleLLM error in rephrasing ${promptToUse}`;
         rephrasedSplits.push({content: rephrasedSplit||"", sequence}) ;
     }
     let rephrasedSplits = [], promisesToWaitFor = []; for (const [index, split] of splits.entries()) {
@@ -51,7 +52,10 @@ async function generate(fileindexer, generatorDefinition) {
         const promptToUse = generatorDefinition[`prompt_fragment_${lang_fragment}`] || generatorDefinition[`prompt_${langDetected}`] || generatorDefinition.prompt;
         promisesToWaitFor.push(queueAnswer(promptToUse, promptData, index));
     }
-    await Promise.all(promisesToWaitFor); 
+    try {await Promise.all(promisesToWaitFor)} catch (err) {
+        LOG.error(`Unable to generate rephrased document due to error ${err}`);
+        return {result: false};
+    }
     rephrasedSplits.sort((v1, v2) => v1.sequence < v2.sequence ? -1 : v1.sequence > v2.sequence ? 1 : 0);
     let joinedConent=""; for (const rephrasedSplit of rephrasedSplits) joinedConent += rephrasedSplit.content+split_joiners[0];
 
