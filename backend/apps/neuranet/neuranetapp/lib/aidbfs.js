@@ -149,7 +149,7 @@ async function uningestfile(pathIn, id, org, brainid) {
     if (!metadata) {
         LOG.error(`Document to uningest at path ${pathIn} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
         return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
-    } else tfidfDB.delete(metadata);
+    } else await tfidfDB.delete(metadata);
     LOG.info(`TF.IDF DB uningestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
 
     // delete from the Vector DB
@@ -190,7 +190,7 @@ async function renamefile(from, to, new_referencelink, id, org, brainid) {
     if (!metadata) {
         LOG.error(`Document to rename at path ${path} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
         return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
-    } else tfidfDB.update(metadata, newmetadata);
+    } else await tfidfDB.update(metadata, newmetadata);
 
     // update vector DB
     let vectordb; try { vectordb = await _getVectorDBForIDAndOrgAndBrainID(id, org, brainid); } catch(err) { 
