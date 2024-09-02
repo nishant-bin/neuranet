@@ -57,7 +57,7 @@ exports.search = async function(params, _llmstepDefinition) {
 	const topK_tfidf = params.topK_tfidf || aiModelObjectForSearch.topK_tfidf;
 	const cutoff_score_tfidf = params.cutoff_score_tfidf || aiModelObjectForSearch.cutoff_score_tfidf;
 	const tfidfSearchOptions = {punish_verysmall_documents: params.punish_verysmall_documents||false, 
-		ignore_coord: params.ignore_coord, max_coord_boost: params.max_coord_boost};
+		ignore_coord: params.ignore_coord, max_coord_boost: params.max_coord_boost, bm25: params.bm25||false};
 
     const tfidfDBs = []; for (const brainidThis of brainids) tfidfDBs.push(...await aidbfs.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainidThis));
 	if (!tfidfDBs.length) {	// no TF.IDF DB worked or found

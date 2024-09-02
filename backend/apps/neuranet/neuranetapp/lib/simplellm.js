@@ -50,7 +50,7 @@ exports.prompt_answer = async function(promptFileOrPrompt, id, org, aiappid, dat
 
     const response = await aiLibrary.process(null, promptJSONForAILib, aiKey, aiModelObject, true);
     if (!response) {
-        LOG.error("SimpleLLM: LLM API library returned internal error (null reponse)."); 
+        LOG.error(`SimpleLLM: LLM API library returned error (null reponse) for the prompt ${prompt}.`); 
         return null; // LLM call error
     }
 

@@ -8,11 +8,14 @@
         "Access-Control-Expose-Headers": "*",
         "Access-Control-Max-Age": 86400
     },
-    "host" : "::",
-    "port" : 9090,
+    "host" : "{{{hostname}}}",
+    "ports" : [9090, 9091],
+    "ssl": true,
+    "sslKeyFile":"/Users/rvkapoor/Documents/Programs/source/etc/dnsip_privkey.pem",
+    "sslCertFile": "/Users/rvkapoor/Documents/Programs/source/etc/dnsip_fullchain.pem",
     "ipblacklistRefresh": 5000,
     "ipwhitelistRefresh": 5000,
-    "ssl": true,
-    "sslKeyFile":"C:/Users/rvkapoor/source/etc/192.168.1.8_privkey.pem",
-	"sslCertFile":"C:/Users/rvkapoor/source/etc/192.168.1.8_fullchain.pem"
+    "virtualhosts": ["{{{hostname}}}:9090", "testhost1.app:9090", "testhost2.app:9090", "testhost3.app:9090",
+        "{{{hostname}}}:9091", "testhost1.app:9091", "testhost2.app:9091", "testhost3.app:9091",
+        "{{{hostname}}}:9092", "testhost1.app:9092", "testhost2.app:9092", "testhost3.app:9092"]
 }

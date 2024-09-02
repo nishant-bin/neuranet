@@ -4,9 +4,11 @@
  * (C) 2023 Tekmonks. All rights reserved.
  */
 const fs = require('fs');
+const path = require("path");
+const fspromises = fs.promises;
+const mustache = require("mustache");
 const customfile = "custom.json";
 const GEN_REPORT_PREFIX = "output";
-const customTestcases = JSON.parse(fs.readFileSync(`${__dirname}/conf/${customfile}`)).testcases;
 
 exports.runTestsAsync = async function(argv) {
 	if ((!argv[0]) || (argv[0].toLowerCase() != "custom")) {
@@ -15,6 +17,9 @@ exports.runTestsAsync = async function(argv) {
 	}
 
 	LOG.console("------------------Custom Test Case--------------------\n");
+	const fileContent = await fspromises.readFile(`${_toUnixPath(__dirname)}/conf/${customfile}`,"utf8");	
+	const renderedContent = mustache.render(fileContent,{ "assetspath": `${_toUnixPath(__dirname)}/assets` });
+	const customTestcases = JSON.parse(renderedContent).testcases;
 	
 	let testResults = []; for (const [i, testcase] of customTestcases.entries()) {
 		LOG.console(`----------Case:${i+1}--------\n`);
@@ -34,14 +39,14 @@ exports.runTestsAsync = async function(argv) {
 	}
 
 	const genDirName = argv[2], genFileName = argv[1];
-    _generateCSVReport(genDirName, genFileName, testResults);
+    _generateCSVReport(genDirName, genFileName, testResults, customTestcases);
 	LOG.console("-------------------------------------------------------\n");
 	return true;
 }
 
 const _getModuleName = (testName) => `test_${testName}.js`;
 
-const _generateCSVReport = (genDirName, genFileName, results) => {
+const _generateCSVReport = (genDirName, genFileName, results, customTestcases) => {
 	try{
 		const csvHeades = `S.no, Test Case, Status\n`; // csv Formate : S.no | Test case | Status
 		let csvRows = []; for (const [i, testcase] of customTestcases.entries()) {
@@ -53,3 +58,4 @@ const _generateCSVReport = (genDirName, genFileName, results) => {
 }
 
 const _escapeCommas = (value) => `"${value.replace(/"/g, '""')}"`;
+const _toUnixPath = pathIn => pathIn.split(path.sep).join(path.posix.sep);

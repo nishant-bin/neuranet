@@ -355,6 +355,7 @@ exports.update = async (oldmetadata, newmetadata, db, publish=true) => {
  *                      max_coord_boost: Maximum boost from coord scores. Default is 10%.,
  *                      punish_verysmall_documents: If set to true then very small documents are punished 
  *                                                  as their total information content may be small
+ *                      bm25: use the BM25 algorithm 
  *                  }
  * @param {object} db The database to use
  * @param {string} lang The language for the query, if set to null it is auto-detected
@@ -381,7 +382,8 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
     for (const docHash of relevantDocs) {
         const document = db.tfidfDocStore.data(docHash); if (!document) {LOG.warn(`Document is null for hash ${docHash}, ignoring.`); continue;}
         if (filter_function && (!options.filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
-        const tfAdjustmentFactor = options.punish_verysmall_documents ? _getVerySmallDocumentPunishment(docHash, db) : 1;
+        const tfAdjustmentFactor = options.bm25 ? _getBM25Adjustment(docHash, db) : 
+            options.punish_verysmall_documents ? _getVerySmallDocumentPunishment(docHash, db) : 1;  // handle BM25 or opposite of it here
 
         let scoreThisDoc = 0, tfScoreThisDoc = 0, queryWordsFoundInThisDoc = 0, 
             documentsWithWordsCount = await db.iindex.getCountOfDocumentsWithWords(queryWords);
@@ -473,7 +475,7 @@ async function _getLangNormalizedWords(document, lang, db, autocorrect=false, fa
     return words;
 }
 
-function _getVerySmallDocumentPunishment(dochash, db) {
+function _getVerySmallDocumentPunishment(dochash, db) { // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
     const thisDocLength = db.tfidfDocStore.data(dochash).length;
     let totalDocLength = 0; for (const hash of db.tfidfDocStore.entries()) totalDocLength += db.tfidfDocStore.data(hash).length;
     const averageDocLength = totalDocLength/db.tfidfDocStore.entries().length;
@@ -482,6 +484,14 @@ function _getVerySmallDocumentPunishment(dochash, db) {
         squaredWeightedDistance = weightedDistanceOfThisDocLengthFromAverage**2;
     const punishment = 1-squaredWeightedDistance;  // this function punishes very small documents hard, but decays quickly
     return punishment;
+}
+
+function _getBM25Adjustment(dochash, db) {  // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
+    const thisDocLength = db.tfidfDocStore.data(dochash).length;
+    let totalDocLength = 0; for (const hash of db.tfidfDocStore.entries()) totalDocLength += db.tfidfDocStore.data(hash).length;
+    const averageDocLength = totalDocLength/db.tfidfDocStore.entries().length;
+    const bm25AdjustmentDenominator = thisDocLength/averageDocLength;
+    return 1/bm25AdjustmentDenominator;
 }
 
 const _getDocumentHashIndex = (metadata, db) => {
@@ -554,7 +564,7 @@ function _distributedSum(db, topic, params, keyedObjectReplies) {
     if (blackboard.getCurrentClusterSizeOnline() == 0) return (keyedObjectReplies?{}:0);   // single node deployment or cluster offline
 
     return new Promise(resolve => blackboard.getReply(topic, {creation_data: _createDBCreationData(db), ...params}, 
-        conf.cluster_timeout, replies => {
+        conf.cluster_timeout, undefined, replies => {
             if (!keyedObjectReplies) {
                 let sum = 0; for (const replyObject of replies||[]) sum += replyObject.reply;
                 resolve(sum);

@@ -56,7 +56,10 @@ exports.ingest = async function(fileindexer) {
 
             if (!indexResult) LOG.error(`Pregen failed at step ${pregenStep.label} in adding generated file ${pregenStep.cmspath}.`);
             else LOG.info(`Pregen succeeded at step ${pregenStep.label} in adding generated file ${pregenStep.cmspath}.`);
-        } else LOG.error(`Pregen failed at step ${pregenStep.label} in generate for file ${pregenStep.cmspath}.`);
+        } else {
+            _informProgress(currentStep+=2);    // generation and add file to AI didn't run, so update counts
+            LOG.error(`Pregen failed at step ${pregenStep.label} in generate for file ${pregenStep.cmspath}.`);
+        }
     }
 
     const aiappObject = await aiapp.getAIApp(fileindexer.id, fileindexer.org, fileindexer.aiappid), 

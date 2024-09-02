@@ -28,7 +28,7 @@ exports.runTestsAsync = async function(argv) {
         LOG.console(`\nQuery: ${query}\n`);
         try{
             const jsonReq = {id: userObj?.id || TEST_ID, org: userObj?.org || TEST_ORG, aiappid: userObj?.aiappid || TEST_APP,
-                question: query, flow: "llm_flow" };
+                question: query, flow: "llm_flow", bm25: true };
             const queryResult = await llmflow.doService(jsonReq);
             if (((!queryResult) || (!queryResult.result))) {
                 LOG.console({result:false, err:queryResult.reason||"Search failed."}); }
