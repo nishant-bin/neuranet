@@ -23,17 +23,17 @@ exports.runTestsAsync = async function(argv) {
     }
 
     if (!argv[1]) { LOG.console("Missing test file/s path/s.\n"); return; }
-    const lastArg = argv[argv.length-1];
-    if (lastArg?.toLowerCase() == "servertest") {
-        process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
-        argv = argv.slice(0, -1);
-    }
-
     let userObj = argv.pop();
     if (typeof userObj === 'object') { const userConf = require(`${__dirname}/conf/testing.json`)[userObj.user];
         userObj = { ...userConf, aiappid: userObj["aiapp"] };} else { argv.push(userObj); userObj = undefined; }
         
     let serialIngestion = argv.pop(); if (typeof serialIngestion !== 'boolean') { argv.push(serialIngestion); serialIngestion = undefined; }
+    
+    const lastArg = argv[argv.length-1];
+    if (lastArg?.toLowerCase() == "servertest") {
+        process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0;
+        argv = argv.slice(0, -1);
+    }
     const filesToTest = argv.slice(1);
 
     LOG.console(`Test case for AI DB indexing called to index the files ${filesToTest.join(", ")}.\n`);
