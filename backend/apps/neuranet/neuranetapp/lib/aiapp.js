@@ -6,7 +6,10 @@
  */
 
 const yaml = require("yaml");
+const fs = require('fs');
 const fspromises = require("fs").promises;
+const path = require('path');
+const archiver = require('archiver');
 const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
@@ -211,6 +214,49 @@ exports.initNewAIAppForOrg = async function(aiappid, label, id, org) {
     }
 }
 
+
+
+/**
+ * Zips the contents of a folder into a .zip file.
+ * 
+ * @param {string} sourceFolderPath - The path of the folder to zip.
+ * @param {string} zipFilePath - The path where the zip file should be saved.
+ * @returns {Promise<void>} - Resolves when the folder is successfully zipped.
+ * @throws {Error} - Throws an error if zipping fails.
+ */
+
+async function _zipFolder(sourceFolderPath, zipFilePath) {
+    return new Promise((resolve, reject) => {
+        const output = fs.createWriteStream(zipFilePath);
+        const archive = archiver('zip', { zlib: { level: 9 } });
+
+        output.on('close', () => {
+            LOG.info(`Successfully zipped folder: ${sourceFolderPath} to ${zipFilePath} (${archive.pointer()} total bytes)`);
+            resolve();
+        });
+
+        output.on('error', (err) => {
+            LOG.error(`Error with zip output stream: ${err.message}`);
+            reject(err);
+        });
+
+        archive.on('error', (err) => {
+            LOG.error(`Error while zipping folder: ${err.message}`);
+            reject(err);
+        });
+
+        archive.pipe(output);
+        archive.directory(sourceFolderPath, false);
+
+        archive.finalize().catch(err => {
+            LOG.error(`Error finalizing the zip operation: ${err.message}`);
+            reject(err);
+        });
+    });
+}
+
+
+
 /**
  * Deletes the given AI app for the given org.
  * @param {string} aiappid The AI app ID
@@ -218,14 +264,42 @@ exports.initNewAIAppForOrg = async function(aiappid, label, id, org) {
  * @param {string} org The org
  * @returns true on success or false on failure
  */
-exports.deleteAIAppForOrg = async function(aiappid, id, org) {    
+
+exports.deleteAIAppForOrg = async function (aiappid, id, org) {
+    aiappid = aiappid.toLowerCase();
+    org = org.toLowerCase();
+
     const newAppDir = exports.getAppDir(id, org, aiappid);
-    aiappid = aiappid.toLowerCase(); org = org.toLowerCase();
-    let result; try {result = await serverutils.rmrf(newAppDir);} catch (err) {
-        if (err.code  !== "ENOENT") {LOG.error(`Error deleting AI app folder due to ${err}`); result = false;} }
-    if (!result) {LOG.error(`Error deleting hosting folder for app ${aiappid} for org ${org}.`); return false;}
-    else return await dblayer.deleteAIAppforOrg(org, aiappid);
+    const archiveDirPath = `${NEURANET_CONSTANTS.DBDIR}/archive`;
+    const sourceFolderPath = `${NEURANET_CONSTANTS.DBDIR}/ai_db/${org}/${aiappid}`;
+    const zipFilePath = path.join(archiveDirPath, `${aiappid}.zip`);
+
+    try {
+        // Ensure archive directory exists
+        await serverutils.createDirectory(archiveDirPath);
+
+        // Zip the folder and remove the source folder after archiving
+        await _zipFolder(sourceFolderPath, zipFilePath);
+        await serverutils.rmrf(sourceFolderPath);
+
+        // Remove the app directory
+        const result = await serverutils.rmrf(newAppDir);
+        if (!result) {
+            throw new Error(`Failed to delete hosting folder for app ${aiappid} for org ${org}.`);
+        }
+
+        // Delete app entry in the database
+        return await dblayer.deleteAIAppforOrg(org, aiappid);
+
+    } catch (err) {
+        if (err.code !== 'ENOENT') {
+            LOG.error(`Error deleting AI app for org ${org}: ${err.message}`);
+        }
+        return false;
+    }
 }
+
+
 
 /**
  * Publishes (but doesn't add) the given AI app for the given org.
@@ -233,7 +307,7 @@ exports.deleteAIAppForOrg = async function(aiappid, id, org) {
  * @param {string} org The org
  * @returns true on success or false on failure
  */
-exports.publishAIAppForOrg = async function(aiappid, org) {    
+exports.publishAIAppForOrg = async function(aiappid, org) {  
     aiappid = aiappid.toLowerCase(); org = org.toLowerCase();
     return await dblayer.addOrUpdateAIAppForOrg(org, aiappid, exports.AIAPP_STATUS.PUBLISHED);
 }
