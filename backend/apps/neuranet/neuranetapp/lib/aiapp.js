@@ -6,7 +6,6 @@
  */
 
 const yaml = require("yaml");
-const fs = require('fs');
 const fspromises = require("fs").promises;
 const path = require('path');
 const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
@@ -275,7 +274,7 @@ exports.publishAIAppForOrg = async function(aiappid, org) {
  * @param {string} org The org
  * @returns true on success or false on failure
  */
-exports.unpublishAIAppForOrg = async function(aiappid, org) {  
+exports.unpublishAIAppForOrg = async function(aiappid, org) {
     aiappid = aiappid.toLowerCase(); org = org.toLowerCase();  
     return await dblayer.addOrUpdateAIAppForOrg(org, aiappid, exports.AIAPP_STATUS.UNPUBLISHED);
 }
