@@ -9,7 +9,6 @@ const yaml = require("yaml");
 const fs = require('fs');
 const fspromises = require("fs").promises;
 const path = require('path');
-const archiver = require('archiver');
 const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
@@ -215,48 +214,6 @@ exports.initNewAIAppForOrg = async function(aiappid, label, id, org) {
 }
 
 
-
-/**
- * Zips the contents of a folder into a .zip file.
- * 
- * @param {string} sourceFolderPath - The path of the folder to zip.
- * @param {string} zipFilePath - The path where the zip file should be saved.
- * @returns {Promise<void>} - Resolves when the folder is successfully zipped.
- * @throws {Error} - Throws an error if zipping fails.
- */
-
-async function _zipFolder(sourceFolderPath, zipFilePath) {
-    return new Promise((resolve, reject) => {
-        const output = fs.createWriteStream(zipFilePath);
-        const archive = archiver('zip', { zlib: { level: 9 } });
-
-        output.on('close', () => {
-            LOG.info(`Successfully zipped folder: ${sourceFolderPath} to ${zipFilePath} (${archive.pointer()} total bytes)`);
-            resolve();
-        });
-
-        output.on('error', (err) => {
-            LOG.error(`Error with zip output stream: ${err.message}`);
-            reject(err);
-        });
-
-        archive.on('error', (err) => {
-            LOG.error(`Error while zipping folder: ${err.message}`);
-            reject(err);
-        });
-
-        archive.pipe(output);
-        archive.directory(sourceFolderPath, false);
-
-        archive.finalize().catch(err => {
-            LOG.error(`Error finalizing the zip operation: ${err.message}`);
-            reject(err);
-        });
-    });
-}
-
-
-
 /**
  * Deletes the given AI app for the given org.
  * @param {string} aiappid The AI app ID
@@ -279,7 +236,7 @@ exports.deleteAIAppForOrg = async function (aiappid, id, org) {
         await serverutils.createDirectory(archiveDirPath);
 
         // Zip the folder and remove the source folder after archiving
-        await _zipFolder(sourceFolderPath, zipFilePath);
+        await serverutils.zipFolder(sourceFolderPath, zipFilePath);
         await serverutils.rmrf(sourceFolderPath);
 
         // Remove the app directory
