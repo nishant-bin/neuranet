@@ -7,7 +7,6 @@
 
 const yaml = require("yaml");
 const fspromises = require("fs").promises;
-const path = require('path');
 const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
@@ -228,29 +227,18 @@ exports.deleteAIAppForOrg = async function (aiappid, id, org) {
     const newAppDir = exports.getAppDir(id, org, aiappid);
     const archiveDirPath = `${NEURANET_CONSTANTS.DBDIR}/archive`;
     const sourceFolderPath = `${NEURANET_CONSTANTS.DBDIR}/ai_db/${org}/${aiappid}`;
-    const zipFilePath = path.join(archiveDirPath, `${aiappid}.zip`);
-
+    const zipFilePath = `${archiveDirPath}/${aiappid}.zip`;
     try {
-        // Ensure archive directory exists
         await serverutils.createDirectory(archiveDirPath);
-
-        // Zip the folder and remove the source folder after archiving
         await serverutils.zipFolder(sourceFolderPath, zipFilePath);
-        await serverutils.rmrf(sourceFolderPath);
-
-        // Remove the app directory
+        await serverutils.rmrf(sourceFolderPath);   
         const result = await serverutils.rmrf(newAppDir);
         if (!result) {
             throw new Error(`Failed to delete hosting folder for app ${aiappid} for org ${org}.`);
         }
-
-        // Delete app entry in the database
         return await dblayer.deleteAIAppforOrg(org, aiappid);
-
     } catch (err) {
-        if (err.code !== 'ENOENT') {
-            LOG.error(`Error deleting AI app for org ${org}: ${err.message}`);
-        }
+        LOG.error(`Error deleting AI app for org ${org}: ${err.message}`);
         return false;
     }
 }
