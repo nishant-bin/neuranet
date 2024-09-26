@@ -221,25 +221,26 @@ exports.initNewAIAppForOrg = async function(aiappid, label, id, org) {
  */
 
 exports.deleteAIAppForOrg = async function (aiappid, id, org) {
-    aiappid = aiappid.toLowerCase();
-    org = org.toLowerCase();
-
     const newAppDir = exports.getAppDir(id, org, aiappid);
+    aiappid = aiappid.toLowerCase(); org = org.toLowerCase();
     const archiveDirPath = `${NEURANET_CONSTANTS.DBDIR}/archive`;
     const sourceFolderPath = `${NEURANET_CONSTANTS.DBDIR}/ai_db/${org}/${aiappid}`;
     const zipFilePath = `${archiveDirPath}/${aiappid}.zip`;
+    let result; 
     try {
         await serverutils.createDirectory(archiveDirPath);
         await serverutils.zipFolder(sourceFolderPath, zipFilePath);
         await serverutils.rmrf(sourceFolderPath);   
-        const result = await serverutils.rmrf(newAppDir);
-        if (!result) {
-            throw new Error(`Failed to delete hosting folder for app ${aiappid} for org ${org}.`);
-        }
-        return await dblayer.deleteAIAppforOrg(org, aiappid);
+        result = await serverutils.rmrf(newAppDir);
     } catch (err) {
         LOG.error(`Error deleting AI app for org ${org}: ${err.message}`);
         return false;
+    }
+    if (!result) {
+        LOG.error(`Error deleting hosting folder for app ${aiappid} for org ${org}.`);
+        return false;
+    } else {
+        return await dblayer.deleteAIAppforOrg(org, aiappid);
     }
 }
 
