@@ -211,6 +211,7 @@ exports.initNewAIAppForOrg = async function(aiappid, label, id, org) {
     }
 }
 
+
 /**
  * Deletes the given AI app for the given org.
  * @param {string} aiappid The AI app ID
@@ -218,14 +219,31 @@ exports.initNewAIAppForOrg = async function(aiappid, label, id, org) {
  * @param {string} org The org
  * @returns true on success or false on failure
  */
-exports.deleteAIAppForOrg = async function(aiappid, id, org) {    
-    const newAppDir = exports.getAppDir(id, org, aiappid);
+exports.deleteAIAppForOrg = async function (aiappid, id, org) {
+    const appDir = exports.getAppDir(id, org, aiappid);
     aiappid = aiappid.toLowerCase(); org = org.toLowerCase();
-    let result; try {result = await serverutils.rmrf(newAppDir);} catch (err) {
-        if (err.code  !== "ENOENT") {LOG.error(`Error deleting AI app folder due to ${err}`); result = false;} }
-    if (!result) {LOG.error(`Error deleting hosting folder for app ${aiappid} for org ${org}.`); return false;}
-    else return await dblayer.deleteAIAppforOrg(org, aiappid);
+    const archiveDirPath = `${NEURANET_CONSTANTS.DBDIR}/archive`;
+    const sourceFolderPath = `${NEURANET_CONSTANTS.DBDIR}/ai_db/${org}/${aiappid}`;
+    const zipFilePath = `${archiveDirPath}/${aiappid}.zip`;
+    let result; 
+    try {
+        await serverutils.createDirectory(archiveDirPath);
+        await serverutils.zipFolder(sourceFolderPath, zipFilePath);
+        await serverutils.rmrf(sourceFolderPath);   
+        result = await serverutils.rmrf(appDir);
+    } catch (err) {
+        LOG.error(`Error deleting AI app for org ${org}: ${err.message}`);
+        return false;
+    }
+    if (!result) {
+        LOG.error(`Error deleting hosting folder for app ${aiappid} for org ${org}.`);
+        return false;
+    } else {
+        return await dblayer.deleteAIAppforOrg(org, aiappid);
+    }
 }
+
+
 
 /**
  * Publishes (but doesn't add) the given AI app for the given org.
@@ -233,7 +251,7 @@ exports.deleteAIAppForOrg = async function(aiappid, id, org) {
  * @param {string} org The org
  * @returns true on success or false on failure
  */
-exports.publishAIAppForOrg = async function(aiappid, org) {    
+exports.publishAIAppForOrg = async function(aiappid, org) {  
     aiappid = aiappid.toLowerCase(); org = org.toLowerCase();
     return await dblayer.addOrUpdateAIAppForOrg(org, aiappid, exports.AIAPP_STATUS.PUBLISHED);
 }
@@ -244,7 +262,7 @@ exports.publishAIAppForOrg = async function(aiappid, org) {
  * @param {string} org The org
  * @returns true on success or false on failure
  */
-exports.unpublishAIAppForOrg = async function(aiappid, org) {  
+exports.unpublishAIAppForOrg = async function(aiappid, org) {
     aiappid = aiappid.toLowerCase(); org = org.toLowerCase();  
     return await dblayer.addOrUpdateAIAppForOrg(org, aiappid, exports.AIAPP_STATUS.UNPUBLISHED);
 }
