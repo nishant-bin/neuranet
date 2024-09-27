@@ -219,9 +219,8 @@ exports.initNewAIAppForOrg = async function(aiappid, label, id, org) {
  * @param {string} org The org
  * @returns true on success or false on failure
  */
-
 exports.deleteAIAppForOrg = async function (aiappid, id, org) {
-    const newAppDir = exports.getAppDir(id, org, aiappid);
+    const appDir = exports.getAppDir(id, org, aiappid);
     aiappid = aiappid.toLowerCase(); org = org.toLowerCase();
     const archiveDirPath = `${NEURANET_CONSTANTS.DBDIR}/archive`;
     const sourceFolderPath = `${NEURANET_CONSTANTS.DBDIR}/ai_db/${org}/${aiappid}`;
@@ -231,7 +230,7 @@ exports.deleteAIAppForOrg = async function (aiappid, id, org) {
         await serverutils.createDirectory(archiveDirPath);
         await serverutils.zipFolder(sourceFolderPath, zipFilePath);
         await serverutils.rmrf(sourceFolderPath);   
-        result = await serverutils.rmrf(newAppDir);
+        result = await serverutils.rmrf(appDir);
     } catch (err) {
         LOG.error(`Error deleting AI app for org ${org}: ${err.message}`);
         return false;
