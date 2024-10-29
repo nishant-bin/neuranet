@@ -174,8 +174,8 @@ llm_flow:
       question: "{{{query}}}"
       aiappid: "{{{aiappid}}}"
       matchers_for_reference_links: 
-        - (.+)\/_neuranet_generated\/summary_(.+)\.txt
-        - (.+)\/_neuranet_generated\/reworded_(.+)\.txt
+        - (?:.+\/)?_neuranet_generated\/summary_(.+)\.txt
+        - (?:.+\/)?_neuranet_generated\/reworded_(.+)\.txt
       documents_js: return airesponse.documents  
       prompt_noinflate: |                   # means do not inflate this at the flow engine - the calling command will use it as is
         Answer the following question only using the documents provided below.
