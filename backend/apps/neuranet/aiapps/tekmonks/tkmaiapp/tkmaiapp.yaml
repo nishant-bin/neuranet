@@ -83,6 +83,7 @@ pregen_flow:
 
 llm_flow:   
   - command: expandquery.expand             # expands the query from session, built-in plugin
+    condition: false
     in: 
       query: "{{{query}}}"
       session_id: "{{{request.session_id}}}" # request is inbuilt variable contains user's request params
@@ -91,6 +92,7 @@ llm_flow:
         name: simplellm-openai
       prompt_noinflate: |
         Given the following conversation and a question, rephrase the question to include all relevant keywords and context from the conversation.
+        If the conversation is not relevant to this question, return the original question.
         Conversation:
         {{#session}}
         {{{role}}}: {{{content}}}
@@ -101,6 +103,7 @@ llm_flow:
         The standalone question is:
       prompt_zh_noinflate: |
         给定以下对话和问题，重新表述问题以包含对话中的所有相关关键字和上下文。
+        如果对话与该问题不相关，则返回原始问题。
         对话：
         {{#session}}
         {{{role}}}: {{{content}}}
@@ -111,6 +114,7 @@ llm_flow:
         独立的问题是：
       prompt_ja_noinflate: |
         次の会話と質問がある場合、会話の関連するキーワードとコンテキストをすべて含めて質問を言い換えます。
+        会話がこの質問に関連していない場合は、元の質問を返します。
         会話：
         {{#session}}
         {{{role}}}: {{{content}}}
@@ -121,6 +125,7 @@ llm_flow:
         独立した質問は次のとおりです:
       prompt_hi_noinflate: |
         निम्नलिखित वार्तालाप और एक प्रश्न को देखते हुए, वार्तालाप से सभी प्रासंगिक कीवर्ड और संदर्भ को शामिल करने के लिए प्रश्न को दोबारा लिखें।
+        यदि बातचीत इस प्रश्न से प्रासंगिक नहीं है, तो मूल प्रश्न वापस करें।
         बातचीत:
         {{#session}}
         {{{role}}}: {{{content}}}
@@ -236,11 +241,11 @@ global_models:
 
   - name: chat-knowledgebase-openai
     model_overrides:                    
-      read_ai_response_from_samples: false
+      read_ai_response_from_samples: true
 
   - name: simplellm-openai
     model_overrides:                    
-      read_ai_response_from_samples: false
+      read_ai_response_from_samples: true
 
 
 modules: 
