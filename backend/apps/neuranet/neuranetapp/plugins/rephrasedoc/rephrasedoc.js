@@ -37,7 +37,7 @@ async function generate(fileindexer, generatorDefinition) {
 
     const promptData = {lang: langDetected}; for (const [key,value] of Object.entries(generatorDefinition)) {
         const keyNormalized = key.toLowerCase().trim();
-        if (keyNormalized.endsWith(PROMPT_PARAM)) promptData[aiapp.extractRawKeyName(key)] = value;
+        if (keyNormalized.endsWith(PROMPT_PARAM)) promptData[keyNormalized.substring(0, keyNormalized.lastIndexOf("_"))] = value;
     }
 
     const queueAnswer = async (promptToUse, promptData, sequence) => {

@@ -27,6 +27,7 @@ const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
 const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
 const textextractor = require(`${NEURANET_CONSTANTS.LIBDIR}/textextractor.js`);
 const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
+const clusterjobhandler = require(`${CONSTANTS.LIBDIR}/distributedjobhandler.js`);
 
 let conf;
 const DEFAULT_MINIMIMUM_SUCCESS_PERCENT = 0.5;
@@ -46,6 +47,11 @@ exports.initSync = _ => {
 /**
  * Adds the given file to the backend CMS repository. Will also issue new file event so the
  * file is then ingested into the backend AI databases, unless told to otherwise.
+ * 
+ * Running it as a cluster job means file/io is only once, since XBin FS is shared, it should be same
+ * for all instances. If `noaievent` is set to false, then AI events will ensure all local cluster AI
+ * instances update themselves regardless.
+ * 
  * @param {string} id The user ID of the user ingesting this file.
  * @param {string} org The org of the user ID of the user ingesting this file.
  * @param {object} contentsOrStream File contents of read stream for the file. If contents then must be a buffer.
@@ -56,13 +62,21 @@ exports.initSync = _ => {
  * @returns {object} Returns result of the format {result: true|false} on success or on failure.
  */
 exports.addFileToCMSRepository = async function(id, org, contentsOrStream, cmspath, comment, extrainfo, noaievent=false) {
-    const xbinResult = await uploadfile.uploadFile(id, org, contentsOrStream, cmspath, comment, extrainfo, noaievent);
-    return xbinResult.result;
+    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${cmspath}.{"xbin_uploadFile"}`, 
+        async _ => await uploadfile.uploadFile(id, org, contentsOrStream, cmspath, comment, extrainfo, noaievent),
+        clusterjobhandler.LOCAL_CLUSTER, conf.distribued_jobwait);
+    if (xbinResult) return xbinResult.result; else {
+        LOG.error(`Error adding file ${cmspath} to the CMS repository, distribued job failed probably.`); return false; }
 }
 
 /**
  * Removes the given file from the backend CMS repository. Will also issue delete file event so the
  * file is then uningested into the backend AI databases, unless told to otherwise.
+ * 
+ * Running it as a cluster job means file/io is only once, since XBin FS is shared, it should be same
+ * for all instances. If `noaievent` is set to false, then AI events will ensure all local cluster AI
+ * instances update themselves regardless (AI DBs take care of cluster targeting for deletes and updates).
+ * 
  * @param {string} id The user ID of the user ingesting this file.
  * @param {string} org The org of the user ID of the user ingesting this file.
  * @param {string} cmspath The cms path at which to delete the file.
@@ -71,13 +85,21 @@ exports.addFileToCMSRepository = async function(id, org, contentsOrStream, cmspa
  * @returns true on success or false on failure.
  */
 exports.deleteFileFromCMSRepository = async function(id, org, cmspath, extrainfo, noaievent=false) {
-    const xbinResult = await deletefile.deleteFile({xbin_id: id, xbin_org: org}, cmspath, extrainfo, noaievent);
-    return xbinResult.result;
+    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${cmspath}.{"xbin_deleteFile"}`, 
+        async _ => await deletefile.deleteFile({xbin_id: id, xbin_org: org}, cmspath, extrainfo, noaievent),
+        clusterjobhandler.LOCAL_CLUSTER, conf.distribued_jobwait);
+    if (xbinResult) return xbinResult.result; else {
+        LOG.error(`Error deleting file ${cmspath} from the CMS repository, distribued job failed probably.`); return false; }
 }
 
 /**
  * Renames the given file from the backend CMS repository. Will also issue renamed file event so the
  * file is then uningested into the backend AI databases, unless told to otherwise.
+ * 
+ * Running it as a cluster job means file/io is only once, since XBin FS is shared, it should be same
+ * for all instances. If `noaievent` is set to false, then AI events will ensure all local cluster AI
+ * instances update themselves regardless (AI DBs take care of cluster targeting for deletes and updates).
+ * 
  * @param {string} id The user ID of the user ingesting this file.
  * @param {string} org The org of the user ID of the user ingesting this file.
  * @param {string} cmspathFrom The cms path from which to move the file.
@@ -87,9 +109,11 @@ exports.deleteFileFromCMSRepository = async function(id, org, cmspath, extrainfo
  * @returns true on success or false on failure.
  */
 exports.renameFileFromCMSRepository = async function(id, org, cmspathFrom, cmspathTo, extrainfo, noaievent=false) {
-    const xbinResult = await renamefile.renameFile({xbin_id: id, xbin_org: org}, cmspathFrom, cmspathTo, 
-        extrainfo, true);
-    return xbinResult.result;
+    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${cmspath}.{"xbin_renameFile"}`, 
+        async _ => await renamefile.renameFile({xbin_id: id, xbin_org: org}, cmspathFrom, cmspathTo, extrainfo, true),
+        clusterjobhandler.LOCAL_CLUSTER, conf.distribued_jobwait);
+    if (xbinResult) return xbinResult.result; else {
+        LOG.error(`Error renaming file ${cmspath} in the CMS repository, distribued job failed probably.`); return false; }
 }
 
 /** Flag to not flush AI DBs after the request */

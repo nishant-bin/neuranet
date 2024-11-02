@@ -29,11 +29,16 @@ exports.getPrompt = async function(promptFile) {
 }
 
 exports.getAIModel = async function(model_name, overrides) {
-    const _overrideModel = model => { 
+    const _overrideModel = async model => { 
+        if (model.inherits) {
+            const basemodel = await exports.getAIModel(model.inherits);
+            for (const [key, value] of Object.entries(model)) serverutils.setObjProperty(basemodel, key, value);
+            model = basemodel;
+        }
         if (overrides) for (const [key, value] of Object.entries(overrides)) serverutils.setObjProperty(model, key, value);
         return model;
     }
-    if (!DEBUG_RUN) return _overrideModel(serverutils.clone(NEURANET_CONSTANTS.CONF.ai_models[model_name]));
+    if ((!DEBUG_RUN) && NEURANET_CONSTANTS.CONF.ai_models[model_name]) return await _overrideModel(serverutils.clone(NEURANET_CONSTANTS.CONF.ai_models[model_name]));
 
     const confFile = await fspromises.readFile(`${NEURANET_CONSTANTS.CONFDIR}/neuranet.json`, "utf8");
     const renderedFile = mustache.render(confFile, NEURANET_CONSTANTS);
@@ -41,5 +46,5 @@ exports.getAIModel = async function(model_name, overrides) {
     NEURANET_CONSTANTS.CONF.ai_models[model_name] = jsonConf.ai_models[model_name];   // update cached models
 
     const model = serverutils.clone(NEURANET_CONSTANTS.CONF.ai_models[model_name]);
-    return _overrideModel(model);
+    return await _overrideModel(model);
 }

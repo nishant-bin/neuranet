@@ -19,11 +19,7 @@ const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 
 /** @return true if we can handle else false */
 exports.canHandle = async fileindexer => {
-    const pregenStepObjects = await aiapp.getPregenObject(fileindexer.id, fileindexer.org, fileindexer.aiappid);
-    if ((!pregenStepObjects) || (!pregenStepObjects.length)) return false;  // nothing to pregen for this app
-
     if (conf.skip_extensions.includes(path.extname(fileindexer.filepath).toLowerCase())) return false; 
-
     return true;    // if enabled to pregen, then we can handle all files
 }
 
@@ -47,7 +43,7 @@ exports.ingest = async function(fileindexer) {
 
         if (pregenResult.result) {
             const addGeneratedFileToCMSResult = fileAlreadyGenerated ? true : await fileindexer.addFileToCMSRepository(
-                pregenResult.contentBufferOrReadStream(), pregenStep.cmspath, pregenStep.comment, true);
+                pregenResult.contentBufferOrReadStream(), pregenStep.cmspath, pregenStep.comment, true);    // no AI event needed as we add to AI ourselves below
             _informProgress(++currentStep);
 
             const indexResult = addGeneratedFileToCMSResult ? 
@@ -66,8 +62,9 @@ exports.ingest = async function(fileindexer) {
         genfilesDir = aiappObject.generated_files_path;
     const cmsGenTextFilePath = `${path.dirname(fileindexer.cmspath)}/${genfilesDir}/${path.basename(fileindexer.cmspath)}.txt`;
     const rootComment = `Text for: ${path.basename(fileindexer.cmspath)}`;
-    const rootIndexerResultCMS = await fileindexer.addFileToCMSRepository(await fileindexer.getReadstream(), cmsGenTextFilePath, rootComment, true);  // save the extracted text as well
-    const rootIndexerResultAI = await fileindexer.addFileToAI(); 
+    // save the extracted text as well to the CMS but no AI event as we already add original text to AI below
+    const rootIndexerResultCMS = await fileindexer.addFileToCMSRepository(await fileindexer.getReadstream(), cmsGenTextFilePath, rootComment, true);  
+    const rootIndexerResultAI = await fileindexer.addFileToAI();    // add the original file to AI
     await fileindexer.end(); _informProgress(totalPregentSteps);
 
     if (!rootIndexerResultCMS) LOG.error(`Pregen failed at adding original file for file ${fileindexer.cmspath}'s extracted text.`);
@@ -92,8 +89,8 @@ exports.uningest = async function(fileindexer) {
         else LOG.info(`Pregen removal succeeded at step ${pregenStep.label} in removing generated file ${pregenStep.cmspath}.`); 
     }
     
-    const aiappObject = await aiapp.getAIApp(fileindexer.id, fileindexer.org, fileindexer.aiappid), 
-        genfilesDir = aiappObject.generated_files_path;    const cmsGenTextFilePath = `${path.dirname(fileindexer.cmspath)}/${genfilesDir}/${path.basename(fileindexer.cmspath)}.txt`;
+    const aiappObject = await aiapp.getAIApp(fileindexer.id, fileindexer.org, fileindexer.aiappid), genfilesDir = aiappObject.generated_files_path;    
+    const cmsGenTextFilePath = `${path.dirname(fileindexer.cmspath)}/${genfilesDir}/${path.basename(fileindexer.cmspath)}.txt`;
     const rootIndexerResultCMS = await fileindexer.deleteFileFromCMSRepository(cmsGenTextFilePath, true);  // remove the extracted text as well
     const rootIndexerResultAI = await fileindexer.removeFileFromAI(); await fileindexer.end();
     if (!rootIndexerResultCMS) LOG.error(`Pregen failed at removing original file ${fileindexer.cmspath}'s extracted text.`);

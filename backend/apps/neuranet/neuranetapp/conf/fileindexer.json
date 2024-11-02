@@ -1,4 +1,5 @@
 {
-    "file_handling_plugins": ["webspider", "pregenindexer"],
-    "enabled": true
+    "file_handling_plugins": ["pregenindexer"],
+    "enabled": true,
+    "distribued_jobwait": 40000
 }

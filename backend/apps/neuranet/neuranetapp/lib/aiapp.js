@@ -138,9 +138,6 @@ exports.getCommandModule = async function(id, org, aiappid, command) {
     else return await NEURANET_CONSTANTS.getPlugin(command);    // if it is not part of the app then must be built-in
 }
 
-/** @return For YAML keys with additional properties e.g. condition_js, returns the raw key name e.g. condition */
-exports.extractRawKeyName = key => key.lastIndexOf("_") != -1 ? key.substring(0, key.lastIndexOf("_")) : key;
-
 /**
  * Returns AI application directory.
  * @param {string} id The user ID
@@ -197,7 +194,7 @@ exports.initNewAIAppForOrg = async function(aiappid, label, id, org) {
             const fileBuffer = Buffer.from(fileContents, "utf8");
             result = await fileindexer.addFileToCMSRepository(id, org,   // app dir is CMS managed so this is needed
                 fileBuffer, relativePath, `AI app file for ${aiappid}`, brainhandler.createExtraInfo(
-                    id, org, aiappid, undefined, NEURANET_CONSTANTS.AIAPPMODES.EDIT), true);
+                    id, org, aiappid, undefined, NEURANET_CONSTANTS.AIAPPMODES.EDIT), true);    // no ai event is true as we don't add this file to the AI
         });
         if (result) result = await dblayer.addOrUpdateAIAppForOrg(org, aiappid, exports.AIAPP_STATUS.UNPUBLISHED);
         else {

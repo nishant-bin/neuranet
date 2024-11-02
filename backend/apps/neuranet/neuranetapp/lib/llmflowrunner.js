@@ -10,7 +10,9 @@ const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 
-const DEFAULT_OUT = "lastLLMFlowStepOutput", CONDITION_JS = "condition_js", NOINFLATE = "_noinflate", JSCODE = "_js";
+const DEFAULT_OUT = "lastLLMFlowStepOutput", CONDITION_JS = "condition_js", CONDITION = "condition", 
+    NOINFLATE = "_noinflate", JSCODE = "_js";
+const SPECIAL_KEY_SUFFIXES = [NOINFLATE, JSCODE];
 
 /** Response reasons for LLM flows */
 exports.REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATION:"badrequest", 
@@ -42,28 +44,20 @@ exports.answer = async function(query, id, org, aiappid, request, flow_section=e
     }
 
     for (const llmflowCommandDefinition of llmflowCommands) {
-        const condition_code = llmflowCommandDefinition[CONDITION_JS] ? mustache.render(
-            llmflowCommandDefinition[CONDITION_JS], working_memory) : undefined;
-        if (condition_code) if (!await _runJSCode(condition_code, {NEURANET_CONSTANTS,  // run only if condition is satisfied
-            require: function() {const module = require(...arguments); return module}, ...working_memory })) continue;  
+        if (llmflowCommandDefinition[CONDITION]||llmflowCommandDefinition[CONDITION_JS]) 
+            llmflowCommandDefinition[CONDITION] = await _expandLLMFlowParam(llmflowCommandDefinition[CONDITION]?CONDITION:CONDITION_JS,
+                llmflowCommandDefinition[CONDITION]||llmflowCommandDefinition[CONDITION_JS], working_memory);
+        if (llmflowCommandDefinition[CONDITION] !== undefined && (!llmflowCommandDefinition[CONDITION])) continue;  
 
         const [command, command_function] = llmflowCommandDefinition.command.split(".");
         const llmflowModule = await aiapp.getCommandModule(id, org, aiappid, command);
         const callParams = {id, org, query, aiappid, request, return_error: function(){working_memory.return_error(...arguments, working_memory)}}; 
-        for (const [key, value] of Object.entries(llmflowCommandDefinition.in)) {
-            if (key.endsWith(NOINFLATE)) callParams[aiapp.extractRawKeyName(key)] = value;
-            else if (key.endsWith(JSCODE)) {
-                const thisvalue = await _runJSCode(mustache.render(value.toString(), working_memory), {
-                    NEURANET_CONSTANTS, require: function() {
-                        const module = require(...arguments); return module}, ...working_memory});
-                callParams[aiapp.extractRawKeyName(key)] = thisvalue;
-            } else callParams[key] = typeof value === "object" ? JSON.parse(
-                mustache.render(JSON.stringify(value), working_memory)) : typeof value === "string" ? 
-                mustache.render(value.toString(), working_memory) : value;
-        }
+        for (const [key, value] of Object.entries(llmflowCommandDefinition.in)) // expand params to get call params
+            callParams[exports.extractRawKeyName(key)] = await _expandLLMFlowParam(key, value, working_memory);
 
         try {
-            const flow_response = await llmflowModule[command_function||aiapp.DEFAULT_ENTRY_FUNCTIONS.llm_flow](callParams, llmflowCommandDefinition);
+            const flow_response = await llmflowModule[command_function||aiapp.DEFAULT_ENTRY_FUNCTIONS.llm_flow](
+                callParams, llmflowCommandDefinition);
             if (working_memory.__error) break;
             serverutils.setObjProperty(working_memory, (llmflowCommandDefinition.out||DEFAULT_OUT), flow_response);
         } catch (err) {
@@ -80,4 +74,21 @@ async function _runJSCode(code, context) {
     try {return await (serverutils.createAsyncFunction(code)(context))} catch (err) {
         LOG.error(`Error running custom JS code error is: ${err}`); return false;
     }
+}
+
+async function _expandLLMFlowParam(key, value, working_memory) {
+    let finalValue;
+    if (key.endsWith(NOINFLATE)) finalValue = value;
+    else if (key.endsWith(JSCODE)) finalValue = await _runJSCode(mustache.render(value.toString(), working_memory), 
+        {NEURANET_CONSTANTS, require: function() {const module = require(...arguments); return module}, ...working_memory});
+    else finalValue = typeof value === "object" ? JSON.parse(
+        mustache.render(JSON.stringify(value), working_memory)) : typeof value === "string" ? 
+        mustache.render(value.toString(), working_memory) : value;
+    return finalValue;
+}
+
+exports.extractRawKeyName = key => {
+    if (key.lastIndexOf("_") == -1) return key;
+    const splits = key.split("_"), suffix = "_"+splits[splits.length-1], tentativeRawKey = splits.slice(0, splits.length-1).join("_");
+    if (SPECIAL_KEY_SUFFIXES.includes(suffix)) return tentativeRawKey; else return key;
 }

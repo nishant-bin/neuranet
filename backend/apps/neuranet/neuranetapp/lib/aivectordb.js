@@ -60,14 +60,13 @@ const crypto = require("crypto");
 const cpucores = os.cpus().length*2;    // assume 2 cpu-threads per core (hyperthreaded cores)
 const maxthreads_for_search = cpucores - 1; // leave 1 thread for the main program
 const worker_threads = require("worker_threads");
+const memfs = require(`${CONSTANTS.LIBDIR}/memfs.js`);
+const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
-const serverutils = CONSTANTS?.LIBDIR ? require(`${CONSTANTS.LIBDIR}/utils.js`) : {
-    clone: o => JSON.parse(JSON.stringify(o)), objectMemSize: o => (JSON.stringify(o).length)*2 }
-const conf = require(`${NEURANET_CONSTANTS?.CONFDIR||(__dirname+"/conf")}/aidb.json`);
-const memfs = CONSTANTS?.LIBDIR ? require(`${CONSTANTS.LIBDIR}/memfs.js`) : fs.promises;  // use uncached fs if not under monkshu
+const conf = require(`${NEURANET_CONSTANTS.CONFDIR}/aidb.json`);
 
 const dbs = {}, DB_INDEX_NAME = "dbindex", METADATA_DOCID_KEY="aidbdocidkey", METADATA_DOCID_KEY_DEFAULT="aidb_docid",
-    VECTORDB_DELETE_VECTOR_TOPIC = "vectordb.rmdoc", VECTORDB_QUERY_TOPIC = "vectordb.query", workers = [],
+    VECTORDB_FUNCTION_CALL_TOPIC = "vectordb.functioncall", workers = [],
     DB_INDEX_OBJECT_TEMPLATE = {index:{}, modifiedts:Date.now(), savedts: 0, multithreaded: false, memused: 0, path: ""};
 
 let dbs_worker, workers_initialized = false, blackboard_initialized = false;
@@ -195,7 +194,7 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
         
         try {await memfs.writeFile(_get_db_index_text_file(dbToUse, vectorHash), text||"", "utf8");}
         catch (err) {
-            _deleteDBVectorObject(dbToUse, vectorHash);
+            _deleteDBVectorObject(db_path, vectorHash);
             _log_error(`Vector DB text file ${_get_db_index_text_file(dbToUse, vectorHash)} could not be saved`, db_path, err);
             return false;
         }
@@ -258,7 +257,7 @@ exports.delete = async (vector, metadata, db_path) => {
     const dbToUse = dbs[_get_db_index(db_path)], hash = _get_vector_hash(vector, metadata, dbToUse); 
 
     try {
-        const deletedVectorFromThisDB = await _deleteDBVectorObject(dbToUse, hash); // will return true if was found and delete on the local DB
+        const deletedVectorFromThisDB = await _deleteDBVectorObject(db_path, hash); // will return true if was found and delete on the local DB
         if (dbToUse.multithreaded && deletedVectorFromThisDB) await _update_db_for_worker_threads();
         return true;
     } catch (err) {
@@ -283,9 +282,8 @@ exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metada
         filter_metadata_last, benchmarkIterations, _forceSingleNode) {
     const dbToUse = serverutils.clone(dbs[_get_db_index(db_path)]); _log_info(`Searching ${Object.values(dbToUse.index).length} vectors.`, db_path);
     const _searchSimilarities = async _ => {
-        const similaritiesOtherReplicas = dbToUse.distributed && (!_forceSingleNode) ? await _getDistributedSimilarities(
-            {vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, db_path, filter_metadata_last, 
-                benchmarkIterations}) : [];
+        const similaritiesOtherReplicas = dbToUse.distributed && (!_forceSingleNode) ? 
+            await _getDistributedSimilarities(arguments.slice(0, -1)) : [];
         const similaritiesThisReplica = dbToUse.multithreaded ? await _search_multithreaded(
                 db_path, vectorToFindSimilarTo, (!filter_metadata_last)?metadata_filter_function:undefined) :
             _search_singlethreaded(dbToUse, vectorToFindSimilarTo, 
@@ -453,35 +451,35 @@ exports.free = async db_path => {await flush_db(path); delete dbs[_get_db_index(
 /**
  * Returns the vector database on the path provided. This is the function of choice to use for all 
  * vector database operations.
- * @param {string} path The path to the database. Must be a folder.
+ * @param {string} db_path The path to the database. Must be a folder.
  * @param {function} embedding_generator The embedding generator of format `vector = await embedding_generator(text)`
  * @param {string} metadata_docid_key The metadata docid key, is needed and if not provided then assumed to be aidb_docid
  * @param {boolean} isMultithreaded Whether to run the database in multi-threaded mode
  * @returns {object} The vector database object with various CRUD operations.
  */
-exports.get_vectordb = async function(path, embedding_generator, metadata_docid_key=METADATA_DOCID_KEY_DEFAULT, isMultithreaded) {
-    await exports.initAsync(path, metadata_docid_key, isMultithreaded); 
-    let save_timer; if (conf.autosave) save_timer = setInterval(_=>exports.save_db(path), conf.autosave_frequency);
+exports.get_vectordb = async function(db_path, embedding_generator, metadata_docid_key=METADATA_DOCID_KEY_DEFAULT, isMultithreaded) {
+    await exports.initAsync(db_path, metadata_docid_key, isMultithreaded); 
+    let save_timer; if (conf.autosave) save_timer = setInterval(_=>exports.save_db(db_path), conf.autosave_frequency);
     return {
-        create: async (vector, metadata, text) => exports.create(vector, metadata, text, embedding_generator, path),
+        create: async (vector, metadata, text) => exports.create(vector, metadata, text, embedding_generator, db_path),
         ingest: async (metadata, document, chunk_size, split_separators, overlap) => exports.ingest(metadata, document, 
-            chunk_size, split_separators, overlap, embedding_generator, path),
+            chunk_size, split_separators, overlap, embedding_generator, db_path),
         ingeststream: async(metadata, stream, encoding="utf8", chunk_size, split_separators, overlap) => 
             exports.ingeststream(metadata, stream, encoding, chunk_size, split_separators, overlap, 
-                embedding_generator, path),
-        read: async (vector, metadata, notext) => exports.read(vector, metadata, notext, path),
-        update: async (vector, oldmetadata, newmetadata, text) => exports.update(vector, oldmetadata, newmetadata, text, embedding_generator, path),
-        delete: async (vector, metadata) =>  exports.delete(vector, metadata, path),    
+                embedding_generator, db_path),
+        read: async (vector, metadata, notext) => exports.read(vector, metadata, notext, db_path),
+        update: async (vector, oldmetadata, newmetadata, text) => exports.update(vector, oldmetadata, newmetadata, text, embedding_generator, db_path),
+        delete: async (vector, metadata) =>  exports.delete(vector, metadata, db_path),    
         uningest: async (vectors, metadata) => exports.uningest(vectors, metadata, db_path),
         query: async (vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, filter_metadata_last, 
                 benchmarkIterations) => exports.query(
-            vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, path, filter_metadata_last, 
+            vectorToFindSimilarTo, topK, min_distance, metadata_filter_function, notext, db_path, filter_metadata_last, 
             benchmarkIterations),
-        flush_db: async _ => exports.save_db(path, true),
-        get_path: _ => path, 
+        flush_db: async _ => exports.save_db(db_path, true),
+        get_path: _ => db_path, 
         get_embedding_generator: _ => embedding_generator,
 	    sort: vectorResults => vectorResults.sort((a,b) => b.similarity - a.similarity),
-        unload: async _ => {if (save_timer) clearInterval(save_timer); await exports.free(path);}
+        unload: async _ => {if (save_timer) clearInterval(save_timer); await exports.free(db_path);}
     }
 }
 
@@ -609,13 +607,17 @@ async function _setDBVectorObject(dbToFill, vectorObject, isBeingCreated=false) 
     _log_info(`Data added, now the memory used for vector database is ${dbToFill.memused} bytes.`, dbToFill.path);
 }
 
-async function _deleteDBVectorObject(dbToUse, hash, publish=true) {
-    if ((!dbToUse.index[hash]) && publish) { // we do not have this vector, maybe someone else does
-        const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
-        blackboard.publish(VECTORDB_DELETE_VECTOR_TOPIC, {dbpath: dbToUse.path, 
-            metadata_docid_key: dbToUse[METADATA_DOCID_KEY], multithreaded: dbToUse.multithreaded, hash}, bboptions); 
-        return false; 
-    }
+async function _deleteDBVectorObject(db_path, hash, publish=true) {
+    const dbToUse = dbs[_get_db_index(db_path)];
+    if (!dbToUse.index[hash]) { 
+        if (publish) {  // we do not have this vector, maybe someone else does, just broadcast it
+            const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
+            const msg = {dbinitparams: _createDBInitParams(dbToUse), function_params: [db_path, hash, false], 
+                function_name: "_deleteDBVectorObject", is_function_private: true, send_reply: false};
+            blackboard.publish(VECTORDB_FUNCTION_CALL_TOPIC, msg, bboptions); 
+            return false;   // not found locally
+        } else return true; // we already don't have this, so deletion is "sort of" successful
+    } 
 
     delete dbToUse.index[hash];
     dbToUse.modifiedts = Date.now();
@@ -623,7 +625,7 @@ async function _deleteDBVectorObject(dbToUse, hash, publish=true) {
     const textFileThisVector = _get_db_index_text_file(dbToUse, hash);
 
     await memfs.unlinkIfExists(indexFileThisVector); await memfs.unlinkIfExists(textFileThisVector);
-    return true;
+    return true;    // found locally
 }
 
 const _getDBVectorObject = (dbToUse, hash) => dbToUse.index[hash];  
@@ -631,38 +633,47 @@ const _getDBVectorObject = (dbToUse, hash) => dbToUse.index[hash];
 function _initBlackboardHooks() {
     const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
 
-    blackboard.subscribe(VECTORDB_DELETE_VECTOR_TOPIC, async msg => {
-        const {dbpath, multithreaded, hash, metadata_docid_key} = msg;
-        if (!dbpath) {LOG.error(`Missing DB path for message ${JSON.stringify(msg)}`); return;}
-        if (!dbs[_get_db_index(dbpath)]) {
-            _log_warning(`Unable to locate database for blackboard add vector event. Trying to initialize.`, dbpath);
-            await exports.initAsync(dbpath, metadata_docid_key, multithreaded);
+    blackboard.subscribe(VECTORDB_FUNCTION_CALL_TOPIC, async msg => {
+        const {dbinitparams, function_name, function_params, is_function_private, send_reply, blackboardcontrol} = msg;
+        if (!dbinitparams.dbpath) {LOG.error(`Missing DB path for message ${JSON.stringify(msg)}`); return;}
+        if (!dbs[_get_db_index(dbinitparams.dbpath)]) {
+            _log_warning(`Unable to locate database ${dbinitparams.dbpath} for distributed function call for ${function_name}. Trying to initialize.`, dbinitparams.dbpath);
+            await exports.initAsync(dbinitparams.dbpath, dbinitparams.metadata_docid_key, dbinitparams.multithreaded);
+            if (!dbs[_get_db_index(dbinitparams.dbpath)]) {
+                _log_error(`Unable to call function ${function_name} as database not found and init failed.`, dbinitparams.dbpath);
+                return; // we can't run the function, as we don't have this DB, so this message is not for us
+            }
         }
-        if (dbs[_get_db_index(dbpath)]) _deleteDBVectorObject(dbs[_get_db_index(dbpath)], hash, false);
-        else _log_error(`Unable to delete vector as database not found and init failed.`, dbpath);
-    }, bboptions);
-
-    blackboard.subscribe(VECTORDB_QUERY_TOPIC, async msg => {
-        const {query_params, blackboardcontrol} = msg;
-        const similarities = await exports.query(...query_params, true);
-        blackboard.sendReply(VECTORDB_QUERY_TOPIC, blackboardcontrol, {reply: similarities});
+        const functionToCall = is_function_private ? private_functions[function_name] : module.exports[function_name];
+        let function_result;
+        if (send_reply) function_result = await functionToCall(...function_params); else await functionToCall(...function_params);
+        if (send_reply) blackboard.sendReply(VECTORDB_FUNCTION_CALL_TOPIC, blackboardcontrol, {reply: function_result});
     }, bboptions);
 }
 
-function _getDistributedSimilarities(query_params) {
+async function _getDistributedSimilarities(query_params) {
     if (blackboard.getCurrentClusterSizeOnline() == 0) return [];   // single node deployment or cluster offline
 
-    return new Promise(resolve => blackboard.getReply(VECTORDB_QUERY_TOPIC, {query_params},  
-        conf.cluster_timeout, undefined, replies => {
-            const similarities = []; for (const replyObject of replies||[]) similarities.concat(replyObject.reply);
-            resolve(similarities);
-        }
-    ));
+    const [_vectorToFindSimilarTo, _topK, _min_distance, _metadata_filter_function, _notext, db_path, 
+        _filter_metadata_last, _benchmarkIterations] = query_params;
+    const dbToUse = dbs[_get_db_index(db_path)]; 
+
+    const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
+    const msg = { dbinitparams: _createDBInitParams(dbToUse), function_params: [...query_params, true], 
+        function_name: "query", is_function_private: false, send_reply: true };
+    const replies = await blackboard.getReply(VECTORDB_FUNCTION_CALL_TOPIC, msg, conf.cluster_timeout, bboptions);
+    if (replies.incomplete) _log_warning(`Received incomplete replies for the query. Results not perfect.`, dbToUse.path);
+    const similarities = []; for (const replyObject of replies||[]) similarities.concat(replyObject.reply);
+    return(similarities);
 }
 
+const _createDBInitParams = dbToUse => {return {dbpath: dbToUse.path, metadata_docid_key: dbToUse[METADATA_DOCID_KEY], 
+    multithreaded: dbToUse.multithreaded}};
 const _log_warning = (message, db_path) => (global.LOG||console).warn(
     `${message}. The vector DB is ${_get_db_index(db_path)}. The error was ${error||"no information"}.`);
 const _log_error = (message, db_path, error) => (global.LOG||console).error(
     `${message}. The vector DB is ${_get_db_index(db_path)}. The error was ${error||"no information"}.`);
 const _log_info= (message, db_path, isDebug) => (global.LOG||console)[isDebug?"debug":"info"](
     `${message}. The vector DB is ${_get_db_index(db_path)}.`);
+
+const private_functions = {_deleteDBVectorObject};  // private functions which can be called via distributed function calls
