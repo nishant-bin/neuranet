@@ -122,6 +122,7 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
         return allDocumentHashes;
     }
     EMPTY_DB.tfidfDocStore.totalDocsInDB = async local => (await EMPTY_DB.tfidfDocStore.allDocumentHashes(local)).length;
+    EMPTY_DB.tfidfDocStore.localTotalDocsInDB = _ => (EMPTY_DB.tfidfDocStore.localDocumentHashes()).length;
     EMPTY_DB.tfidfDocStore.localDelete = async documentHash => { 
         delete EMPTY_DB.tfidfDocStore[documentHash]; if (!EMPTY_DB.mem_only) {
             const pathOnDisk = `${EMPTY_DB.pathOrMemID}/${documentHash}`;
@@ -130,7 +131,6 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
         }
     };
     EMPTY_DB.tfidfDocStore.localAdd = (documentHash, document) => EMPTY_DB.tfidfDocStore[documentHash] = document; 
-    EMPTY_DB.tfidfDocStore.localdata = documentHash => EMPTY_DB.tfidfDocStore[documentHash];
     EMPTY_DB.tfidfDocStore.data = async (documentHash, local) => {
         if (EMPTY_DB.tfidfDocStore[documentHash]) return EMPTY_DB.tfidfDocStore[documentHash];
         else if ((!local) && EMPTY_DB.distributed) {
@@ -139,6 +139,7 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
             return undefined;
         }
     }
+    EMPTY_DB.tfidfDocStore.localData = documentHash => EMPTY_DB.tfidfDocStore[documentHash];
     EMPTY_DB.iindex.addLocalWordObject = (word, wordObject) => EMPTY_DB.iindex[word] = wordObject;
     EMPTY_DB.iindex.deleteLocalDocumentFromWordObject = (wordObject, documentHash) => delete wordObject.docs[documentHash];
     EMPTY_DB.iindex.getLocalWordObjectCountForDocument = (wordObject, documentHash) => wordObject.docs[documentHash];
@@ -242,7 +243,7 @@ exports.writeData = async (pathIn, db) => {
     memfsWritePromises.push(memfs.writeFile(`${pathIn}/${IINDEX_FILE}`, iindexNDJSON));
     memfsWritePromises.push(memfs.writeFile(`${pathIn}/${VOCABULARY_FILE}`, JSON.stringify(db.iindex.getAllLocalWords(), null, 1))); // we don't use this, only serialized as FYI
     for (const dbDocHashKey of db.tfidfDocStore.localDocumentHashes()) memfsWritePromises.push(memfs.writeFile(
-        `${pathIn}/${dbDocHashKey}`, JSON.stringify(await db.tfidfDocStore.localdata(dbDocHashKey), null, 4)));
+        `${pathIn}/${dbDocHashKey}`, JSON.stringify(await db.tfidfDocStore.localData(dbDocHashKey), null, 4)));
     try {await Promise.all(memfsWritePromises);} catch (err) {
         LOG.error(`Error ${err} in writing to disk via memfs for TF.IDF DB.`);
     } finally {await memfs.flush();}
@@ -310,10 +311,10 @@ exports.ingestStream = exports.createStream = async function(readstream, metadat
  * @param {object} db The incoming database
  * @param {boolean} publish Update other cluster members
  */
-exports.delete = async function(metadata, db, publish=true) {
-    const docHash = _getDocumentHashIndex(metadata, db), document = await db.tfidfDocStore.data(docHash, true);
+exports.delete = function(metadata, db, publish=true) {
+    const docHash = _getDocumentHashIndex(metadata, db), localDocument = db.tfidfDocStore.localData(docHash);
     
-    if (document) {
+    if (localDocument) {
         for (const wordObject of db.iindex.getAllLocalWordObjects()) db.iindex.deleteLocalDocumentFromWordObject(wordObject, docHash);
         db.tfidfDocStore.localDelete(_getDocumentHashIndex(metadata, db));       // we don't await as it causes multi-threading for cascading deletes, the await is only to delete the text file which doesn't matter much
     } else if (publish) {
@@ -334,7 +335,7 @@ exports.delete = async function(metadata, db, publish=true) {
  */
 exports.update = async (oldmetadata, newmetadata, db, publish=true) => {
     const oldhash = _getDocumentHashIndex(oldmetadata, db), newhash = _getDocumentHashIndex(newmetadata, db),
-        document = await db.tfidfDocStore.data(oldhash, true);
+        document = db.tfidfDocStore.ocalData(oldhash);
     if ((!document) && publish) {
         const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
         blackboard.publish(TFIDFDB_UPDATE_DOC_TOPIC, {creation_data: _createDBCreationData(db), 
@@ -383,7 +384,7 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
     const scoredDocs = []; 
 
     if (!query) {   // no query -> no need to score
-        for (const documentHash of db.tfidfDocStore.allDocumentHashes()) {
+        for (const documentHash of (await db.tfidfDocStore.allDocumentHashes())) {
             const document = await db.tfidfDocStore.data(documentHash);
             if (filter_function && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
             scoredDocs.push({metadata: document.metadata, score: 0, coord_score: 0, tf_score: 0,
@@ -397,10 +398,12 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
     for (const queryWord of queryWords) {const docHashesWithThisWord = await db.iindex.getDocumentHashesForWord(queryWord); 
         for (const docHash of docHashesWithThisWord) if (!relevantDocs.includes(docHash)) relevantDocs.push(docHash)};
     for (const docHash of relevantDocs) {
-        const document = await db.tfidfDocStore.data(docHash); if (!document) {LOG.warn(`Document is null for hash ${docHash}, ignoring.`); continue;}
+        const document = await db.tfidfDocStore.data(docHash); 
+        if (!document) {LOG.warn(`Document is null for hash ${docHash}, ignoring.`); continue;}
+        
         if (filter_function && (!options.filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
-        const tfAdjustmentFactor = options.bm25 ? _getBM25Adjustment(docHash, db) : // handle BM25 or opposite of it here
-            options.punish_verysmall_documents ? _getVerySmallDocumentPunishment(docHash, db) : 1;  
+        const tfAdjustmentFactor = options.bm25 ? await _getBM25Adjustment(document.length, db) : // handle BM25 or opposite of it here
+            options.punish_verysmall_documents ? await _getVerySmallDocumentPunishment(document.length, db) : 1;  
 
         let scoreThisDoc = 0, tfScoreThisDoc = 0, queryWordsFoundInThisDoc = 0, 
             documentsWithWordsCount = await db.iindex.getCountOfDocumentsWithWords(queryWords);
@@ -462,7 +465,7 @@ function _getLangNormalizedWords(document, lang, db, autocorrect=false, fastSpli
         if (word.trim() == "") return true; // emptry words are useless
         const dbHasStopWords = db._stopwords?.[lang] && db._stopwords[lang].length > 0;
         if (!dbHasStopWords) {   // auto learn stop words if possible
-            const dbDocCount = db.tfidfDocStore.totalDocsInDB(true);
+            const dbDocCount = db.tfidfDocStore.localTotalDocsInDB();
             if (dbDocCount > MIN_STOP_WORD_IDENTIFICATION_LENGTH) {
                 if (!db._stopwords) db._stopwords = {}; db._stopwords[lang] = [];
                 for (const word of db.iindex.getAllLocalWords())
@@ -492,9 +495,8 @@ function _getLangNormalizedWords(document, lang, db, autocorrect=false, fastSpli
     return words;
 }
 
-function _getVerySmallDocumentPunishment(dochash, db) { // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
-    const thisDocLength = db.tfidfDocStore.data(dochash).length;
-    let totalDocLength = 0; for (const hash of db.tfidfDocStore.localDocumentHashes()) totalDocLength += db.tfidfDocStore.data(hash).length;
+async function _getVerySmallDocumentPunishment(thisDocLength, db) { // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
+    let totalDocLength = 0; for (const hash of db.tfidfDocStore.localDocumentHashes()) totalDocLength += db.tfidfDocStore.localData(hash).length;
     const averageDocLength = totalDocLength/db.tfidfDocStore.localDocumentHashes().length;
     const cappedPercentThidDocLengthToAverageLength = Math.min(thisDocLength/averageDocLength,1);
     const weightedDistanceOfThisDocLengthFromAverage = 1-cappedPercentThidDocLengthToAverageLength, 
@@ -503,9 +505,8 @@ function _getVerySmallDocumentPunishment(dochash, db) { // this function doesn't
     return punishment;
 }
 
-function _getBM25Adjustment(dochash, db) {  // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
-    const thisDocLength = db.tfidfDocStore.data(dochash).length;
-    let totalDocLength = 0; for (const hash of db.tfidfDocStore.localDocumentHashes()) totalDocLength += db.tfidfDocStore.data(hash).length;
+async function _getBM25Adjustment(thisDocLength, db) {  // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
+    let totalDocLength = 0; for (const hash of db.tfidfDocStore.localDocumentHashes()) totalDocLength += db.tfidfDocStore.localData(hash).length;
     const averageDocLength = totalDocLength/db.tfidfDocStore.localDocumentHashes().length;
     const bm25AdjustmentDenominator = thisDocLength/averageDocLength;
     return 1/bm25AdjustmentDenominator;
