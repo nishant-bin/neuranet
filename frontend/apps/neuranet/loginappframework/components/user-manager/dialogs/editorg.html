@@ -99,13 +99,13 @@ div#editListsContainer editable-list {width: 40%}
     div#editListsContainer { flex-direction: column; }
 {{{CONF.MOBILE_MEDIA_QUERY_PORTRAIT_END}}}
 
-<input type="text" id="orgname" placeholder="{{i18n.OrgName}}" value="{{orgname}}" required 
+<input type="text" id="orgname" placeholder="{{i18n.OrgName}}" value="{{orgname}}" readonly 
     oninvalid="this.setCustomValidity('{{i18n.FillField}}')" oninput="setCustomValidity('')">
 <input type="text" id="orgaddress" placeholder="{{i18n.OrgAddress}}" value="{{orgaddress}}" required 
     oninvalid="this.setCustomValidity('{{i18n.FillField}}')" oninput="setCustomValidity('')">
 <input type="text" id="orgcontactname" placeholder="{{i18n.OrgContactName}}" value="{{orgcontactname}}" required 
     oninvalid="this.setCustomValidity('{{i18n.FillField}}')" oninput="setCustomValidity('')">
-<input type="email" id="orgcontactemail" placeholder="{{i18n.OrgContactEmail}}" value="{{orgcontactemail}}" required 
+<input type="email" id="orgcontactemail" placeholder="{{i18n.OrgContactEmail}}" value="{{orgcontactemail}}" readonly 
     oninvalid="this.setCustomValidity('{{i18n.FillField}}')" oninput="setCustomValidity('')">
 <input type="url" id="orgdomain" placeholder="{{i18n.OrgMainDomain}}" value="{{orgdomain}}" readonly
     required oninvalid="this.setCustomValidity('{{i18n.FillField}}')" oninput="setCustomValidity('')">

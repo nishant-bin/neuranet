@@ -14,7 +14,7 @@ endpoint: llmflow                           # the API endpoint - usually llmflow
 users: ["*"]                                # the * means all users, else must be an array of user IDs
 admins: ["thecompany@tekmonks.com"]         # the admins for this app - they can train for example
 api_uploads_cms_path: uploads               # where files are uploaded by index, unindex APIs
-generated_files_path: _neuranet_generated
+generated_files_path: _neuranet_generated   # where generated files are placed
 
 # all flows are sequence of commands which follow the same syntax - command, in, out - in is the input
 # to the command, out is the variable holding the output and name points to the command module and entry
@@ -233,6 +233,43 @@ llm_flow:
       model: 
         name: chat-knowledgebase-openai
     out: airesponse                         # the final response must output to this property - airesponse for LLM flows
+
+
+docsearch_flow:
+  - command: doctfidfsearch.search          # only if forced, perfrom a non-llm search
+    condition_js: |                         # _js means run the code - assign value to the property
+      if (request.force_nonllm_search) return true; else return false;
+    in: 
+      query: "{{{query}}}"                  # inbuilt variable contains the user's query
+      topK_tfidf: 3
+      cutoff_score_tfidf_js: request.cutoff_score_tfidf || 0.40
+      topK_vectors: 3
+      min_distance_vectors: 0
+      aiappid: "{{{aiappid}}}"  
+      bridges_js: return (request.bridges||[aiappid])
+      metadata_filter_function: "{{{request.metadata_filter_function}}}"
+      punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
+      bm25_js: "return request.bm25 !== undefined ? request.bm25 : false"
+    out: airesponse.documents
+
+  - command: docvectorsearch.search         # unless forced, this is the default
+    condition_js: |
+      if (request.force_nonllm_search) return false; else return true;
+    in: 
+      query: "{{{query}}}"
+      topK_tfidf: 3
+      cutoff_score_tfidf_js: request.cutoff_score_tfidf || 0.40
+      topK_vectors: 3
+      min_distance_vectors: 0
+      embeddings_model: 
+        name: embedding-openai
+      aiappid: "{{{aiappid}}}"  
+      bridges_js: return (request.bridges||[aiappid])
+      metadata_filter_function: "{{{request.metadata_filter_function}}}"
+      punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
+      bm25_js: "return request.bm25 !== undefined ? request.bm25 : false"
+    out: airesponse.documents
+
 
 global_models:
   - name: embedding-openai

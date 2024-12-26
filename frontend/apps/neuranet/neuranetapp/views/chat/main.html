@@ -5,5 +5,5 @@ chat-box#generalchat {
 }
 </style>
 <chat-box id="generalchat" chatapi="{{APP_CONSTANTS.API_PATH}}/{{aiendpoint}}"
-    onresult="window.monkshu_env.apps.neuranetapp.chat_main.processChatResponse(result, 'generalchat')"
-    onrequest="window.monkshu_env.apps.neuranetapp.chat_main.getChatRequest(prompt, 'generalchat')"></chat-box>
+    onresult="window.monkshu_env.apps.neuranetapp.chat_main.processChatResponse(result, 'generalchat', '{{{activeaiapp.id}}}')"
+    onrequest="window.monkshu_env.apps.neuranetapp.chat_main.getChatRequest(prompt, 'generalchat', '{{{activeaiapp.id}}}')"></chat-box>

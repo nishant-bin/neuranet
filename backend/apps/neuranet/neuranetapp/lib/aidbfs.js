@@ -29,12 +29,13 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
-
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
+const conf = require(`${NEURANET_CONSTANTS.CONFDIR}/aidb.json`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
-const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
-const aivectordb = require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
+const pluginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/pluginhandler.js`);
+const aitfidfdb = conf.aitfidfdb_module?.trim().length?pluginhandler.getPlugin(conf.aitfidfdb_module):require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
+const aivectordb = conf.aivectordb_module?.trim().length?pluginhandler.getPlugin(conf.aivectordb_module):require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
 	MODEL_DEFAULT = "embedding-openai", UNKNOWN_ORG = "unknownorg";

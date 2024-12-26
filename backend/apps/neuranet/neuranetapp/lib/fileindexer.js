@@ -62,7 +62,7 @@ exports.initSync = _ => {
  * @returns {object} Returns result of the format {result: true|false} on success or on failure.
  */
 exports.addFileToCMSRepository = async function(id, org, contentsOrStream, cmspath, comment, extrainfo, noaievent=false) {
-    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${cmspath}.{"xbin_uploadFile"}`, 
+    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${cmspath}.xbin_uploadFile`, 
         async _ => await uploadfile.uploadFile(id, org, contentsOrStream, cmspath, comment, extrainfo, noaievent),
         clusterjobhandler.LOCAL_CLUSTER, conf.distribued_jobwait);
     if (xbinResult) return xbinResult.result; else {
@@ -85,7 +85,7 @@ exports.addFileToCMSRepository = async function(id, org, contentsOrStream, cmspa
  * @returns true on success or false on failure.
  */
 exports.deleteFileFromCMSRepository = async function(id, org, cmspath, extrainfo, noaievent=false) {
-    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${cmspath}.{"xbin_deleteFile"}`, 
+    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${cmspath}.xbin_deleteFile`, 
         async _ => await deletefile.deleteFile({xbin_id: id, xbin_org: org}, cmspath, extrainfo, noaievent),
         clusterjobhandler.LOCAL_CLUSTER, conf.distribued_jobwait);
     if (xbinResult) return xbinResult.result; else {
@@ -109,7 +109,7 @@ exports.deleteFileFromCMSRepository = async function(id, org, cmspath, extrainfo
  * @returns true on success or false on failure.
  */
 exports.renameFileFromCMSRepository = async function(id, org, cmspathFrom, cmspathTo, extrainfo, noaievent=false) {
-    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${cmspath}.{"xbin_renameFile"}`, 
+    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${cmspath}.xbin_renameFile`, 
         async _ => await renamefile.renameFile({xbin_id: id, xbin_org: org}, cmspathFrom, cmspathTo, extrainfo, true),
         clusterjobhandler.LOCAL_CLUSTER, conf.distribued_jobwait);
     if (xbinResult) return xbinResult.result; else {

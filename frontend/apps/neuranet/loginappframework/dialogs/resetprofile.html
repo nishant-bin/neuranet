@@ -35,7 +35,7 @@ input.error {color: red;}
 
 <input type="text" id="name" placeholder="{{i18n.Name}}" value="{{name}}" required 
     oninvalid="this.setCustomValidity('{{i18n.FillField}}')" oninput="setCustomValidity('')">
-<input type="text" id="id" placeholder="{{i18n.Email}}" value="{{id}}" required 
+<input type="text" id="id" placeholder="{{i18n.Email}}" value="{{id}}" readonly
     oninvalid="this.setCustomValidity('{{i18n.FillField}}')" oninput="setCustomValidity('')">
 <input type="hidden" id="oldid" value="{{id}}">
 <input type="text" id="org" placeholder="{{i18n.Org}}" value="{{org}}" readonly 

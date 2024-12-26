@@ -118,11 +118,24 @@ span#usercontentholder, span#aicontentholder {
     display: flex;
     flex-direction: row;
 }
-span#usercontentholder img, span#aicontentholder img {
+span#usercontentholder img.chatactor, span#aicontentholder img.chatactor {
     width: 3.36em; 
     height: 2em;
     margin-top: 1em;
 }
+span#aicontentholder img.controls {
+    width: 0.8em;
+    padding: 0.4em;
+    border-radius: 0.2em;
+}
+span#aicontentholder img.controls:hover {background-color: #dff0fe;}
+span#aicontentholder span#controls {
+    display: flex;
+    width: 100%;
+    flex-direction: row;
+    justify-content: right;
+}
+
 img#waitspin {
     margin-top: 0 !important;
     height: 2em !important;
@@ -136,7 +149,6 @@ span#userprompt, span#airesponse {
     color: #005C84;
     border-radius: 0.2em;
     border: 1px solid #AED6E9;
-    white-space: pre-wrap;
     max-width: calc(100% - 3.36em);
     overflow: hidden;
     text-overflow: ellipsis;
@@ -186,14 +198,25 @@ textarea.readonly {
 <template id="chatresponse_insertion_template">
     <div id="insertiondiv">
     <span id="usercontentholder"> 
-        <img src="{{{COMPONENT_PATH}}}/img/userchatimg.svg"><span id="userprompt"></span> 
+        <img class="chatactor" src="{{{COMPONENT_PATH}}}/img/userchatimg.svg"><span id="userprompt"></span> 
     </span>
     <span id="aicontentholder">
         <span id="spacer"></span>
         <span id="airesponse"><img id="waitspin" src="{{{COMPONENT_PATH}}}/img/chatspin.svg"></span>
-        <img src="{{{COMPONENT_PATH}}}/img/aichatimg.svg"> 
+        <img class="chatactor" src="{{{COMPONENT_PATH}}}/img/aichatimg.svg"> 
     </span>
     </div>
+    <span id="controls">
+        <img class="controls" src="{{{COMPONENT_PATH}}}/img/copy.svg" 
+            onclick="$$.copyTextToClipboard(this.parentNode.parentNode.dataset.content); 
+                this.src='{{{COMPONENT_PATH}}}/img/tick.svg'; 
+                setTimeout(_=>this.src='{{{COMPONENT_PATH}}}/img/copy.svg', 800)">
+        <img class="controls" src="{{{COMPONENT_PATH}}}/img/save.svg" 
+            onclick="window.monkshu_env.frameworklibs.util.downloadFile(
+                this.parentNode.parentNode.dataset.content, 
+                'text/markdown; charset=UTF-8', 
+                `chat_${new Date(Date.now()).toLocaleString().replaceAll(' ', '_').replaceAll(',', '')}.html`)">
+    </span>
 </template>
 
 </div>

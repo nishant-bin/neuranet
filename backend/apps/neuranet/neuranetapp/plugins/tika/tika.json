@@ -18,7 +18,7 @@
         ".xla", ".xlam", ".xlr", ".xls", ".xlsb", ".xlsm", ".xlsx", ".xlt", ".xltm", ".xltx", ".xlw", ".xml", ".xps", ".crawl"],
         
     "always_ocr": true,
-    "tesseract_path": "/usr/local/Cellar/tesseract/5.3.4_1/bin",
+    "tesseract_path": "/usr/local/bin/",
     "tesseract_datapath": "/usr/local/share/tessdata",
     "ocrlanguage_bundles": {"en": "eng", "zh": "chi_sim", "ja": "jpn", "hi": "hin"}
 }

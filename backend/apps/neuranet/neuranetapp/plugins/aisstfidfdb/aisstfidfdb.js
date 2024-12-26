@@ -29,7 +29,7 @@ const path = require("path");
 const crypto = require("crypto");
 const natural = require("natural");
 const {Readable} = require("stream");
-const memfs = require(`${CONSTANTS.LIBDIR}/memfs.js`);
+const mysql = require("mysql2/promise");
 const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const conf = require(`${NEURANET_CONSTANTS.CONFDIR}/aidb.json`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
@@ -37,8 +37,8 @@ const jpsegmenter = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/jpsegmenter.js`
 const zhsegmenter = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/zhsegmenter.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
 
-const VOCABULARY_FILE="vocabulary", IINDEX_FILE="iindex", METADATA_DOCID_KEY="docid.key", 
-    METADATA_LANGID_KEY="langid.key", METADATA_DOCID_KEY_DEFAULT = "aidb_docid", METADATA_LANGID_KEY_DEFAULT = "aidb_langid", 
+const METADATA_DOCID_KEY="docid.key", METADATA_LANGID_KEY="langid.key", 
+    METADATA_DOCID_KEY_DEFAULT = "aidb_docid", METADATA_LANGID_KEY_DEFAULT = "aidb_langid", 
     MIN_STOP_WORD_IDENTIFICATION_LENGTH = 5, MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95, 
     DEFAULT_MAX_COORD_BOOST = 0.10, TFIDFDB_DELETE_DOC_TOPIC = "tfidf.rmdoc",
     TFIDFDB_UPDATE_DOC_TOPIC = "tfidf.updatedoc", TFIDFDB_INTERNAL_FUNCTION_CALL_TOPIC = "tfidf.functioncall";
@@ -69,14 +69,14 @@ exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA
     if (!dbLoadedInMemAlready) IN_MEM_DBS[dbmemid] = await exports.emptydb(dbPathOrMemID, metadata_docid_key, 
         metadata_langid_key, stopwords_path, no_stemming, mem_only); 
     
-    if ((!mem_only) && (!dbLoadedInMemAlready)) try {   // load the DB from the disk only if needed
-        await memfs.access(dbPathOrMemID); await exports.loadData(dbmemid, IN_MEM_DBS[dbmemid]);
-    } catch (err) {    // check the DB path exists or create it etc.
-        if (err.code == "ENOENT") { 
+    if ((!mem_only) && (!dbLoadedInMemAlready)){
+        if(await _exitsTfidfDB()){ // load the DB from the disk only if needed
+            await exports.loadData(dbmemid, IN_MEM_DBS[dbmemid]);
+        } else {
             LOG.warn(`Unable to access the TF.IDF DB store at path ${dbPathOrMemID}. Creating a new one.`); 
-            await memfs.mkdir(dbPathOrMemID, {recursive: true});   // empty DB, as it is new
-        } else throw err;   // not an issue with the DB folder, something else so throw it
-    } 
+            await createTfidfDB();
+        }
+    }
 
     // setup autosave if config has indicated for us to auto-save
     let save_timer; if (conf.autosave && (!mem_only)) save_timer = setInterval(_=>exports.writeData(dbPathOrMemID, db), conf.autosave_frequency);
@@ -126,7 +126,7 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
     EMPTY_DB.tfidfDocStore.localDelete = async documentHash => { 
         delete EMPTY_DB.tfidfDocStore[documentHash]; if (!EMPTY_DB.mem_only) {
             const pathOnDisk = `${EMPTY_DB.pathOrMemID}/${documentHash}`;
-            try {await memfs.rm(pathOnDisk)} catch (err) {
+            try {await deleteDocUsingHash(documentHash);} catch (err) {
                 LOG.warn(`Error deleting file ${pathOnDisk} for TD.IDF hash ${documentHash} due to ${err}.`); }
         }
     };
@@ -206,30 +206,23 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
  * @returns {object} The DB loaded 
  */
 exports.loadData = async function(pathIn, dbToLoad) {
-    let fileEntries, iindexNDJSON; try{
-        fileEntries = await memfs.readdir(pathIn); iindexNDJSON = await memfs.readFile(`${pathIn}/${IINDEX_FILE}`, {encoding: "utf8"});
+    let documents, iindexNDJSON; try{
+        documents = await _getAllDocsFromTfidfDB(); iindexNDJSON = await _getIndexNDJSONFromTfidfDB();
     } catch (err) {
         LOG.error(`TF.IDF search can't find or load database directory from path ${pathIn}. Using an empty DB.`); 
         return dbToLoad; 
     }
 
-    for (const line of iindexNDJSON.split("\n")) {   // read the iindex
-        try {
+    for (const line of iindexNDJSON.split("\n")) { try { // read the iindex
             const wordObject = JSON.parse(line); 
             dbToLoad.iindex.addLocalWordObject(wordObject.word, wordObject);
         } catch (err) { LOG.error(`Corrupted iindex due to line ${line}. Skipping this line.`); }
     }
 
-    try {
-        for (const file of fileEntries) if ((file != IINDEX_FILE) && (file != VOCABULARY_FILE)) { // these are our indices, so skip
-            try {
-                const document = JSON.parse(await memfs.readFile(`${pathIn}/${file}`, {encoding: "utf8"}));
-                dbToLoad.tfidfDocStore.localAdd(_getDocumentHashIndex(document.metadata, dbToLoad), document); 
-            } catch (err) { LOG.error(`Corrupted document found at ${`${pathIn}/${file}`}. Skipping this document.`); }
-        }
-    } catch (err) {LOG.error(`TF.IDF search load document ${file} from path ${pathIn}. Skipping this document.`);};
-
-    return dbToLoad;
+    for (const document of documents){ try {
+            dbToLoad.tfidfDocStore.localAdd(_getDocumentHashIndex(document.metadata, dbToLoad), document); 
+        } catch (err) { LOG.error(`Corrupted document found - document: ${JSON.stringify(document)}. Skipping this document.`); }
+    } return dbToLoad;
 }
 
 /**
@@ -237,16 +230,18 @@ exports.loadData = async function(pathIn, dbToLoad) {
  * @param {string} pathIn The path to write to
  * @param {object} db The DB to write out
  */
-exports.writeData = async (pathIn, db) => {
-    let iindexNDJSON = ""; for (const wordObject of db.iindex.getAllLocalWordObjects()) iindexNDJSON += JSON.stringify(wordObject)+"\n";
-    const memfsWritePromises = [];
-    memfsWritePromises.push(memfs.writeFile(`${pathIn}/${IINDEX_FILE}`, iindexNDJSON));
-    memfsWritePromises.push(memfs.writeFile(`${pathIn}/${VOCABULARY_FILE}`, JSON.stringify(db.iindex.getAllLocalWords(), null, 1))); // we don't use this, only serialized as FYI
-    for (const dbDocHashKey of db.tfidfDocStore.localDocumentHashes()) memfsWritePromises.push(memfs.writeFile(
-        `${pathIn}/${dbDocHashKey}`, JSON.stringify(await db.tfidfDocStore.localData(dbDocHashKey), null, 4)));
-    try {await Promise.all(memfsWritePromises);} catch (err) {
-        LOG.error(`Error ${err} in writing to disk via memfs for TF.IDF DB.`);
-    } finally {await memfs.flush();}
+exports.writeData = async (_, db) => {
+    try {
+        let iindexNDJSON = ""; for (const wordObject of db.iindex.getAllLocalWordObjects()) iindexNDJSON += JSON.stringify(wordObject)+"\n";
+        await _storeIndexObjectInTfidfDB(iindexNDJSON);
+
+        await _storeVocabularyInTfidfDB(db.iindex.getAllLocalWords()); // we don't use this, only serialized as FYI
+        
+        for (const dbDocHashKey of db.tfidfDocStore.localDocumentHashes()) 
+            await _storeDocInTfidfDB(await db.tfidfDocStore.localData(dbDocHashKey), dbDocHashKey);
+    } catch (err) {
+        LOG.error(`Error ${err} in writing to Single Store DB via SQL QUERY for TF.IDF DB.`);
+    }
 }
 
 /**
@@ -311,7 +306,7 @@ exports.ingestStream = exports.createStream = async function(readstream, metadat
  * @param {object} db The incoming database
  * @param {boolean} publish Update other cluster members
  */
-exports.delete = function(metadata, db, publish=true) {
+exports.delete = async function(metadata, db, publish=true) {
     const docHash = _getDocumentHashIndex(metadata, db), localDocument = db.tfidfDocStore.localData(docHash);
     
     if (localDocument) {
@@ -335,7 +330,7 @@ exports.delete = function(metadata, db, publish=true) {
  */
 exports.update = async (oldmetadata, newmetadata, db, publish=true) => {
     const oldhash = _getDocumentHashIndex(oldmetadata, db), newhash = _getDocumentHashIndex(newmetadata, db),
-        document = db.tfidfDocStore.ocalData(oldhash);
+        document = db.tfidfDocStore.localData(oldhash);
     if ((!document) && publish) {
         const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
         blackboard.publish(TFIDFDB_UPDATE_DOC_TOPIC, {creation_data: _createDBCreationData(db), 
@@ -400,8 +395,8 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
     for (const docHash of relevantDocs) {
         const document = await db.tfidfDocStore.data(docHash); 
         if (!document) {LOG.warn(`Document is null for hash ${docHash}, ignoring.`); continue;}
-        
         if (filter_function && (!options.filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
+        
         const tfAdjustmentFactor = options.bm25 ? await _getBM25Adjustment(document.length, db) : // handle BM25 or opposite of it here
             options.punish_verysmall_documents ? await _getVerySmallDocumentPunishment(document.length, db) : 1;  
 
@@ -465,7 +460,7 @@ function _getLangNormalizedWords(document, lang, db, autocorrect=false, fastSpli
         if (word.trim() == "") return true; // emptry words are useless
         const dbHasStopWords = db._stopwords?.[lang] && db._stopwords[lang].length > 0;
         if (!dbHasStopWords) {   // auto learn stop words if possible
-            const dbDocCount = db.tfidfDocStore.localTotalDocsInDB();
+            const dbDocCount = db.tfidfDocStore.localTotalDocsInDB(true);
             if (dbDocCount > MIN_STOP_WORD_IDENTIFICATION_LENGTH) {
                 if (!db._stopwords) db._stopwords = {}; db._stopwords[lang] = [];
                 for (const word of db.iindex.getAllLocalWords())
@@ -495,8 +490,8 @@ function _getLangNormalizedWords(document, lang, db, autocorrect=false, fastSpli
     return words;
 }
 
-async function _getVerySmallDocumentPunishment(thisDocLength, db) { // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
-    let totalDocLength = 0; for (const hash of db.tfidfDocStore.localDocumentHashes()) totalDocLength += db.tfidfDocStore.localData(hash).length;
+function _getVerySmallDocumentPunishment(thisDocLength, db) { // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
+    let totalDocLength = 0; for (const hash of db.tfidfDocStore.localDocumentHashes()) totalDocLength += db.tfidfDocStore.data(hash).length;
     const averageDocLength = totalDocLength/db.tfidfDocStore.localDocumentHashes().length;
     const cappedPercentThidDocLengthToAverageLength = Math.min(thisDocLength/averageDocLength,1);
     const weightedDistanceOfThisDocLengthFromAverage = 1-cappedPercentThidDocLengthToAverageLength, 
@@ -505,8 +500,8 @@ async function _getVerySmallDocumentPunishment(thisDocLength, db) { // this func
     return punishment;
 }
 
-async function _getBM25Adjustment(thisDocLength, db) {  // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
-    let totalDocLength = 0; for (const hash of db.tfidfDocStore.localDocumentHashes()) totalDocLength += db.tfidfDocStore.localData(hash).length;
+function _getBM25Adjustment(thisDocLength, db) {  // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
+    let totalDocLength = 0; for (const hash of db.tfidfDocStore.localDocumentHashes()) totalDocLength += db.tfidfDocStore.data(hash).length;
     const averageDocLength = totalDocLength/db.tfidfDocStore.localDocumentHashes().length;
     const bm25AdjustmentDenominator = thisDocLength/averageDocLength;
     return 1/bm25AdjustmentDenominator;
@@ -567,4 +562,72 @@ function _getDistributedResultFromFunction(db, module_name, function_name, param
 }
 
 const _unmarshallReplies = replies => {
-    const unmarshalled = []; for (const reply of (replies||[])) unmarshalled.push(reply.reply); return unmarshalled;}
+    const unmarshalled = []; 
+    for (const reply of (replies||[])) unmarshalled.push(reply.reply); 
+    return unmarshalled;
+}
+
+async function _exitsTfidfDB(){
+    let connection = await getSingleStoreConnection(); 
+    try {
+        const [dbExists] = await connection.query(`SELECT COUNT(*) AS dbExists FROM information_schema.schemata WHERE schema_name = 'tfidfDB';`);
+        if (dbExists[0].dbExists > 0) {
+            const [docTableExists] = await connection.query(`SELECT COUNT(*) AS tableExists FROM information_schema.tables WHERE table_schema = ? AND table_name = 'DOCUMENT';`, [conf.aiss_tfidfdb]);
+            if (docTableExists[0].tableExists > 0){
+                const [indTableExists] = await connection.query(`SELECT COUNT(*) AS tableExists FROM information_schema.tables WHERE table_schema = ? AND table_name = 'IINDEX';`, [conf.aiss_tfidfdb]);
+                if (indTableExists[0].tableExists > 0){
+                    const [vocabTableExists] = await connection.query(`SELECT COUNT(*) AS tableExists FROM information_schema.tables WHERE table_schema = ? AND table_name = 'VOCABULARY';`, [conf.aiss_tfidfdb]);
+                    return vocabTableExists[0].tableExists > 0;
+                }
+            } 
+        } return false; 
+    } catch(error){ return false; }
+    finally { await connection.end(); } // End transaction
+}
+
+async function createTfidfDB(){
+    let connection = await getSingleStoreConnection();
+    await connection.query(`CREATE DATABASE IF NOT EXISTS ?;`, [conf.aiss_tfidfdb]);
+    await connection.query(`USE ?;`, [conf.aiss_tfidfdb]);
+    await connection.query(`CREATE TABLE IF NOT EXISTS DOCUMENT (hash VARCHAR(255) NOT NULL PRIMARY KEY, metadata JSON, length INT, date_created BIGINT, date_modified BIGINT);`);
+    await connection.query(`CREATE TABLE IF NOT EXISTS IINDEX (id INT PRIMARY KEY DEFAULT 0, indexNDJSON LONGTEXT NOT NULL);`);
+    await connection.query(`CREATE TABLE IF NOT EXISTS VOCABULARY (id INT PRIMARY KEY DEFAULT 0, wordArray JSON NOT NULL);`);
+    await connection.end(); // end transaction
+}
+
+async function _storeDocInTfidfDB(docObject, docHash){
+    const insertQuery = `REPLACE INTO DOCUMENT VALUES (?, ?, ?, ?, ?)`;
+    const insertData = [docHash, JSON.stringify(docObject.metadata), 
+        docObject.length, docObject.date_created, docObject.date_modified];
+    await executeQuery(insertQuery, insertData);
+}
+
+async function _storeIndexObjectInTfidfDB(indexNDJSON){
+    await executeQuery(`REPLACE INTO IINDEX VALUES (0, ?)`, [indexNDJSON]);
+}
+
+async function _storeVocabularyInTfidfDB(wordArray){
+    await executeQuery(`REPLACE INTO VOCABULARY (id, wordArray) VALUES (0, ?)`, [JSON.stringify(wordArray)]);
+}
+
+async function _getAllDocsFromTfidfDB(){
+    let [docObjects] = await executeQuery(`SELECT * FROM DOCUMENT`, undefined, true);
+    return docObjects;
+}
+
+async function _getIndexNDJSONFromTfidfDB(){
+    let [wordObjects] = await executeQuery(`SELECT * FROM IINDEX`, undefined, true);
+    return wordObjects[0].indexNDJSON;
+}
+
+async function executeQuery(query, data, returnflag){
+    let connection = await getSingleStoreConnection();
+    await connection.query(`USE ?;`, [conf.aiss_tfidfdb]);
+    let result = await connection.query(query, data);
+    await connection.end(); // end transaction 
+    if(returnflag) return result;
+}
+
+async function getSingleStoreConnection(){
+    return await mysql.createConnection(conf.aiss_config); // create & update connection;
+}

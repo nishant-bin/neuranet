@@ -30,15 +30,30 @@ License: See enclosed license.txt file.
 			justify-content: center;
 			align-items: center;
 			margin: 0;
+			background-color: #4fb3ed23;
 		}
 
-		body > img {width: 30vw; height: 30vw; visibility: hidden;}
+		img#__org_monkshu_xbin_indexpage_spinner {
+			width: 30vw; 
+			height: 30vw; 
+			max-width: 9em;
+			max-height: 9em; 
+			visibility: hidden;
+		}
+
+		img#neuranet_loading {
+			width: 30vw; 
+			height: 30vw; 
+			max-width: 9em;
+			max-height: 9em; 
+		}
 		@media (orientation: portrait) { body > img {width: 50vw; height: 50vw;} }
 	</style>
 </head>
 
 <body>
 	<img id="__org_monkshu_xbin_indexpage_spinner" src="./img/loading.svg" onclick="window.open(APP_CONSTANTS.APP_ABOUT_URL, '_blank')">
+	<img id="neuranet_loading" src="./img/neuranetloading.svg" onclick="window.open(APP_CONSTANTS.APP_ABOUT_URL, '_blank')">
 
 	<!-- Show the waiting spinner if waiting for more than default timeout and error if there are network issues -->
 	<script type="text/javascript">
@@ -48,10 +63,12 @@ License: See enclosed license.txt file.
 			if (imgElement) imgElement.style.visibility="visible"
 		}, SPINNER_WAIT_TIMEOUT));
 
-		const ERROR_SPINNER_WAIT_TIMEOUT = 10000;	// 10 seconds before error spinner shows up
+		const ERROR_SPINNER_WAIT_TIMEOUT = 15000;	// 10 seconds before error spinner shows up
 		document.addEventListener("DOMContentLoaded", _=>setTimeout(_=> {
 			const imgElement = document.querySelector("img#__org_monkshu_xbin_indexpage_spinner");
 			if (imgElement) {imgElement.src = "./img/errorloading.svg"; $$.setSlowNetwork(true);}
+			const imgElement2 = document.querySelector("img#neuranet_loading");
+			if (imgElement2) imgElement2.src = "./img/errorneuranetloading.svg";
 		}, ERROR_SPINNER_WAIT_TIMEOUT));
 	</script>
 </body>

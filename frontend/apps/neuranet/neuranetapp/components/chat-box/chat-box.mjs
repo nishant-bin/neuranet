@@ -7,15 +7,16 @@
  * Provides a standard chatbox component.
  */
 
+import {marked} from "./3p/marked.esm.min.js";
 import {util} from "/framework/js/util.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 import {monkshu_component} from "/framework/js/monkshu_component.mjs";
 
 const COMPONENT_PATH = util.getModulePath(import.meta); 
-let API_CHAT, USER_ID;
+let API_CHAT;
 
 async function elementConnected(host) {
-    API_CHAT = host.getAttribute("chatapi"); USER_ID = host.getAttribute("user");
+    API_CHAT = host.getAttribute("chatapi"); 
 	chat_box.setDataByHost(host, {COMPONENT_PATH});
 }
 
@@ -49,11 +50,15 @@ async function send(containedElement) {
 }
 
 function _insertAIResponse(shadowRoot, userMessageArea, userPrompt, aiResponse, oldInsertion) {
-    const insertionTemplate = shadowRoot.querySelector("template#chatresponse_insertion_template");   // insert current prompt and reply
-    const insertion = oldInsertion||insertionTemplate.content.cloneNode(true), 
-        insertionDiv = oldInsertion||insertion.querySelector("div#insertiondiv");
+    const insertionTemplate = shadowRoot.querySelector("template#chatresponse_insertion_template").content.cloneNode(true);   // insert current prompt and reply
+    const insertion = oldInsertion||insertionTemplate.querySelector("div#insertiondiv");
     insertion.querySelector("span#userprompt").innerHTML = userPrompt;
-    if (aiResponse) insertion.querySelector("span#airesponse").innerHTML = aiResponse;
+    const elementAIResponse = insertion.querySelector("span#airesponse");
+    if (aiResponse) {
+        const htmlContent = _markdownToHTML(aiResponse);
+        elementAIResponse.innerHTML = htmlContent + insertionTemplate.querySelector("span#controls").outerHTML;
+        elementAIResponse.dataset.content = `<!doctype html>\n${htmlContent}\n</html>`;
+    }
     shadowRoot.querySelector("div#chatmainarea").appendChild(insertion);
     const chatScroller = shadowRoot.querySelector("div#chatscroller");
     chatScroller.scrollTop = chatScroller.scrollHeight;
@@ -62,8 +67,18 @@ function _insertAIResponse(shadowRoot, userMessageArea, userPrompt, aiResponse, 
     chatScroller.classList.replace("hidden", "visible");  // show chats
     userMessageArea.value = ""; // clear text area for the next prompt
 
-    return insertionDiv;
+    return insertion;
 }
 
+function _markdownToHTML(text) {
+    try {
+        const html = marked.parse(text);
+        return html;
+    } catch (err) {
+        LOG.error(`Markdown conversion error: ${err}, returning original text`);
+        return text;
+    }
+}
+ 
 export const chat_box = {trueWebComponentMode: true, elementConnected, elementRendered, send}
 monkshu_component.register("chat-box", `${COMPONENT_PATH}/chat-box.html`, chat_box);

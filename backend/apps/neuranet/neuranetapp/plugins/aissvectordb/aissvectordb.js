@@ -54,18 +54,17 @@
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 
 const os = require("os");
-const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const cpucores = os.cpus().length*2;    // assume 2 cpu-threads per core (hyperthreaded cores)
 const maxthreads_for_search = cpucores - 1; // leave 1 thread for the main program
+const mysql = require("mysql2/promise");
 const worker_threads = require("worker_threads");
-const memfs = require(`${CONSTANTS.LIBDIR}/memfs.js`);
 const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const conf = require(`${NEURANET_CONSTANTS.CONFDIR}/aidb.json`);
 
-const dbs = {}, DB_INDEX_NAME = "dbindex", METADATA_DOCID_KEY="aidbdocidkey", METADATA_DOCID_KEY_DEFAULT="aidb_docid",
+const dbs = {}, METADATA_DOCID_KEY="aidbdocidkey", METADATA_DOCID_KEY_DEFAULT="aidb_docid",
     VECTORDB_FUNCTION_CALL_TOPIC = "vectordb.functioncall", workers = [],
     DB_INDEX_OBJECT_TEMPLATE = {index:{}, modifiedts:Date.now(), savedts: 0, multithreaded: false, memused: 0, path: ""};
 
@@ -99,16 +98,18 @@ exports.initAsync = async (db_path_in, metadata_docid_key, multithreaded) => {
         await Promise.all(workersOnlinePromises);  // make sure all are online
     }
 
-    try {await memfs.access(db_path_in, fs.constants.R_OK)} catch (err) {
-        _log_error("Vector DB path folder does not exist. Initializing to an empty DB", db_path_in, err); 
-        await memfs.mkdir(db_path_in, {recursive:true});
+    if (!await _existsVectorDB()) {
+        _log_error("Vector DB path folder does not exist. Initializing to an empty DB", db_path_in); 
+        await _createVectorDB();
         dbs[_get_db_index(db_path_in)] = _createEmptyDB(db_path_in, multithreaded); // init to an empty db
         dbs[_get_db_index(db_path_in)][METADATA_DOCID_KEY] = metadata_docid_key;
         return;
     }
 
-    try {if (!dbs[_get_db_index(db_path_in)]) await exports.read_db(db_path_in, metadata_docid_key, multithreaded);} catch (err) { // read if not in memory already
-        _log_error("Vector DB index does not exist, or read error. Initializing to an empty DB", db_path_in, err); 
+    try {
+        if (!dbs[_get_db_index(db_path_in)]) await exports.read_db(db_path_in, metadata_docid_key, multithreaded);
+    } catch (err) { // read if not in memory already
+        _log_error("Vector DB index does not exist, or read error. Initializing to an empty DB", db_path_in, err);
         dbs[_get_db_index(db_path_in)] = _createEmptyDB(db_path_in, multithreaded); // init to an empty db
         dbs[_get_db_index(db_path_in)][METADATA_DOCID_KEY] = metadata_docid_key;
     }
@@ -126,13 +127,9 @@ exports.read_db = async (db_path_in, metadata_docid_key, multithreaded) => {
     dbToFill[METADATA_DOCID_KEY] = metadata_docid_key;
     dbs[_get_db_index(db_path_in)] = dbToFill;
 
-    const indexFilesForDB = await _get_db_index_files(db_path_in); for (const indexFile of indexFilesForDB) {
-        const ndjson_index = await memfs.readFile(indexFile, "utf8");
-        for (const vector of ndjson_index.split("\n")) { 
-            if (vector.trim() == "") continue;  // ignore blank lines
-            const vectorObject = JSON.parse(vector); 
-            await _setDBVectorObject(dbToFill, vectorObject);
-        }
+    const vectorObjects = await _getAllVectorsFromVectorDB();
+    for (const vectorObject of vectorObjects) {
+        await _setDBVectorObject(dbToFill, vectorObject);
         await _update_db_for_worker_threads();
     }
 }
@@ -151,15 +148,10 @@ exports.save_db = async (db_path_out, force) => {
     if ((db_to_save.modifiedts < db_to_save.savedts) && (!force)) return;  // no need
 
     try {
-        const memFSPromises = [];
         for (const indexHash of Object.keys(db_to_save.index)) {
             const vectorObject = _getDBVectorObject(db_to_save, indexHash);
-            const ndjsonLine = JSON.stringify(vectorObject) + "\n";
-            const indexFile = await _getIndexFileForVector(db_to_save, indexHash, true);
-            memFSPromises.push(memfs.appendFile(indexFile, ndjsonLine));
-        }
-        await Promise.all(memFSPromises); await memfs.flush();
-        db_to_save.savedts = Date.now();    
+            await _storeVectorInVectorDB(vectorObject);
+        } db_to_save.savedts = Date.now();    
     } catch (err) {_log_error("Error saving the database index in save_db call", db_path_out, err);}
 }
 
@@ -191,8 +183,9 @@ exports.create = exports.add = async (vector, metadata, text, embedding_generato
     const vectorHash = _get_vector_hash(vector, metadata, dbToUse); 
     if (!_getDBVectorObject(dbToUse, vectorHash)) {  
         await _setDBVectorObject(dbToUse, {vector, hash: vectorHash, metadata, length: _getVectorLength(vector)}, true);
-        
-        try {await memfs.writeFile(_get_db_index_text_file(dbToUse, vectorHash), text||"", "utf8");}
+        try {
+            await _setTextInVectorDB(vectorHash, text||"");
+        }
         catch (err) {
             _deleteDBVectorObject(db_path, vectorHash);
             _log_error(`Vector DB text file ${_get_db_index_text_file(dbToUse, vectorHash)} could not be saved`, db_path, err);
@@ -221,9 +214,9 @@ exports.read = async (vector, metadata, notext, db_path) => {
 
     let text; 
     if (!notext) try {  // read the associated text unless told not to, don't cache these files
-        text = await memfs.readFile(_get_db_index_text_file(dbToUse, hash), {encoding: "utf8", memfs_dontcache: true});
+        text = await _getTextFromVectorDB(hash);
     } catch (err) { 
-        _log_error(`Vector DB text file ${_get_db_index_text_file(dbToUse, hash)} not found or error reading`, db_path, err); 
+        _log_error(`Vector DB text not found or error reading`, db_path, err); 
         return null;
     }
     
@@ -283,7 +276,7 @@ exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metada
     const dbToUse = serverutils.clone(dbs[_get_db_index(db_path)]); _log_info(`Searching ${Object.values(dbToUse.index).length} vectors.`, db_path);
     const _searchSimilarities = async _ => {
         const similaritiesOtherReplicas = dbToUse.distributed && (!_forceSingleNode) ? 
-            await _getDistributedSimilarities([...arguments].slice(0, -1)) : [];
+            await _getDistributedSimilarities(arguments.slice(0, -1)) : [];
         const similaritiesThisReplica = dbToUse.multithreaded ? await _search_multithreaded(
                 db_path, vectorToFindSimilarTo, (!filter_metadata_last)?metadata_filter_function:undefined) :
             _search_singlethreaded(dbToUse, vectorToFindSimilarTo, 
@@ -308,12 +301,11 @@ exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metada
     similarities = []; // try to free memory asap
 
     if (!notext) for (const similarity_object of results) {
-        const hash = _get_vector_hash(similarity_object.vector, similarity_object.metadata, dbToUse), 
-            textFile = _get_db_index_text_file(dbToUse, hash);
+        const hash = _get_vector_hash(similarity_object.vector, similarity_object.metadata, dbToUse);
         try { // read associated text, unless told not to
-            similarity_object.text = await memfs.readFile(textFile, "utf8");
+            similarity_object.text = await _getTextFromVectorDB(hash);
         } catch (err) { 
-            _log_error(`Vector DB text file ${textFile} not found or error reading`, db_path, err); return false; }
+            _log_error(`Vector DB text not found or error reading`, db_path, err); return false; }
     }
 
     return results; 
@@ -562,7 +554,7 @@ function _worker_setDatabase(dbsIn) {
 }
 /*** End: worker module functions ***/
 
-const _createEmptyDB = (dbPath, multithreaded) => { return {...(serverutils.clone(DB_INDEX_OBJECT_TEMPLATE)), multithreaded, path: dbPath, distributed: conf.distributed} };
+const _createEmptyDB = (dbPath, multithreaded) => { return {...(serverutils.clone(DB_INDEX_OBJECT_TEMPLATE)), multithreaded, path: dbPath} };
 
 const _update_db_for_worker_threads = async _ => {for (const worker of workers) await _callWorker(worker, "setDatabase", 
     [dbs])}; // send DB to all workers
@@ -571,12 +563,6 @@ const _getVectorLength = v => Math.sqrt(v.reduce((accumulator, val) => accumulat
 
 const _get_db_index = db_path => path.resolve(db_path);
 
-const _get_db_index_files = async db_path => {
-    const indexfiles = [];
-    for (const candidateFile of await memfs.readdir(db_path))
-        if (candidateFile.startsWith(DB_INDEX_NAME)) indexfiles.push(path.resolve(`${db_path}/${candidateFile}`));
-    return indexfiles;
-}
 
 const _get_db_index_text_file = (db, hash) => 
     path.resolve(`${db.path}/text_${hash}`);
@@ -588,17 +574,10 @@ function _get_vector_hash(vector, metadata, db) {
     const hash = hashAlgo.digest("hex"); return hash;
 }
 
-async function _getIndexFileForVector(db, hash, forWriting) {
-    const indexFile = `${db.path}/${DB_INDEX_NAME}_${hash}`;
-    if (forWriting) await memfs.unlinkIfExists(indexFile)
-    return indexFile;
-}
-
 async function _setDBVectorObject(dbToFill, vectorObject, isBeingCreated=false) {
 
-    const indexFileThisVector = await _getIndexFileForVector(dbToFill, vectorObject.hash, isBeingCreated);
     if (isBeingCreated) {
-        if (isBeingCreated) await memfs.appendFile(indexFileThisVector, JSON.stringify(vectorObject)+"\n", "utf8");
+        if (isBeingCreated) await _storeVectorInVectorDB(vectorObject);
         dbToFill.modifiedts = Date.now();
     }
 
@@ -621,10 +600,8 @@ async function _deleteDBVectorObject(db_path, hash, publish=true) {
 
     delete dbToUse.index[hash];
     dbToUse.modifiedts = Date.now();
-    const indexFileThisVector = await _getIndexFileForVector(dbToUse, hash, true);
-    const textFileThisVector = _get_db_index_text_file(dbToUse, hash);
 
-    await memfs.unlinkIfExists(indexFileThisVector); await memfs.unlinkIfExists(textFileThisVector);
+    await _deleteVectorInVectorDB(hash);
     return true;    // found locally
 }
 
@@ -652,6 +629,8 @@ function _initBlackboardHooks() {
 }
 
 async function _getDistributedSimilarities(query_params) {
+    if (blackboard.getCurrentDistributedClusterSizeOnline() == 0) return [];   // single node deployment or cluster offline
+
     const [_vectorToFindSimilarTo, _topK, _min_distance, _metadata_filter_function, _notext, db_path, 
         _filter_metadata_last, _benchmarkIterations] = query_params;
     const dbToUse = dbs[_get_db_index(db_path)]; 
@@ -662,16 +641,73 @@ async function _getDistributedSimilarities(query_params) {
     const replies = await blackboard.getReply(VECTORDB_FUNCTION_CALL_TOPIC, msg, conf.cluster_timeout, bboptions);
     if (replies.incomplete) _log_warning(`Received incomplete replies for the query. Results not perfect.`, dbToUse.path);
     const similarities = []; for (const replyObject of replies||[]) similarities.concat(replyObject.reply);
-    return similarities;
+    return(similarities);
 }
 
 const _createDBInitParams = dbToUse => {return {dbpath: dbToUse.path, metadata_docid_key: dbToUse[METADATA_DOCID_KEY], 
     multithreaded: dbToUse.multithreaded}};
 const _log_warning = (message, db_path) => (global.LOG||console).warn(
-    `${message}. The vector DB is ${_get_db_index(db_path)}.`);
+    `${message}. The vector DB is ${_get_db_index(db_path)}. The error was ${error||"no information"}.`);
 const _log_error = (message, db_path, error) => (global.LOG||console).error(
     `${message}. The vector DB is ${_get_db_index(db_path)}. The error was ${error||"no information"}.`);
 const _log_info= (message, db_path, isDebug) => (global.LOG||console)[isDebug?"debug":"info"](
     `${message}. The vector DB is ${_get_db_index(db_path)}.`);
 
 const private_functions = {_deleteDBVectorObject};  // private functions which can be called via distributed function calls
+
+async function _createVectorDB(){
+    let connection = await getSingleStoreConnection();
+    await connection.query(`CREATE DATABASE IF NOT EXISTS ?;`, [conf.aiss_vectordb]);
+    await connection.query(`USE ?;`, [conf.aiss_vectordb]);
+    await connection.query(`CREATE TABLE IF NOT EXISTS VECTOR (vector JSON NOT NULL, hash VARCHAR(255) NOT NULL, metadata JSON, length DOUBLE, text LONGTEXT, PRIMARY KEY (hash));`);
+    await connection.end(); // end transaction
+}
+
+async function _existsVectorDB() {
+    let connection = await getSingleStoreConnection(); 
+    try {
+        const [dbExists] = await connection.query(`SELECT COUNT(*) AS dbExists FROM information_schema.schemata WHERE schema_name = ?;`, [conf.aiss_vectordb]);
+        if (dbExists[0].dbExists > 0) {
+            const [tableExists] = await connection.query(`SELECT COUNT(*) AS tableExists FROM information_schema.tables WHERE table_schema = ? AND table_name = 'VECTOR';`, [conf.aiss_vectordb]);
+            return tableExists[0].tableExists > 0;
+        } else return false; 
+    } catch(error){ return false; }
+    finally { await connection.end(); } // End transaction
+}
+
+async function _storeVectorInVectorDB(vectorObject){
+    const insertQuery = `REPLACE INTO VECTOR (vector, hash, metadata, length, text) VALUES (?, ?, ?, ?, ?);`;
+    const insertData = [JSON.stringify(vectorObject.vector), vectorObject.hash, 
+        JSON.stringify(vectorObject.metadata), _getVectorLength(vectorObject.vector), vectorObject.text||""];
+    await executeQuery(insertQuery, insertData);
+}
+
+async function _deleteVectorInVectorDB(vectorHash){
+    await executeQuery(`DELETE FROM VECTOR WHERE hash = ?`, [vectorHash]);
+}
+
+async function _getAllVectorsFromVectorDB(){
+    let [allRecords] = await executeQuery(`SELECT * FROM VECTOR;`, undefined, true);
+    return allRecords; 
+}
+
+async function _getTextFromVectorDB(vectorHash){
+    let [matchedRecords] = await executeQuery(`SELECT text FROM VECTOR WHERE hash = ?`, [vectorHash], true);
+    return matchedRecords[0].text ?? ""; 
+}
+
+async function _setTextInVectorDB(vectorHash, text){
+    await executeQuery(`UPDATE VECTOR SET text = ? WHERE hash = ?`, [text, vectorHash]);
+}
+
+async function executeQuery(query, data, returnflag){
+    let connection = await getSingleStoreConnection();
+    await connection.query(`USE ?;`, [conf.aiss_vectordb]);
+    let result = await connection.query(query, data);
+    await connection.end(); // end transaction 
+    if(returnflag) return result;
+}
+
+async function getSingleStoreConnection(){
+    return await mysql.createConnection(conf.aiss_config); // create & update connection;
+}

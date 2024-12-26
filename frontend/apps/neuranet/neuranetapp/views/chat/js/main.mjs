@@ -8,9 +8,8 @@ import {i18n} from "/framework/js/i18n.mjs";
 import {session} from "/framework/js/session.mjs";
 
 let chatsessionID;
-const SESSION_OBJ_TEMPLATE = {"role": "user", "content": ""};
 
-function initView() {
+function initView(data) {
     window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {
         ...(window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME]||{}), chat_main: main}; 
 }
@@ -23,11 +22,9 @@ async function processChatResponse(result, _chatboxid) {
     return {ok: true, response: result.response};
 }
 
-function getChatRequest(prompt, _chatboxid) {
-    const sessionRequest = {...SESSION_OBJ_TEMPLATE}; sessionRequest.content = prompt;
-
-    return {id: session.get(APP_CONSTANTS.USERID), org: session.get(APP_CONSTANTS.USERORG), session: [sessionRequest], 
-        maintain_session: true, session_id: chatsessionID};
+function getChatRequest(question, _chatboxid, aiappid) {
+    return {id: session.get(APP_CONSTANTS.USERID), org: session.get(APP_CONSTANTS.USERORG), question, 
+        session_id: chatsessionID, aiappid};
 }
 
 export const main = {initView, processChatResponse, getChatRequest};
