@@ -80,7 +80,8 @@ span#desktopheader > span#rightheader {
 	z-index: 50;
 }
 
-span#desktopheader > span#rightheader img { height: 2em; }
+span#desktopheader > span#rightheader img { height: 2em; cursor: pointer; }
+span#desktopheader > span#rightheader > span#greeting img { cursor: default !important; }
 
 span#desktopheader > span#rightheader > span#greeting {
 	display: flex;
@@ -163,10 +164,11 @@ span#mobilefooter > img {
 	<img id="textlogo" src="./img/logomainpage.svg" onclick="window.open(APP_CONSTANTS.APP_ABOUT_URL, '_blank')">
 	{{#showhome}}<img id="home" src="./img/home.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.gohome()">{{/showhome}}
 	<span id="greeting">
-	<span><img src="./img/person.svg"></span>
+	<span><img id="person" src="{{#icons_person}}{{{.}}}.svg{{/icons_person}}{{^icons_person}}./img/person.svg{{/icons_person}}"></span>
 	<span id="name">{{i18n.Hi}} {{#_org_monkshu_session}}username{{/_org_monkshu_session}}!</span>
 	</span>
-	<span id="refresh"><img src="./img/reload.svg" onclick="location.reload()"></span>
+	<span id="refresh"><img id="refresh" src="{{#icons_refresh}}{{{.}}}.svg{{/icons_refresh}}{{^icons_refresh}}./img/reload.svg{{/icons_refresh}}" 
+		onclick="location.reload()"></span>
 	{{#shownotifications}}<span id="notifications"><img src="./img/bell.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.showNotifications('{{{action}}}', event)"></span>{{/shownotifications}}
 	<span-with-menu id="gear" styleBody="url(./pages/menu.stylebody.css)"><img src="./img/settings.svg" style="height: 2em;width: 2em;vertical-align: middle;">
 		<menu-item onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.changePassword(this)" 
@@ -178,7 +180,7 @@ span#mobilefooter > img {
 		{{#admin}}<menu-item onclick="monkshu_env.frameworklibs.router.navigate(APP_CONSTANTS.MANAGE_HTML)" 
 			label="{{i18n.ManageUsersAndOrg}}" icon="./img/manageusers_menu.svg"></menu-item>{{/admin}}
 	</span-with-menu>
-	<span id="signoff"><img src="./img/poweroff.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.logoutClicked()"></span>
+	<span id="signoff"><img id="logoff" src="./img/poweroff.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.logoutClicked()"></span>
 	</span>
 </span>
 
@@ -188,7 +190,7 @@ span#mobilefooter > img {
 
 <span id="mobilefooter">
 	<img src="./img/mobilefooter_home.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.gohome()">
-	<img src="./img/mobilefooter_reload.svg" onclick="location.reload()">
+	<img src="{{#icons_refresh}}{{{.}}}_mobile.svg{{/icons_refresh}}{{^icons_refresh}}./img/mobilefooter_reload.svg{{/icons_refresh}}" onclick="location.reload()">
 	{{#shownotifications}}<img class="headerimg" src="./img/mobilefooter_bell.svg" onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.showNotifications('{{{action}}}', event, true)">{{/shownotifications}}
 	<span-with-menu id="gearmobile" bottommenu="true" styleBody="url(./pages/menu.stylebody.css)"><img src="./img/mobilefooter_settings.svg">
 		<menu-item onclick="monkshu_env.apps[APP_CONSTANTS.APP_NAME].main.changePassword(this)" 

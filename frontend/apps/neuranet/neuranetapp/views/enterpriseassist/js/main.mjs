@@ -10,6 +10,7 @@ import {router} from "/framework/js/router.mjs";
 import {session} from "/framework/js/session.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 
+const MODULE_PATH = util.getModulePath(import.meta);
 const API_GET_EVENTS = "events";
 
 let chatsessionID, VIEW_PATH;
@@ -30,6 +31,7 @@ function initView(data) {
     data.shownotifications = {action: "monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME].enterprise_assist_main.getNotifications()"};
     data.aiskipfolders_base64_json = data.activeaiapp.interface.skippable_file_patterns?
         util.stringToBase64(JSON.stringify(data.activeaiapp.interface.skippable_file_patterns)) : undefined;
+    data.icons_refresh = `${MODULE_PATH}/../img/newchat`;
 }
 
 async function getNotifications() {

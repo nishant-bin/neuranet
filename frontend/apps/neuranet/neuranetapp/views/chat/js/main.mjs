@@ -5,13 +5,16 @@
  */
 
 import {i18n} from "/framework/js/i18n.mjs";
+import {util} from "/framework/js/util.mjs";
 import {session} from "/framework/js/session.mjs";
 
+const MODULE_PATH = util.getModulePath(import.meta);
 let chatsessionID;
 
 function initView(data) {
     window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME] = {
         ...(window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME]||{}), chat_main: main}; 
+    data.icons_refresh = `${MODULE_PATH}/../img/newchat`;
 }
 
 async function processChatResponse(result, _chatboxid) {
