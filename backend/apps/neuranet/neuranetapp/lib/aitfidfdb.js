@@ -110,14 +110,18 @@ exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA
 exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DEFAULT, 
         metadata_langid_key=METADATA_LANGID_KEY_DEFAULT, stopwords_path, no_stemming=false, mem_only=false) => {
 
-    const EMPTY_DB = {tfidfDocStore: {}, iindex: {}, distributed: conf.distributed}; 
+    const EMPTY_DB = {tfidfDocStore: {}, iindex: {}, distributed: conf.distributed};
+    EMPTY_DB.empty = _ => {
+        for (const word of EMPTY_DB.iindex.getAllLocalWordObjects()) delete EMPTY_DB.iindex[word.word];
+        for (const dochash of EMPTY_DB.tfidfDocStore.localDocumentHashes()) delete EMPTY_DB.tfidfDocStore[dochash];
+    }
     EMPTY_DB.tfidfDocStore.localDocumentHashes = _ => Object.keys(EMPTY_DB.tfidfDocStore).filter(key => 
         typeof EMPTY_DB.tfidfDocStore[key] !== "function"); 
     EMPTY_DB.tfidfDocStore.allDocumentHashes = async local => {
-        const allDocumentHashes = EMPTY_DB.tfidfDocStore.localDocumentHashes();
+        let allDocumentHashes = EMPTY_DB.tfidfDocStore.localDocumentHashes();
         if ((!local) && EMPTY_DB.distributed) {
             const documentHashesReplies = await _getDistributedResultFromFunction(EMPTY_DB, "tfidfDocStore", "allDocumentHashes");
-            for (const documentHashesReply of documentHashesReplies) allDocumentHashes.concat(documentHashesReply);
+            for (const documentHashesReply of documentHashesReplies) allDocumentHashes = allDocumentHashes.concat(documentHashesReply);
         }
         return allDocumentHashes;
     }
@@ -132,12 +136,12 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
     };
     EMPTY_DB.tfidfDocStore.localAdd = (documentHash, document) => EMPTY_DB.tfidfDocStore[documentHash] = document; 
     EMPTY_DB.tfidfDocStore.data = async (documentHash, local) => {
-        if (EMPTY_DB.tfidfDocStore[documentHash]) return EMPTY_DB.tfidfDocStore[documentHash];
-        else if ((!local) && EMPTY_DB.distributed) {
+        if (EMPTY_DB.tfidfDocStore[documentHash]) return EMPTY_DB.tfidfDocStore[documentHash];  // found locally, no need to search more
+        if ((!local) && EMPTY_DB.distributed) { // see if other DB instances have it.
             const dataReplies = await _getDistributedResultFromFunction(EMPTY_DB, "tfidfDocStore", "data", [documentHash]);
             for (const dataReply of dataReplies) if (dataReply) return dataReply;
-            return undefined;
         }
+        return undefined;   // not found anywhere
     }
     EMPTY_DB.tfidfDocStore.localData = documentHash => EMPTY_DB.tfidfDocStore[documentHash];
     EMPTY_DB.iindex.addLocalWordObject = (word, wordObject) => EMPTY_DB.iindex[word] = wordObject;
@@ -169,13 +173,13 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
         const finalDocWordCounts = {...localDocWordCounts}; if ((!local) && EMPTY_DB.distributed) {
             const wordcountReplies = await _getDistributedResultFromFunction(EMPTY_DB, "iindex", "getCountOfDocumentsWithWords", [words]);
             for (const word of words) for (const wordcountReply of wordcountReplies)
-                finalDocWordCounts[word] += wordcountReply[word]||0;
+                finalDocWordCounts[word] = (finalDocWordCounts[word]||0) + (wordcountReply[word]||0);
         }
         return finalDocWordCounts;
     }
     EMPTY_DB.iindex.isWordInVocabulary = async (word, local) => {
         if (EMPTY_DB.iindex[word]) return true; // we know of this locally already
-        if ((!local) && EMPTY_DB.distributed) {
+        else if ((!local) && EMPTY_DB.distributed) {
             const vocabularyReplies = await _getDistributedResultFromFunction(EMPTY_DB, "iindex", "isWordInVocabulary", [word]);
             for (const vocabularyReply of vocabularyReplies) if (vocabularyReply) return true;
             return false;
@@ -185,10 +189,10 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
     EMPTY_DB.iindex.getAllLocalWordObjects = _ => Object.values(EMPTY_DB.iindex).filter(value => typeof value !== "function");
     EMPTY_DB.iindex.getAllLocalWords = _ => Object.keys(EMPTY_DB.iindex).filter(key => typeof EMPTY_DB.iindex[key] !== "function");
     EMPTY_DB.iindex.getDocumentHashesForWord = async (word, local) => {
-        const hashes = Object.keys(EMPTY_DB.iindex[word]?.docs||{}); 
+        let hashes = Object.keys(EMPTY_DB.iindex[word]?.docs||{}); 
         if ((!local) && EMPTY_DB.distributed) {
             const otherHashesReplies = await _getDistributedResultFromFunction(EMPTY_DB, "iindex", "getDocumentHashesForWord", [word]);
-            for (const otherHashesReply of otherHashesReplies) hashes.concat(otherHashesReply);
+            for (const otherHashesReply of otherHashesReplies) hashes = hashes.concat(otherHashesReply);
         }
         return hashes;
     }
