@@ -339,7 +339,7 @@ exports.delete = function(metadata, db, publish=true) {
  */
 exports.update = async (oldmetadata, newmetadata, db, publish=true) => {
     const oldhash = _getDocumentHashIndex(oldmetadata, db), newhash = _getDocumentHashIndex(newmetadata, db),
-        document = db.tfidfDocStore.ocalData(oldhash);
+        document = db.tfidfDocStore.localData(oldhash);
     if ((!document) && publish) {
         const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
         blackboard.publish(TFIDFDB_UPDATE_DOC_TOPIC, {creation_data: _createDBCreationData(db), 
