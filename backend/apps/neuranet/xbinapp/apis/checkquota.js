@@ -2,7 +2,6 @@
  * Checks a given user's disk quota to write the given amount of bytes
  * (C) 2022 TekMonks. All rights reserved.
  */
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const quotas = require(`${XBIN_CONSTANTS.LIB_DIR}/quotas.js`);
 const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
 

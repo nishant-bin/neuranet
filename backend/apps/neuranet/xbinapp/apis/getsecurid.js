@@ -3,7 +3,6 @@
  */
 
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 
 const CLUSTER_SYNC_TIME = require("os").cpus().length*100;
 

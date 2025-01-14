@@ -5,14 +5,14 @@
 
 const fs = require("fs");
 const mustache = require("mustache");
+const XBIN_CONSTANTS = require(`${__dirname}/xbinconstants.js`);
 
-exports.initSync = appName => {
-    global.APP_CONSTANTS = require(`${__dirname}/../apis/lib/loginappconstants.js`);
-    global.APP_CONSTANTS.CONF = JSON.parse( mustache.render(fs.readFileSync(`${__dirname}/../conf/app.json`, "utf-8"), 
-        {app: appName, hostname: CONSTANTS.HOSTNAME}) );
-    require(`${APP_CONSTANTS.LIB_DIR}/deleteunverifiedaccounts.js`).init();    // init expired accounts cleanup service
+exports.initSync = _appName => {
+    const xbinson = mustache.render(fs.readFileSync(`${XBIN_CONSTANTS.CONF_DIR}/xbin.json`, "utf8"), 
+        {...XBIN_CONSTANTS, hostname: LOGINAPP_CONSTANTS.HOSTNAME}).replace(/\\/g, "\\\\");   // escape windows paths
+    XBIN_CONSTANTS.CONF = JSON.parse(xbinson);
+    global.XBIN_CONSTANTS = XBIN_CONSTANTS; // setup constants
 
-    for (const dirEntry of fs.readdirSync(__dirname, {withFileTypes: true}))   // init wrapped apps
-        if (dirEntry.isFile() && dirEntry.name.toLowerCase().endsWith("_init.js")) 
-            require(`${__dirname}/${dirEntry.name}`).initSync();
+    require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`).init();    // init cms which inits our ID change listeners
+    require(`${XBIN_CONSTANTS.API_DIR}/sharefile.js`).init();    // init the file sharing subsystem
 }

@@ -2,7 +2,6 @@
  * API for downloading a shared file.
  * (C) 2020 TekMonks. All rights reserved.
  */
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const db = require(`${XBIN_CONSTANTS.LIB_DIR}/xbindb.js`).getDB();
 const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
 

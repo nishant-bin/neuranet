@@ -2,7 +2,6 @@
  * (C) 2020 TekMonks. All rights reserved.
  */
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);

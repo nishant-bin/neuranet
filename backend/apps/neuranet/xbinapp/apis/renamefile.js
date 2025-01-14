@@ -5,7 +5,6 @@
 const path = require("path");
 const fspromises = require("fs").promises;
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const db = require(`${XBIN_CONSTANTS.LIB_DIR}/xbindb.js`).getDB();

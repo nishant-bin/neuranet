@@ -8,13 +8,13 @@
 const path = require("path");
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
-const DB_PATH = path.resolve(`${NEURANET_CONSTANTS.DBDIR}/neuranet.db`);
+const DB_PATH = (NEURANET_CONSTANTS.CONF.db_server_host||"")+path.resolve(`${NEURANET_CONSTANTS.DBDIR}/neuranet.db`).replaceAll(path.sep, path.posix.sep)
 const DB_CREATION_SQLS = require(`${NEURANET_CONSTANTS.DBDIR}/neuranetapp_dbschema.json`);
 const db = require(`${CONSTANTS.LIBDIR}/db.js`).getDBDriver("sqlite", DB_PATH, DB_CREATION_SQLS);
 
 const DEFAULT_VIEWS_ORG = NEURANET_CONSTANTS.DEFAULT_ORG, DB_CACHE = {};
 
-exports.initDBAsync = async _ => await db.init();
+exports.initDBAsync = async noerror => {try {await db.init();} catch (err) {if (noerror) LOG.error(`Error initializing the DB: ${err}`); else throw err;}}
 
 exports.getViewsForOrg = async org => {
 	const query = "SELECT view FROM views WHERE org=? COLLATE NOCASE";

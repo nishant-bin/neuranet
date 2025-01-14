@@ -32,4 +32,4 @@ llm_flow:
 global_models:
   - name: simplellm-openai
     model_overrides:                    
-      read_ai_response_from_samples: true
+      read_ai_response_from_samples: false

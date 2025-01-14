@@ -83,7 +83,7 @@ pregen_flow:
 
 llm_flow:   
   - command: expandquery.expand             # expands the query from session, built-in plugin
-    condition: false
+    condition: false                        # this plugin usually leads to bad results, so default is to disable it
     in: 
       query: "{{{query}}}"
       session_id: "{{{request.session_id}}}" # request is inbuilt variable contains user's request params
@@ -274,15 +274,15 @@ docsearch_flow:
 global_models:
   - name: embedding-openai
     model_overrides:                    
-      read_ai_response_from_samples: true
+      read_ai_response_from_samples: false
 
   - name: chat-knowledgebase-openai
     model_overrides:                    
-      read_ai_response_from_samples: true
+      read_ai_response_from_samples: false
 
   - name: simplellm-openai
     model_overrides:                    
-      read_ai_response_from_samples: true
+      read_ai_response_from_samples: false
 
 
 modules: 

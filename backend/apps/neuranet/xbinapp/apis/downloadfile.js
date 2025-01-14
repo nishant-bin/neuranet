@@ -10,7 +10,6 @@ const stream = require("stream");
 const archiver = require("archiver");
 const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const getfiles = require(`${XBIN_CONSTANTS.API_DIR}/getfiles.js`);
 const securid = require(`${XBIN_CONSTANTS.API_DIR}/getsecurid.js`);

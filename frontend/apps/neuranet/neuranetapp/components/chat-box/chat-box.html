@@ -208,7 +208,7 @@ textarea.readonly {
     </div>
     <span id="controls">
         <img class="controls" src="{{{COMPONENT_PATH}}}/img/copy.svg" 
-            onclick="$$.copyTextToClipboard(this.parentNode.parentNode.dataset.content); 
+            onclick="$$.copyTextToClipboard(this.parentNode.parentNode.dataset.content, this.parentNode.parentNode.dataset.content_mime); 
                 this.src='{{{COMPONENT_PATH}}}/img/tick.svg'; 
                 setTimeout(_=>this.src='{{{COMPONENT_PATH}}}/img/copy.svg', 800)">
         <img class="controls" src="{{{COMPONENT_PATH}}}/img/save.svg" 

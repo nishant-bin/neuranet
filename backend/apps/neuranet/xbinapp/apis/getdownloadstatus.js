@@ -5,7 +5,6 @@
  * (C) 2021 TekMonks. All rights reserved.
  */
 const REQIDS_WITH_NO_STATUS = {};
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const EXPIRED_REQID_INTERVAL = XBIN_CONSTANTS.CONF.TIME_TO_WAIT_FOR_DOWNLOADS_TO_START||20000;
 
 exports.doService = async jsonReq => {

@@ -219,7 +219,7 @@ exports.initNewAIAppForOrg = async function(aiappid, label, id, org) {
 exports.deleteAIAppForOrg = async function (aiappid, id, org) {
     const appDir = exports.getAppDir(id, org, aiappid);
     aiappid = aiappid.toLowerCase(); org = org.toLowerCase();
-    const archiveDirPath = `${NEURANET_CONSTANTS.DBDIR}/archive`;
+    const archiveDirPath = `${NEURANET_CONSTANTS.DBDIR}/ai_db/archive`;
     const sourceFolderPath = `${NEURANET_CONSTANTS.DBDIR}/ai_db/${org}/${aiappid}`;
     const zipFilePath = `${archiveDirPath}/${aiappid}.zip`;
     let result; 

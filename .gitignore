@@ -2,7 +2,7 @@ backend/server/logs
 frontend/server/logs
 debug.log
 backend/apps/*/logs/remotelog.ndjson
-backend/apps/*/db/*.db*
+backend/apps/*/db/sqlite/*.db*
 backend/**/conf/hostname.json
 backend/apps/neuranet/tests/vector_db/**/*
 backend/apps/neuranet/tests/tfidf_db/**/*

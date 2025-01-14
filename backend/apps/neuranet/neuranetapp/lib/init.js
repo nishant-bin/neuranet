@@ -5,6 +5,7 @@
 
 const fs = require("fs");
 const mustache = require("mustache");
+const { hostname } = require("os");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 
 exports.initSync = _ => {
@@ -17,7 +18,7 @@ exports.initSync = _ => {
     const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
     const textextractor = require(`${NEURANET_CONSTANTS.LIBDIR}/textextractor.js`);
 
-    dblayer.initDBAsync(); // yes this is async so there is a slim chance by the first call it is still loading
+    dblayer.initDBAsync(true); // yes this is async so there is a slim chance by the first call it is still loading
     loginhandler.initSync(); 
     fileindexer.initSync();
     events.initSync();
@@ -27,6 +28,6 @@ exports.initSync = _ => {
 
 function _readConfSync() {
     const confjson = mustache.render(fs.readFileSync(`${NEURANET_CONSTANTS.CONFDIR}/neuranet.json`, "utf8"), 
-        NEURANET_CONSTANTS).replace(/\\/g, "\\\\");   // escape windows paths
+        {...NEURANET_CONSTANTS, hostname: LOGINAPP_CONSTANTS.HOSTNAME}).replace(/\\/g, "\\\\");   // escape windows paths
     NEURANET_CONSTANTS.CONF = JSON.parse(confjson);
 }

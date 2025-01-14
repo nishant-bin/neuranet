@@ -14,5 +14,6 @@
     "cleanup_unverified_accounts_frequency": 600000,
     "verifyurl_safe_time_range_seconds": 10,
     "id_blacklist_mode": true,
-    "id_whitelist_mode": true
+    "id_whitelist_mode": true,
+    "db_server_host": "sqlite://{{{hostname}}}" 
 }

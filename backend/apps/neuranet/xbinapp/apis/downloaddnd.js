@@ -1,7 +1,6 @@
 /* 
  * (C) 2020 TekMonks. All rights reserved.
  */
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const getsecurid = require(`${XBIN_CONSTANTS.API_DIR}/getsecurid.js`);
 const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
 const jwtTokenManager = require(`${CONSTANTS.LIBDIR}/apiregistry.js`).getExtension("jwtTokenManager");

@@ -1,9 +1,7 @@
 /* 
  * (C) 2020 TekMonks. All rights reserved.
  */
-const path = require("path");
 const crypto = require("crypto");
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const userid = require(`${LOGINAPP_CONSTANTS.LIB_DIR}/userid.js`);
 const db = require(`${XBIN_CONSTANTS.LIB_DIR}/xbindb.js`).getDB();

@@ -7,14 +7,15 @@ const util = require("util");
 const path = require("path");
 const bcryptjs = require("bcryptjs");
 const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
-const DB_PATH = path.resolve(`${APP_CONSTANTS.DB_DIR}/loginapp.db`);
-const DB_CREATION_SQLS = require(`${APP_CONSTANTS.DB_DIR}/loginapp_dbschema.json`);
 const ID_BLACK_WHITE_LISTS = require(`${APP_CONSTANTS.CONF_DIR}/idblackwhitelists.json`)
+
+const DB_PATH = (LOGINAPP_CONSTANTS.CONF.db_server_host||"")+`${APP_CONSTANTS.DB_DIR}/loginapp.db`.replaceAll(path.sep, path.posix.sep);
+const DB_CREATION_SQLS = require(`${APP_CONSTANTS.DB_DIR}/loginapp_dbschema.json`);
 const db = require(`${CONSTANTS.LIBDIR}/db.js`).getDBDriver("sqlite", DB_PATH, DB_CREATION_SQLS);
 
 const idDeletionListeners = [];
 
-exports.initDB = async _ => await db.init();
+exports.initDB = async noerror => {try {await db.init();} catch (err) {if (noerror) LOG.error(`Error initializing the DB: ${err}`); else throw err;}}
 
 exports.register = async (id, name, org, pwph, totpSecret, role, approved, verifyEmail=1, domain) => {
 	const existsID = await exports.existsID(id);

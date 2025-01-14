@@ -58,6 +58,7 @@ function _insertAIResponse(shadowRoot, userMessageArea, userPrompt, aiResponse, 
         const htmlContent = _markdownToHTML(aiResponse);
         elementAIResponse.innerHTML = htmlContent + insertionTemplate.querySelector("span#controls").outerHTML;
         elementAIResponse.dataset.content = `<!doctype html>\n${htmlContent}\n</html>`;
+        elementAIResponse.dataset.content_mime = "text/html";
     }
     shadowRoot.querySelector("div#chatmainarea").appendChild(insertion);
     const chatScroller = shadowRoot.querySelector("div#chatscroller");

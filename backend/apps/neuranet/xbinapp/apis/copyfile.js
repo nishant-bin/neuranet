@@ -3,7 +3,6 @@
  */
 const path = require("path");
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const quotas = require(`${XBIN_CONSTANTS.LIB_DIR}/quotas.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);

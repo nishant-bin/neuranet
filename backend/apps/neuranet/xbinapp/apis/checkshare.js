@@ -2,7 +2,6 @@
  * (C) 2020 TekMonks. All rights reserved.
  */
 const path = require("path");
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const db = require(`${XBIN_CONSTANTS.LIB_DIR}/xbindb.js`).getDB();
 
 exports.doService = async jsonReq => {

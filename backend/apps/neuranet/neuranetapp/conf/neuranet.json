@@ -8,6 +8,7 @@
 "disable_private_cms": true,
 "dynamic_aiapps": true,
 "java_home": "/Users/rvkapoor/Documents/Programs/source/java",
+"db_server_host": "sqlite://{{{hostname}}}",
 
 "ai_models": {
     "chat-openai": {

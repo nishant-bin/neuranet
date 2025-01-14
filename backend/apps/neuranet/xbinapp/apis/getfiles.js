@@ -4,7 +4,6 @@
  */
 const path = require("path");
 const fspromises = require("fs").promises;
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
 

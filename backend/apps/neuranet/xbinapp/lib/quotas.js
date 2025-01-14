@@ -3,7 +3,6 @@
  * (C) 2022 TekMonks
  */
 
-const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const CONF = XBIN_CONSTANTS.CONF;
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const db = require(`${XBIN_CONSTANTS.LIB_DIR}/xbindb.js`).getDB();
