@@ -60,6 +60,7 @@ async function registerOrUpdate(old_id, name, id, pass, org, totpSecret, totpCod
         resp.reason=="securityerror"?loginmanager.ID_SECURITY_ERROR:resp.reason=="domainerror"?loginmanager.ID_DOMAIN_ERROR:
         loginmanager.ID_INTERNAL_ERROR;
     } else if (resp.result && resp.tokenflag) { // registration/update succeeded and JWT token is generated, so login can proceed
+        session.set(LOGOUT_LISTENERS, []); // initializing logout listener on registration
         session.set(APP_CONSTANTS.USERID, id); 
         session.set(APP_CONSTANTS.USERNAME, name);
         session.set(APP_CONSTANTS.USERORG, org);
