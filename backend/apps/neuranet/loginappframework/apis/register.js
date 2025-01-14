@@ -32,7 +32,7 @@ exports.addUser = async (jsonReq, servObject, byAdmin=false) => {
 		LOG.error(`Unable to register: ${jsonReq.name}, ID: ${jsonReq.id}, wrong totp code`);
 		return {...CONSTANTS.FALSE_RESULT, reason: REASONS.OTP_ERROR};
 	}
-
+    jsonReq.org = jsonReq.org.toLowerCase();
 	await exports.updateOrgAndDomain(jsonReq);
 
 	if (!await exports.checkOrgAndDomainMatch(jsonReq)) {	// security check for org and domain match
