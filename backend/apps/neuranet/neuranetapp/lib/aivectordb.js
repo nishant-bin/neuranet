@@ -309,6 +309,7 @@ exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metada
     similarities = []; // try to free memory asap
 
     if (!notext) for (const similarity_object of results) {
+        if(similarity_object.text) continue; // already has the text,no need to get the text
         const hash = _get_vector_hash(similarity_object.vector, similarity_object.metadata, dbToUse), 
             textFile = _get_db_index_text_file(dbToUse, hash);
         try { // read associated text, unless told not to
@@ -660,10 +661,21 @@ async function _getDistributedSimilarities(query_params) {
     const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
     const msg = { dbinitparams: _createDBInitParams(dbToUse), function_params: [...query_params, true], 
         function_name: "query", is_function_private: false, send_reply: true };
-    const replies = await blackboard.getReply(VECTORDB_FUNCTION_CALL_TOPIC, msg, conf.cluster_timeout, bboptions);
+    const replies = await _getDistributedResultFromFunction(msg);
     if (replies.incomplete) _log_warning(`Received incomplete replies for the query. Results not perfect.`, dbToUse.path);
-    const similarities = []; for (const replyObject of replies||[]) similarities.concat(replyObject.reply);
-    return similarities;
+    const similaritiesOtherReplicas = _unmarshallOtherSimilarityReplies(replies);
+    return similaritiesOtherReplicas;
+}
+
+function _getDistributedResultFromFunction(msg, bboptions) {
+    return new Promise(resolve => blackboard.getReply(VECTORDB_FUNCTION_CALL_TOPIC, 
+        msg, conf.cluster_timeout, bboptions, replies=>resolve(replies)));
+}
+
+const _unmarshallOtherSimilarityReplies = replies => {
+    let unmarshalledSimilarities = []; 
+    for (const reply of (replies||[])) unmarshalledSimilarities.push(...(reply.reply)); 
+    return unmarshalledSimilarities;
 }
 
 const _createDBInitParams = dbToUse => {return {dbpath: dbToUse.path, metadata_docid_key: dbToUse[METADATA_DOCID_KEY], 
