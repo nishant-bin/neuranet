@@ -663,19 +663,13 @@ async function _getDistributedSimilarities(query_params) {
         function_name: "query", is_function_private: false, send_reply: true };
     const replies = await _getDistributedResultFromFunction(msg);
     if (replies.incomplete) _log_warning(`Received incomplete replies for the query. Results not perfect.`, dbToUse.path);
-    const similaritiesOtherReplicas = _unmarshallOtherSimilarityReplies(replies);
-    return similaritiesOtherReplicas;
+    const similarities = []; for (const replyObject of replies||[]) if (replyObject.reply) similarities.concat(replyObject.reply);
+    return similarities;
 }
 
 function _getDistributedResultFromFunction(msg, bboptions) {
     return new Promise(resolve => blackboard.getReply(VECTORDB_FUNCTION_CALL_TOPIC, 
         msg, conf.cluster_timeout, bboptions, replies=>resolve(replies)));
-}
-
-const _unmarshallOtherSimilarityReplies = replies => {
-    let unmarshalledSimilarities = []; 
-    for (const reply of (replies||[])) unmarshalledSimilarities.push(...(reply.reply)); 
-    return unmarshalledSimilarities;
 }
 
 const _createDBInitParams = dbToUse => {return {dbpath: dbToUse.path, metadata_docid_key: dbToUse[METADATA_DOCID_KEY], 

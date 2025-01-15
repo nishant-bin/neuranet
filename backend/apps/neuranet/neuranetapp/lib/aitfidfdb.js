@@ -397,10 +397,13 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
         return scoredDocs;  // can't do cutoff, topK etc if no query was given
     } 
     
-    const queryWords = _getLangNormalizedWords(query, lang||langdetector.getISOLang(query), db, autocorrect), relevantDocs = [];
+    const queryWords = _getLangNormalizedWords(query, lang||langdetector.getISOLang(query), db, autocorrect), 
+        relevantDocs = [], queryCache = {words:{}};
     let highestScore = 0; 
-    for (const queryWord of queryWords) {const docHashesWithThisWord = await db.iindex.getDocumentHashesForWord(queryWord); 
-        for (const docHash of docHashesWithThisWord) if (!relevantDocs.includes(docHash)) relevantDocs.push(docHash)};
+    for (const queryWord of queryWords) {
+        const docHashesWithThisWord = await db.iindex.getDocumentHashesForWord(queryWord); 
+        for (const docHash of docHashesWithThisWord) if (!relevantDocs.includes(docHash)) relevantDocs.push(docHash)
+    };
     for (const docHash of relevantDocs) {
         const document = await db.tfidfDocStore.data(docHash); 
         if (!document) {LOG.warn(`Document is null for hash ${docHash}, ignoring.`); continue;}
@@ -410,12 +413,24 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
             options.punish_verysmall_documents ? await _getVerySmallDocumentPunishment(document.length, db) : 1;  
 
         let scoreThisDoc = 0, tfScoreThisDoc = 0, queryWordsFoundInThisDoc = 0, 
-            documentsWithWordsCount = await db.iindex.getCountOfDocumentsWithWords(queryWords);
+            documentsWithWordsCount = queryCache.documentsWithWordsCount || await db.iindex.getCountOfDocumentsWithWords(queryWords);
+        if (!queryCache.documentsWithWordsCount) queryCache.documentsWithWordsCount = documentsWithWordsCount;
+
         for (const queryWord of queryWords) {
-            if (!await db.iindex.isWordInVocabulary(queryWord)) continue; // query word not found in the vocabulary
-            const tf = await db.iindex.getWordCountForDocument(queryWord, docHash)/document.length, tfAdusted = tf*tfAdjustmentFactor,
-                totalDocLength = await db.tfidfDocStore.totalDocsInDB(), docsWithThisWord = documentsWithWordsCount[queryWord],
-                idf = 1+Math.log10(totalDocLength/(docsWithThisWord+1)), tfidf = tfAdusted*idf;
+            if (!queryCache.words[queryWord]) queryCache.words[queryWord] = {};
+
+            const isWordInVocabulary = queryCache.words[queryWord].isWordInVocabulary !== undefined ? 
+                queryCache.words[queryWord].isWordInVocabulary : await db.iindex.isWordInVocabulary(queryWord);
+            if (queryCache.words[queryWord].isWordInVocabulary === undefined) queryCache.words[queryWord].isWordInVocabulary = isWordInVocabulary;
+
+            if (!isWordInVocabulary) continue; // query word not found in the vocabulary
+
+            const totalDocsInDB = queryCache.totalDocsInDB || await db.tfidfDocStore.totalDocsInDB();
+            if (!queryCache.totalDocsInDB) queryCache.totalDocsInDB = totalDocsInDB;
+            const tf = await db.iindex.getWordCountForDocument(queryWord, docHash)/document.length, 
+                tfAdusted = tf*tfAdjustmentFactor,
+                docsWithThisWord = documentsWithWordsCount[queryWord],
+                idf = 1+Math.log10(totalDocsInDB/(docsWithThisWord+1)), tfidf = tfAdusted*idf;
             tfScoreThisDoc += tfAdusted; scoreThisDoc += tfidf; if (tfAdusted) queryWordsFoundInThisDoc++;
         }
 
