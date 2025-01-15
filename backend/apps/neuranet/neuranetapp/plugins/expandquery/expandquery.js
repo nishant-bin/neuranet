@@ -68,13 +68,18 @@ exports.expand = async (params) => {
 		llmchat.jsonifyContentsInThisSession(chatsession), aiModelObjectForChat, 
 		aiModelObjectForChat.token_approximation_uplift, aiModelObjectForChat.tokenizer, aiLibrary) : [];
 	if (finalSessionObject.length) finalSessionObject[finalSessionObject.length-1].last = true;
+	const flatSession = []; for (const sessionObject of finalSessionObject) {
+		const flatSessionObject = {}; flatSessionObject[sessionObject.role] = sessionObject.content;
+		flatSession.push(flatSessionObject);
+	}
 
 	const languageDetectedForQuestion =  langdetector.getISOLang(query_in)
 
 	let expandedQuery; if (finalSessionObject.length > 0) {
         expandedQuery = await simplellm.prompt_answer(
             params[`prompt_${languageDetectedForQuestion}`] || params.prompt, id, org, brainid,
-			{session: finalSessionObject, question: query_in, ...params}, aiModelObjectForChat);
+			{flatsession: flatSession, session: finalSessionObject, question: query_in, ...params}, 
+			aiModelObjectForChat);
 		if (!expandedQuery) LOG.error("Couldn't expand the query, continuing with the originial query.");
     }
 
