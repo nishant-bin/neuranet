@@ -83,7 +83,7 @@ pregen_flow:
 
 llm_flow:   
   - command: expandquery.expand             # expands the query from session, built-in plugin
-    condition: true                         
+    condition: true                         # this plugin usually leads to bad results, so default is to disable it
     in: 
       query: "{{{query}}}"
       session_id: "{{{request.session_id}}}" # request is inbuilt variable contains user's request params
@@ -91,58 +91,56 @@ llm_flow:
       model: 
         name: simplellm-openai
       prompt_noinflate: |
-        Given the previous questions and a new question, rephrase the new question's nouns with pronouns.
+        Given the previous conversation and a new question, rephrase the new question's pronouns with nouns and add keywords.
         If the previous questions are not relevant to this question, then do not rephrase and return the new question without modification.
-        Previous questions:
-        {{#flatsession}}
-        {{#user}}
-        {{{.}}}
-        {{/user}}
-        {{/flatsession}}
+        Previous conversation:
+        {{#session}}
+        {{{role}}}: {{{content}}}
+        {{/session}}
 
         New question: {{{question}}}
 
         The rephrased question is:
       prompt_zh_noinflate: |
-        给定以下对话和问题，重新表述问题以包含对话中的所有相关关键字和上下文。
-        如果对话与该问题不相关，则返回原始问题。
-        对话：
+        给定上一个对话和一个新问题，用名词重新表述新问题的代词并添加关键字。
+        如果之前的问题与这个问题不相关，则不要重新表述并返回新问题而不进行修改。
+        上一个对话：
         {{#session}}
-        {{{role}}}: {{{content}}}
+        {{{role}}}：{{{content}}}
         {{/session}}
 
-        问题：{{{question}}}
+        新问题：{{{question}}}
 
-        独立的问题是：
+        重新表述的问题是：
       prompt_ja_noinflate: |
-        次の会話と質問がある場合、会話の関連するキーワードとコンテキストをすべて含めて質問を言い換えます。
-        会話がこの質問に関連していない場合は、元の質問を返します。
-        会話：
+        以前の会話と新しい質問に基づいて、新しい質問の代名詞を名詞に言い換え、キーワードを追加します。
+        以前の質問がこの質問に関連していない場合は、言い換えずに、変更せずに新しい質問を返します。
+        以前の会話:
         {{#session}}
         {{{role}}}: {{{content}}}
         {{/session}}
 
-        質問: {{{question}}}
+        新しい質問: {{{question}}}
 
-        独立した質問は次のとおりです:
+        言い換えた質問は次のとおりです。
       prompt_hi_noinflate: |
-        निम्नलिखित वार्तालाप और एक प्रश्न को देखते हुए, वार्तालाप से सभी प्रासंगिक कीवर्ड और संदर्भ को शामिल करने के लिए प्रश्न को दोबारा लिखें।
-        यदि बातचीत इस प्रश्न से प्रासंगिक नहीं है, तो मूल प्रश्न वापस करें।
-        बातचीत:
+        पिछली बातचीत और एक नए प्रश्न को देखते हुए, नए प्रश्न के सर्वनामों को संज्ञाओं के साथ फिर से लिखें और कीवर्ड जोड़ें।
+        यदि पिछले प्रश्न इस प्रश्न के लिए प्रासंगिक नहीं हैं, तो फिर से न लिखें और बिना संशोधन के नया प्रश्न वापस करें।
+        पिछली बातचीत:
         {{#session}}
-        {{{role}}}: {{{content}}}
+        {{role}}}: {{{content}}}
         {{/session}}
 
-        प्रश्न: {{{question}}
+        नया प्रश्न: {{{question}}}
 
-        स्टैंडअलोन प्रश्न यह है:
+        फिर से लिखा गया प्रश्न है:
     out: searchquery
 
   - command: doctfidfsearch.search          # only if forced, perfrom a non-llm search
     condition_js: |                         # _js means run the code - assign value to the property
       if (request.force_nonllm_search) return true; else return false;
     in: 
-      query: "{{{searchquery}}}"            # inbuilt variable contains the user's query
+      query: "{{{searchquery}}}"                  # inbuilt variable contains the user's query
       topK_tfidf: 3
       cutoff_score_tfidf_js: request.cutoff_score_tfidf || 0.40
       topK_vectors: 3
