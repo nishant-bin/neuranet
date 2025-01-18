@@ -61,8 +61,8 @@ exports.initSync = _ => {
  * @param {boolean} noaievent If true, the file is added to CMS without further AI processing 
  * @returns {object} Returns result of the format {result: true|false} on success or on failure.
  */
-exports.addFileToCMSRepository = async function(id, org, contentsOrStream, cmspath, comment, extrainfo, noaievent=false) {
-    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${cmspath}.xbin_uploadFile`, 
+exports.addFileToCMSRepository = async function(id, org, aiappid, contentsOrStream, cmspath, comment, extrainfo, noaievent=false) {
+    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${aiappid}.${cmspath}.xbin_uploadFile`, 
         async _ => await uploadfile.uploadFile(id, org, contentsOrStream, cmspath, comment, extrainfo, noaievent),
         clusterjobhandler.LOCAL_CLUSTER, conf.distribued_jobwait);
     if (xbinResult) return xbinResult.result; else {
