@@ -9,7 +9,7 @@ const login = require(`${APP_CONSTANTS.API_DIR}/login.js`);
 const userid = require(`${APP_CONSTANTS.LIB_DIR}/userid.js`);
 const register = require(`${APP_CONSTANTS.API_DIR}/register.js`);
 
-const idChangeListeners = [];
+const idChangeListeners = [],UPDATE_USER_LISTENERS_MEMORY_KEY = "__org_monkshu_loginapp_updateuser_listeners";
 
 exports.addIDChangeListener = listener => idChangeListeners.push(listener);
 
@@ -69,6 +69,8 @@ exports.doService = async (jsonReq, _, headers) => {
 		jsonReq.role||idEntry.role, (jsonReq.approved==true||jsonReq.approved==1)?1:0, userDomain);
 
 	if (result.result) {	// update done successfully
+		result.tokenflag = true; 
+        if(!(await _informUpdateListeners(result))); result.tokenflag = false; //just inform the update listeners
 		LOG.info(`User updated ${result.name}, old ID: ${jsonReq.old_id}, new ID: ${jsonReq.new_id}`); 
 		return {...CONSTANTS.TRUE_RESULT, ...result, tokenflag: result.approved==1?true:false, reason: undefined};
 	}
@@ -77,6 +79,20 @@ exports.doService = async (jsonReq, _, headers) => {
 		if (jsonReq.old_id.toLowerCase() != jsonReq.new_id.toLowerCase()) rollback();	// rollback ID change if applicable
 		return {...CONSTANTS.FALSE_RESULT, reason: register.REASONS.INTERNAL_ERROR};
 	}
+}
+
+exports.addUpdateUserListener = (modulePath, functionName) => {
+    const newuserListeners = CLUSTER_MEMORY.get(UPDATE_USER_LISTENERS_MEMORY_KEY, []);
+    newuserListeners.push({modulePath, functionName});
+    CLUSTER_MEMORY.set(UPDATE_USER_LISTENERS_MEMORY_KEY, newuserListeners);
+}
+
+const _informUpdateListeners = async result => {
+    const updatelisteners = CLUSTER_MEMORY.get(UPDATE_USER_LISTENERS_MEMORY_KEY, []);
+    for (const listener of updatelisteners) {
+        const listenerFunction = require(listener.modulePath)[listener.functionName];
+        if (!(await listenerFunction(result))) return false; return true; 
+    }
 }
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.id && jsonReq.old_id && jsonReq.new_id);
