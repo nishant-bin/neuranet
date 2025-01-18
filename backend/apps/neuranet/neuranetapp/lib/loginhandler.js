@@ -5,12 +5,16 @@
 
 const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
 const register = require(`${LOGINAPP_CONSTANTS.API_DIR}/register.js`);
+const updateuser = require(`${LOGINAPP_CONSTANTS.API_DIR}/updateuser.js`);
+
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 
 exports.initSync = _ => {
     login.addLoginListener(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`, "viewInjector");
     register.addNewUserListener(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`, "viewInjector");
+    updateuser.addUpdateUserListener(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`, "viewInjector");
+
 }
 
 exports.viewInjector = async function(result) {
