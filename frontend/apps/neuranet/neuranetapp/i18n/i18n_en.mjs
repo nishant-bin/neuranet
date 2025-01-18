@@ -49,7 +49,7 @@ export const i18n = {
 "AIWorkshop_DeleteAIApp": "Delete",
 "AIWorkshop_PublishAIApp": "Publish",
 "AIWorkshop_UnpublishAIApp": "Unpublish",
-"AIWorkshop_AIAppNamePrompt": "Enter AI Application ID",
+"AIWorkshop_AIAppNamePrompt": "Enter AI Application Name",
 "AIWorkshop_AIAppGenericError": "Error in AI application",
 "AIWorkshop_AIAppGenericSuccess": "Command succeeded",
 "AIWorkshop_AIAppAlreadyExists": "Error an app by that ID already exists",

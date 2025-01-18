@@ -25,8 +25,9 @@ const OPS = Object.freeze({NEW: "new", DELETE: "delete", PUBLISH: "publish", UNP
 
 exports.doService = async jsonReq => {
     if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return CONSTANTS.FALSE_RESULT};
-    const op = jsonReq.op.toLowerCase(), aiappid = jsonReq.aiappid.toLowerCase(), org = jsonReq.org.toLowerCase(), 
-        aiapplabel = jsonReq.aiapplabel || NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP_LABEL, id = jsonReq.id;
+    const op = jsonReq.op.toLowerCase(), id = jsonReq.id, org = jsonReq.org.toLowerCase();  
+    const aiappid = jsonReq.aiappid.toLowerCase().trim().replaceAll(" ", "_"); // ensuring that aiappid must not have spaces
+    const aiapplabel = jsonReq.aiapplabel || NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP_LABEL;
     
     if (op == OPS.NEW) return {result: await aiapp.initNewAIAppForOrg(aiappid, aiapplabel, id, org)};
     else if (op == OPS.DELETE) return {result: await aiapp.deleteAIAppForOrg(aiappid, id, org)};
