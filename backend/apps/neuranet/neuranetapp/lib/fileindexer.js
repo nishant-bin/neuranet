@@ -84,8 +84,8 @@ exports.addFileToCMSRepository = async function(id, org, aiappid, contentsOrStre
  * @param {noaievent} boolean If true, the file is added to CMS without further AI processing 
  * @returns true on success or false on failure.
  */
-exports.deleteFileFromCMSRepository = async function(id, org, cmspath, extrainfo, noaievent=false) {
-    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${cmspath}.xbin_deleteFile`, 
+exports.deleteFileFromCMSRepository = async function(id, org, aiappid, cmspath, extrainfo, noaievent=false) {
+    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${aiappid}.${cmspath}.xbin_deleteFile`, 
         async _ => await deletefile.deleteFile({xbin_id: id, xbin_org: org}, cmspath, extrainfo, noaievent),
         clusterjobhandler.LOCAL_CLUSTER, conf.distribued_jobwait);
     if (xbinResult) return xbinResult.result; else {
@@ -108,8 +108,8 @@ exports.deleteFileFromCMSRepository = async function(id, org, cmspath, extrainfo
  * @param {noaievent} boolean If true, the file is added to CMS without further AI processing 
  * @returns true on success or false on failure.
  */
-exports.renameFileFromCMSRepository = async function(id, org, cmspathFrom, cmspathTo, extrainfo, noaievent=false) {
-    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${cmspath}.xbin_renameFile`, 
+exports.renameFileFromCMSRepository = async function(id, org, aiappid, cmspathFrom, cmspathTo, extrainfo, noaievent=false) {
+    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${aiappid}.${cmspath}.xbin_renameFile`, 
         async _ => await renamefile.renameFile({xbin_id: id, xbin_org: org}, cmspathFrom, cmspathTo, extrainfo, true),
         clusterjobhandler.LOCAL_CLUSTER, conf.distribued_jobwait);
     if (xbinResult) return xbinResult.result; else {
@@ -208,22 +208,29 @@ async function _searchForFilePlugin(fileindexerForFile) {
 }
 
 async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
+    const aiappid = await brainhandler.getAppID(id, org, extraInfo);
     return {
-        filepath: pathIn, id, org, lang, minimum_success_percent: DEFAULT_MINIMIMUM_SUCCESS_PERCENT, cmspath,
-        aiappid: await brainhandler.getAppID(id, org, extraInfo), extrainfo: extraInfo,
-        addFileToCMSRepository: (contentBufferOrReadStream, cmspath, comment, noaievent) =>
-            exports.addFileToCMSRepository(id, org, contentBufferOrReadStream, cmspath, comment, extraInfo, noaievent),
-        deleteFileFromCMSRepository: (cmspath, noaievent) => exports.deleteFileFromCMSRepository(id, org, 
-            cmspath, extraInfo, noaievent),
-        renameFileFromCMSRepository: (cmspath, cmspathTo, noaievent) => exports.renameFileFromCMSRepository(id, org, 
-            cmspath, cmspathTo, extraInfo, noaievent),
+        filepath: pathIn, id, org, lang, minimum_success_percent: DEFAULT_MINIMIMUM_SUCCESS_PERCENT, 
+        cmspath, aiappid, extrainfo: extraInfo,
+        addFileToCMSRepository: async (contentBufferOrReadStream, cmspath, comment, noaievent) =>
+            await exports.addFileToCMSRepository(id, org, aiappid, contentBufferOrReadStream, 
+                cmspath, comment, extraInfo, noaievent),
+        deleteFileFromCMSRepository: async (cmspath, noaievent) => 
+            await exports.deleteFileFromCMSRepository(id, org, aiappid, cmspath, extraInfo, noaievent),
+        renameFileFromCMSRepository: async (cmspath, cmspathTo, noaievent) => 
+            await exports.renameFileFromCMSRepository(id, org, aiappid, cmspath, cmspathTo, extraInfo, noaievent),
         getTextReadstream: async function(overridePath) {
             const pathToRead = overridePath||pathIn;
             const inputStream = downloadfile.getReadStream(pathToRead, false);
             const readStream = await textextractor.extractTextAsStreams(inputStream, pathToRead);
             return readStream;
         },
-        getReadstream: function(overridePath) {return this.getTextReadstream(overridePath)},
+        getReadstream: async function(overridePath) {return await this.getTextReadstream(overridePath)},
+        getReadBuffer: async function(overridePath) {
+            const pathToRead = overridePath||pathIn;
+            const readBuffer = await textextractor.extractTextAsBuffer(pathToRead);
+            return readBuffer;
+        },
         getTextContents: async function(encoding) {
             try {
                 const contents = await neuranetutils.readFullFile(await this.getTextReadstream(), encoding);
@@ -235,8 +242,8 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
         },
         getContents: async function(encoding) { return await this.getTextContents(encoding)},
         start: function(){},
-        end: function(){if (extraInfo?.[module.exports.DO_NOT_FLUSH_AIDB]) return; else aidbfs.flush(id, org, this.aiappid);},
-        flush: async function() { try {await aidbfs.flush(id, org, this.aiappid); return true;} catch (err) {
+        end: function(){if (extraInfo?.[module.exports.DO_NOT_FLUSH_AIDB]) return; else aidbfs.flush(id, org, aiappid);},
+        flush: async function() { try {await aidbfs.flush(id, org, aiappid); return true;} catch (err) {
             LOG.error(`Error flushing AI databases. The error is ${err}`); return false;} },
         //addfile, removefile, renamefile - all follow the same high level logic
         addFileToAI: async function(cmsPathThisFile=this.cmspath, langFile=this.lang, metadata) {
@@ -244,7 +251,7 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
                 const fullPath = await cms.getFullPath({xbin_id: id, xbin_org: org}, cmsPathThisFile, extraInfo);
                 
                 // update AI databases
-                const aiDBIngestResult = await aidbfs.ingestfile(fullPath, cmsPathThisFile, id, org, this.aiappid, 
+                const aiDBIngestResult = await aidbfs.ingestfile(fullPath, cmsPathThisFile, id, org, aiappid, 
                     langFile, _=>this.getTextReadstream(fullPath), metadata||brainhandler.getMetadata(this.extrainfo));  // update AI databases
                 if (aiDBIngestResult?.result) return true; else return false;
             } catch (err) {
@@ -255,7 +262,7 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
         removeFileFromAI: async function(cmsPathFile=this.cmspath) {
             try {
                 const fullPath = await cms.getFullPath({xbin_id: id, xbin_org: org}, cmsPathFile, extraInfo);
-                const aiDBUningestResult = await aidbfs.uningestfile(fullPath, id, org, this.aiappid);
+                const aiDBUningestResult = await aidbfs.uningestfile(fullPath, id, org, aiappid);
                 if (aiDBUningestResult?.result) return CONSTANTS.TRUE_RESULT; else return CONSTANTS.FALSE_RESULT;
             } catch (err) {
                 LOG.error(`Error deleting file ${cmsPathFile} for ID ${id} and org ${org} due to ${err}.`);
@@ -266,7 +273,7 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
             try {
                 const fullPathFrom = await cms.getFullPath({xbin_id: id, xbin_org: org}, cmsPathFrom, extraInfo);
                 const fullPathTo = await cms.getFullPath({xbin_id: id, xbin_org: org}, cmsPathTo, extraInfo);
-                const aiDBRenameResult = await aidbfs.renamefile(fullPathFrom, fullPathTo, cmsPathTo, id, org, this.aiappid);
+                const aiDBRenameResult = await aidbfs.renamefile(fullPathFrom, fullPathTo, cmsPathTo, id, org, aiappid);
                     if (aiDBRenameResult?.result) return CONSTANTS.TRUE_RESULT; else return CONSTANTS.FALSE_RESULT;
             } catch (err) {
                 LOG.error(`Error renaming file ${cmsPathFrom} for ID ${id} and org ${org} due to ${err}.`);
