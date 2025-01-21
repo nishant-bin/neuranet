@@ -21,9 +21,9 @@ exports.viewInjector = async function(result) {
     if (result.tokenflag) try {     // add in all AI apps the user has access to
         try {
             const aiapps = (await aiapp.getAllAIAppsForOrg(result.id, result.org, true))||[], aiappsForUser = [];
-            if (aiapps.length == 0) aiapps.push({aiappid: NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP});   // use default app if none found
+            if (aiapps.length == 0) aiapps.push({id: NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP});   // use default app if none found
             for (const aiappThis of aiapps) {
-                const aiappObject = await aiapp.getAIApp(result.id, result.org, aiappThis.aiappid),
+                const aiappObject = await aiapp.getAIApp(result.id, result.org, aiappThis.id),
                     usersThisApp = aiappObject?aiappObject.users:[], adminsThisApp = aiappObject?aiappObject.admins:[];
                 if (usersThisApp.includes('*') || usersThisApp.some(id => id.toLowerCase() == result.id.toLowerCase()))
                     aiappsForUser.push({id: aiappObject.id, interface: aiappObject.interface, 
