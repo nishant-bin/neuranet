@@ -131,7 +131,7 @@ exports.writeUTF8File = async function (headersOrLoginIDAndOrg, inpath, data, ex
 	if (data.length) await _appendOrWrite(fullpath, data, true, true, exports.isZippable(fullpath));
 	else await fspromises.appendFile(fullpath, data);
 
-	exports.updateFileStats(fullpath, inpath, data.length, true, XBIN_CONSTANTS.XBIN_FILE, undefined, extraInfo);	
+	await exports.updateFileStats(fullpath, inpath, data.length, true, XBIN_CONSTANTS.XBIN_FILE, undefined, extraInfo);	
 
 	if (!noevent) blackboard.publish(XBIN_CONSTANTS.XBINEVENT, {type: XBIN_CONSTANTS.EVENTS.FILE_CREATED, path: fullpath, 
 		ip: utils.getLocalIPs()[0], id: cms.getID(headersOrLoginIDAndOrg), org: cms.getOrg(headersOrLoginIDAndOrg), 

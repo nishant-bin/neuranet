@@ -30,3 +30,18 @@ exports.extractTextAsStreams = function(inputstream, filepath) {
         reject(new Error(`Unable to process the given file to extract the text.`));
     }); 
 }
+
+exports.extractTextAsBuffer = function(filepath, forceExtract=false) {
+    return new Promise(async (resolve, reject) => { // stream processing can throw errors midway, so promise is used
+    
+        for (const textExtractor of conf.text_extraction_plugins) {
+            const pluginThis = NEURANET_CONSTANTS.getPlugin(textExtractor); 
+            try {
+                const extractedText = await pluginThis.getContent(filepath, forceExtract);
+                if (extractedText) resolve(Buffer.from(extractedText, "utf8"));
+            } catch (err) {LOG.warn(`Error thrown by text extractin plugin ${textExtractor} for file ${filepath}, ignoring.`);}
+        } 
+    
+        reject(new Error(`Unable to process the given file to extract the text.`));
+    }); 
+}
