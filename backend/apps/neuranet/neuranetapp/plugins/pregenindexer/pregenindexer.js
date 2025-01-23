@@ -63,7 +63,7 @@ exports.ingest = async function(fileindexer) {
     const cmsGenTextFilePath = `${path.dirname(fileindexer.cmspath)}/${genfilesDir}/${path.basename(fileindexer.cmspath)}.txt`;
     const rootComment = `Text for: ${path.basename(fileindexer.cmspath)}`;
     // save the extracted text as well to the CMS but no AI event as we already add original text to AI below
-    const rootIndexerResultCMS = await fileindexer.addFileToCMSRepository(await fileindexer.getReadBuffer(), cmsGenTextFilePath, rootComment, true);  
+    const rootIndexerResultCMS = await fileindexer.addFileToCMSRepository(await fileindexer.getReadstream(), cmsGenTextFilePath, rootComment, true);  
     const rootIndexerResultAI = await fileindexer.addFileToAI();    // add the original file to AI
     await fileindexer.end(); _informProgress(totalPregentSteps);
 

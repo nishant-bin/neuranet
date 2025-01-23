@@ -8,16 +8,14 @@ const zlib = require("zlib");
 const fspromises = fs.promises;
 const stream = require("stream");
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
-const crypt = require(`${CONSTANTS.LIBDIR}/crypt.js`);
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const quotas = require(`${XBIN_CONSTANTS.LIB_DIR}/quotas.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const getfiles = require(`${XBIN_CONSTANTS.API_DIR}/getfiles.js`);
-const addablereadstream = require(`${XBIN_CONSTANTS.LIB_DIR}/addablereadstream.js`)
 const ADDABLE_STREAM_TIMEOUT = XBIN_CONSTANTS.CONF.UPLOAD_STREAM_MAX_WAIT||120000;	// 2 minutes to receive new data else we timeout
 
 const UTF8CONTENTTYPE_MATCHER = /^\s*?text.*?;\s*charset\s*=\s*utf-?8\s*$/;
-const _existing_streams = [];	// holds existing streams for files under upload progress
+let _existing_paths = [];	// holds active file paths for append or write operations
 
 exports.doService = async (jsonReq, _servObject, headers, _url) => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return CONSTANTS.FALSE_RESULT;}
@@ -94,8 +92,7 @@ exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath
 		try {await exports.deleteDiskFileMetadata(fullpath);} catch (err) {};
 	} 
 
-	if (chunk.length > 0) await _appendOrWrite(temppath, chunk, startOfFile, endOfFile, exports.isZippable(fullpath));
-	else await fspromises.appendFile(temppath, chunk);
+	await _appendOrWrite(temppath, chunk, startOfFile, endOfFile, exports.isZippable(fullpath));
 	LOG.debug(`Added new ${chunk.length} bytes to the file at eventual path ${fullpath} using temp path ${temppath}.`);
 	if (endOfFile) {
 		try {await fspromises.rename(temppath, fullpath)} catch (err) {
@@ -128,8 +125,7 @@ exports.writeUTF8File = async function (headersOrLoginIDAndOrg, inpath, data, ex
 	if (!(await quotas.checkQuota(headersOrLoginIDAndOrg, extraInfo, additionalBytesToWrite)).result) 
 		throw `Quota is full write failed for ${fullpath}`;
 
-	if (data.length) await _appendOrWrite(fullpath, data, true, true, exports.isZippable(fullpath));
-	else await fspromises.appendFile(fullpath, data);
+	await _appendOrWrite(fullpath, data, true, true, exports.isZippable(fullpath));
 
 	await exports.updateFileStats(fullpath, inpath, data.length, true, XBIN_CONSTANTS.XBIN_FILE, undefined, extraInfo);	
 
@@ -293,60 +289,44 @@ async function _getSecureFullPath(headers, inpath, extraInfo) {
 	return fullpath;
 }
 
-function _appendOrWrite(inpath, buffer, startOfFile, endOfFile, isZippable) {
-	const _createStreams = (path, reject, resolve) => {
-		if (_existing_streams[path]) _deleteStreams(path);	// delete old streams if open
-
-		_existing_streams[path] = { addablestream: addablereadstream.getAddableReadstream(ADDABLE_STREAM_TIMEOUT), 
-			reject, resolve }; 
-		LOG.debug(`Created readable stream with ID ${_existing_streams[path].addablestream.getID()} for path ${path}.`);
-		let readableStream = _existing_streams[path].addablestream;
-		if (isZippable) readableStream = readableStream.pipe(zlib.createGzip());	// gzip to save disk space and download bandwidth for downloads
-		if (exports.isEncryptable(path)) readableStream = readableStream.pipe(crypt.getCipher(XBIN_CONSTANTS.CONF.SECURED_KEY));
-		_existing_streams[path].writestream = fs.createWriteStream(path, {"flags":"w"}); 
-		_existing_streams[path].writestream.__org_xbin_writestream_id = Date.now();
-		_existing_streams[path].closeWriteStream = true;
-		readableStream.pipe(_existing_streams[path].writestream); 
-		_existing_streams[path].writestream.on("finish", _=>{	// deleteStreams if the finish itself is not emitted by _deleteStreams
-			if (_existing_streams[path].writestream.__org_xbin_writestream_id != 
-					_existing_streams[path].ignoreWriteStreamFinishForID) {
-				LOG.warn(`Finish write not issued by deleteStreams, deleted the streams as well. Path is ${path}, addablestream ID is ${_existing_streams[path].addablestream.getID()}.`);
-				_existing_streams[path].closeWriteStream = false; _deleteStreams(path);
-			} else LOG.info(`Finish write issued by deleteStreams, path is ${path}, addablestream ID is ${_existing_streams[path].addablestream.getID()}.`);
-		}); 
-		_existing_streams[path].writestream.on("error", error => { 
-			LOG.error(`Error in the write stream for path ${path}, error is ${error}, addablestream ID is ${_existing_streams[path].addablestream.getID()}.`);
-			_existing_streams[path].reject(error); _deleteStreams(path) 
-		});
-		_existing_streams[path].addablestream.on("read_drained", _ => {
-			if (_existing_streams[path]) {
-				_existing_streams[path].resolve();
-				LOG.debug(`Resolved writing for path ${path} with buffer size of ${buffer.length} bytes for stream with ID ${_existing_streams[path].addablestream.getID()}.`);
-			} else LOG.warn(`Drained issued for an addablestream which doesn't exist anymore. The path is ${path}.`);
-		});
+/**
+ * Append or write to a file with optional compression.
+ * @param {string} filepath - The path to the file.
+ * @param {Buffer|string} data - The data to write.
+ * @param {boolean} startOfFile - Indicates whether this is the start of the file.
+ * @param {boolean} endOfFile - Indicates whether this is the end of the file.
+ * @param {boolean} isZippable - Indicates if the file should be compressed.
+ */
+async function _appendOrWrite(filepath, data, startOfFile, endOfFile, isZippable) {
+	try {
+		if (isZippable) data = zlib.gzipSync(data); // Compress the data if zippable is true.
+	
+		if (startOfFile && !_existing_paths.includes(filepath)) { // extra condition check because sometimes start is true multiple times for the same file
+			fs.writeFileSync(filepath, data); _existing_paths.push(filepath); // always overwrite for a newfile upload event
+			LOG.info(`** File created at ${filepath} with initial data. **`);
+		} else {
+			const writeStream = fs.createWriteStream(filepath, { flags: 'a' });
+			writeStream.write(data); writeStream.end();
+	
+			await Promise.race([
+				new Promise((resolve, reject) => {
+				writeStream.on('finish', resolve);
+				writeStream.on('error', reject);
+				}),
+				new Promise((_, reject) => setTimeout(() => 
+						reject(new Error('Stream write timeout')), ADDABLE_STREAM_TIMEOUT))
+			]);
+	
+			LOG.info(`** Data appended to ${filepath}. **`);
+		}
+	
+		if (endOfFile) { 
+			_existing_paths = _existing_paths.filter(path => path!=filepath);
+			LOG.info(`** End of file reached for ${filepath}. **`);
+		}
+	} catch (error) {
+	  	LOG.error(`** Skipping the chunk in _appendOrWrite for ${filepath} due to: ${error.message} **`);
 	}
-
-	const _deleteStreams = path => {
-		if (!_existing_streams[path]) return;
-		LOG.info(`Deleteting streams for path ${path}. Addable stream ID is ${(_existing_streams[path].addablestream?.getID())||"unknown"}`);
-		if (_existing_streams[path].addablereadstream) _existing_streams[path].addablestream.end(); 
-		if (_existing_streams[path].closeWriteStream) try {
-			_existing_streams[path].ignoreWriteStreamFinishForID = _existing_streams[path].writestream.__org_xbin_writestream_id;
-			_existing_streams[path].writestream.close(); 
-		} catch (err) {LOG.warn(`Error closing write stream with for path ${path}, error is ${err}. Addable stream ID is ${(_existing_streams[path].addablestream?.getID())||"unknown"}`);}
-		delete _existing_streams[path];
-	}
-
-	return new Promise((resolve, reject) => {
-		if (startOfFile) _createStreams(inpath, resolve, reject);
-
-		if (!_existing_streams[inpath]) {reject("Error: Missing stream for file "+inpath); return;}
-
-		_existing_streams[inpath].resolve = resolve; _existing_streams[inpath].reject = reject;	// update these so events calls the right ones
-		_existing_streams[inpath].addablestream.addData(buffer); 
-		LOG.debug(`Added data for path ${inpath} with buffer size of ${buffer.length} bytes for stream with ID ${_existing_streams[inpath].addablestream.getID()}, total bytes added are ${_existing_streams[inpath].addablestream.length}.`);
-		if (endOfFile) _existing_streams[inpath].addablestream.end(); 
-	});
 }
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.path && jsonReq.data && 
