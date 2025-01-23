@@ -38,7 +38,7 @@ exports.extractTextAsBuffer = function(filepath, forceExtract=false) {
             const pluginThis = NEURANET_CONSTANTS.getPlugin(textExtractor); 
             try {
                 const extractedText = await pluginThis.getContent(filepath, forceExtract);
-                if (extractedText) resolve(Buffer.from(extractedText, "utf8"));
+                if (extractedText) resolve(extractedText);
             } catch (err) {LOG.warn(`Error thrown by text extractin plugin ${textExtractor} for file ${filepath}, ignoring.`);}
         } 
     
