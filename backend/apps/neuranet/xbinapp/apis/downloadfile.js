@@ -22,8 +22,8 @@ exports.handleRawRequest = async function(jsonReq, servObject, headers, url) {
 	if (!securid.check(jsonReq.securid)) {LOG.error("SecurID validation failure."); _sendError(servObject, true); return;}
 
 	const headersMod = {...headers, "authorization": `Bearer ${jsonReq.auth}`};
-	jsonReq.fullpath = await cms.getFullPath(headersMod, jsonReq.path, jsonReq.extraInfo);
-	if (!await cms.isSecure(headersMod, jsonReq.fullpath, jsonReq.extraInfo)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); _sendError(servObject); return;}
+	jsonReq.fullpath = await cms.getFullPath(headersMod, jsonReq.path, jsonReq.extrainfo);
+	if (!await cms.isSecure(headersMod, jsonReq.fullpath, jsonReq.extrainfo)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); _sendError(servObject); return;}
 
 	await this.downloadFile(jsonReq, servObject, headers, url);
 }
