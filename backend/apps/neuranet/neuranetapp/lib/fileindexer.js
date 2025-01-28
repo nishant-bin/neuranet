@@ -109,7 +109,7 @@ exports.deleteFileFromCMSRepository = async function(id, org, aiappid, cmspath, 
  * @returns true on success or false on failure.
  */
 exports.renameFileFromCMSRepository = async function(id, org, aiappid, cmspathFrom, cmspathTo, extrainfo, noaievent=false) {
-    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${aiappid}.${cmspath}.xbin_renameFile`, 
+    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${aiappid}.${cmspathFrom}.xbin_renameFile`, 
         async _ => await renamefile.renameFile({xbin_id: id, xbin_org: org}, cmspathFrom, cmspathTo, extrainfo, true),
         clusterjobhandler.LOCAL_CLUSTER, conf.distribued_jobwait);
     if (xbinResult) return xbinResult.result; else {
