@@ -1,6 +1,8 @@
 # Neuranet
 Build Business AI applications including AI assistants and AI agents.
 
+![Neuranet](https://repository-images.githubusercontent.com/619328836/ea160ed6-3a96-48a3-b80e-9c89fb723dab)
+
 Getting Started
 ===============
 Step 1: Download the Monkshu server https://github.com/TekMonks/monkshu.git  
