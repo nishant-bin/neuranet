@@ -1,5 +1,5 @@
 # Neuranet
-Neural network and LLM application server for AI applications.
+Build Business AI applications including AI assistants and AI agents.
 
 Getting Started
 ===============
