@@ -124,9 +124,7 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
  */
 async function flush(id, org, brainid) {
     const tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid); 
-    const vectordb = await _getVectorDBForIDAndOrgAndBrainID(id, org, brainid, null);
     await tfidfDB.flush(); 
-    await vectordb.flush_db();
 }
 
 /**
@@ -154,19 +152,13 @@ async function uningestfile(pathIn, id, org, brainid) {
     LOG.info(`TF.IDF DB uningestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
 
     // delete from the Vector DB
-    const queryResults = await vectordb.query(undefined, -1, undefined, 
-        metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID, true);
-    if (queryResults) {
-        for (const result of queryResults) {
-            try {await vectordb.delete(result.vector, result.metadata);} catch (err) {
-                LOG.error(`Error dropping vector for file ${pathIn} for ID ${id} and org ${org} failed. Some vectors were dropped. Database needs recovery for this file.`);
-                LOG.debug(`The vector which failed was ${result.vector}.`);
-                return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
-            }
-        }
-    } else LOG.error(`Queyring vector DB for file ${pathIn} for ID ${id} and org ${org} produced no matching vectors.`);
+    const uningestResult = await vectordb.uningest(metadata);
+    if (!uningestResult) {
+        LOG.error(`Uningestion of the vectors failed for path ${pathIn}, ID ${id} and org ${org}.`);
+        return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
+    } 
+    
     LOG.info(`Vector DB uningestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
-
     return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
 }
 
@@ -199,16 +191,10 @@ async function renamefile(from, to, new_referencelink, id, org, brainid) {
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
-    const queryResults = await vectordb.query(undefined, -1, undefined, 
-        metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID); 
-    if (queryResults) for (const result of queryResults) {
-        if (!vectordb.update(result.vector, metadata, newmetadata, result.text)) {
-            LOG.error(`Renaming the vector file paths failed from path ${from} to path ${to} for ID ${id} and org ${org}.`);
-            return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
-        } 
-    } else {
-        LOG.error(`Queyring vector DB for file ${from} for ID ${id} and org ${org} failed.`);
-        return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
+    const updateResult = await vectordb.update(metadata, newmetadata);
+    if (!updateResult) {
+        LOG.error(`Renaming the vector file paths failed from path ${from} to path ${to} for ID ${id} and org ${org}.`);
+        return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};  
     }
 
     LOG.info(`Rename of file from ${from} to ${to} for ID ${id} and org ${org} succeeded.`)
