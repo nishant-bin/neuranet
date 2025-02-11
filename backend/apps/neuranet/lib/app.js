@@ -8,7 +8,8 @@ const mustache = require("mustache");
 
 exports.initSync = appName => {
     global.APP_CONSTANTS = require(`${__dirname}/../loginappframework/apis/lib/loginappconstants.js`);
-    const hostname = require(`${APP_CONSTANTS.APP_ROOT}/conf/hostname.json`); APP_CONSTANTS.HOSTNAME = hostname;
+    let hostname; if(fs.existsSync(`${APP_CONSTANTS.APP_ROOT}/conf/hostname.json`)) { hostname = require(`${APP_CONSTANTS.APP_ROOT}/conf/hostname.json`); 
+    } else { hostname = CONSTANTS.HOSTNAME; } APP_CONSTANTS.HOSTNAME = hostname; // select monkshu's default hostname if not exists in apps
     global.APP_CONSTANTS.CONF = JSON.parse( mustache.render(fs.readFileSync(
         `${APP_CONSTANTS.CONF_DIR}/loginapp.json`, "utf-8"), {app: appName, hostname}) );
     global.LOGINAPP_CONSTANTS = APP_CONSTANTS;  // will be the namespace used in the future.
