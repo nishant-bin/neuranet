@@ -44,7 +44,8 @@ exports.expand = async (params) => {
 
 	LOG.debug(`Got query expansion for query ${query_in} from ID ${id} of org ${org}.`);
 
-	if (!(await quota.checkQuota(id, org))) {
+	const aiappThis = await aiapp.getAIApp(id, org, brainid, true);
+    if ((!aiappThis.disable_quota_checks) && (!(await quota.checkQuota(id, org, brainid)))) {
 		LOG.error(`Disallowing the call, as the user ${id} of org ${org} is over their quota.`);
         params.return_error(REASONS.LIMIT); return;
 	}

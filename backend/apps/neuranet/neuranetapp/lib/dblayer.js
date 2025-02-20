@@ -41,8 +41,7 @@ exports.setViewsForOrg = async (org, views) => {
 	return result;
 }
 
-exports.logUsage = async (id, usage, model) => db.runCmd("INSERT INTO usage (id, usage, model) values (?,?,?)",
-	[id, usage, model]);
+exports.logUsage = async (id, usage=0, model) => db.runCmd("INSERT INTO usage (id, usage, model) values (?,?,?)", [id, usage, model]);
 
 exports.getAIModelUsage = async (id, startTimestamp, endTimestamp, model) => {
 	const usage = await db.getQuery("SELECT sum(usage) AS totaluse FROM usage WHERE timestamp >= ? AND timestamp <= ? AND id=? AND model=?",

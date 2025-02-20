@@ -104,8 +104,8 @@ exports.search = async function(params, _llmstepDefinition) {
 	}
 	let vectorResults = []; const topK_vectors = params.topK_vectors || aiModelObjectForSearch.topK_vectors;
 	const min_distance_vectors = params.min_distance_vectors || aiModelObjectForSearch.min_distance_vectors;
-	for (const vectordb of vectordbs) vectorResults.push(...(await vectordb.query(vectorForUserPrompts, undefined, 
-		min_distance_vectors, metadata => documentsToUseDocIDs.includes(metadata[NEURANET_CONSTANTS.NEURANET_DOCID]))));
+	for (const vectordb of vectordbs) vectorResults.push(...(await vectordb.query(vectorForUserPrompts, topK_vectors, 
+		min_distance_vectors, `return [${documentsToUseDocIDs.map(value=>`'${value}'`).join(",")}].includes(metadata['${NEURANET_CONSTANTS.NEURANET_DOCID}'])`)));
 	if ((!vectorResults) || (!vectorResults.length)) {
 		LOG.warn(`No vector search documents found for query ${query} for id ${id} org ${org} and brainid ${brainids}.`);
 		return _formatResults(params, []);

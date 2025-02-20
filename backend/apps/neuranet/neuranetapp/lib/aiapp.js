@@ -66,12 +66,13 @@ exports.getPregenObject = (id, org, aiappid) => exports.getAIAppObject(id, org, 
  * @param {string} id The user ID
  * @param {string} org The org
  * @param {string} aiappid The AI app ID
+ * @param {boolean} forcecache Force use of cache 
  * @returns The AI app object itself - the overall AI app object.
  */
-exports.getAIApp = async function(id, org, aiappid) {
+exports.getAIApp = async function(id, org, aiappid, forcecache) {
     aiappid = aiappid.toLowerCase(); org = org.toLowerCase();
     const appCacheKey = `${org}_${aiappid}`;
-    if ((!DEBUG_MODE) && APP_CACHE[appCacheKey]) return APP_CACHE[appCacheKey];
+    if ((forcecache || (!DEBUG_MODE)) && APP_CACHE[appCacheKey]) return APP_CACHE[appCacheKey];
 
     try {
         const appFile = exports.getAppFile(id, org, aiappid), appFileYaml = await fspromises.readFile(appFile, "utf8"),

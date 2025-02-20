@@ -38,11 +38,12 @@ const zhsegmenter = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/zhsegmenter.js`
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
 
 const VOCABULARY_FILE="vocabulary", IINDEX_FILE="iindex", METADATA_DOCID_KEY="docid.key", 
-    METADATA_LANGID_KEY="langid.key", METADATA_DOCID_KEY_DEFAULT = "aidb_docid", METADATA_LANGID_KEY_DEFAULT = "aidb_langid", 
-    MIN_STOP_WORD_IDENTIFICATION_LENGTH = 5, MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95, 
-    DEFAULT_MAX_COORD_BOOST = 0.10, TFIDFDB_DELETE_DOC_TOPIC = "tfidf.rmdoc",
-    TFIDFDB_UPDATE_DOC_TOPIC = "tfidf.updatedoc", TFIDFDB_INTERNAL_FUNCTION_CALL_TOPIC = "tfidf.functioncall";
+    METADATA_LANGID_KEY="langid.key", METADATA_DOCID_KEY_DEFAULT = "aidb_docid", 
+    METADATA_LANGID_KEY_DEFAULT = "aidb_langid", MIN_STOP_WORD_IDENTIFICATION_LENGTH = 5, 
+    MIN_PERCENTAGE_COMMON_DOCS_FOR_STOP_WORDS = 0.95, DEFAULT_MAX_COORD_BOOST = 0.10, 
+    TFIDFDB_INTERNAL_FUNCTION_CALL_TOPIC = "tfidf.functioncall";
 const IN_MEM_DBS = {}; let blackboard_initialized = false;
+if (!blackboard_initialized) {_initBlackboardHooks(); blackboard_initialized = true;}
 
 // international capable punctuation character regex from: https://stackoverflow.com/questions/7576945/javascript-regular-expression-for-punctuation-international
 const PUNCTUATIONS = new RegExp(/[\$\uFFE5\^\+=`~<>{}\[\]|\u3000-\u303F!-#%-\x2A,-/:;\x3F@\x5B-\x5D_\x7B}\u00A1\u00A7\u00AB\u00B6\u00B7\u00BB\u00BF\u037E\u0387\u055A-\u055F\u0589\u058A\u05BE\u05C0\u05C3\u05C6\u05F3\u05F4\u0609\u060A\u060C\u060D\u061B\u061E\u061F\u066A-\u066D\u06D4\u0700-\u070D\u07F7-\u07F9\u0830-\u083E\u085E\u0964\u0965\u0970\u0AF0\u0DF4\u0E4F\u0E5A\u0E5B\u0F04-\u0F12\u0F14\u0F3A-\u0F3D\u0F85\u0FD0-\u0FD4\u0FD9\u0FDA\u104A-\u104F\u10FB\u1360-\u1368\u1400\u166D\u166E\u169B\u169C\u16EB-\u16ED\u1735\u1736\u17D4-\u17D6\u17D8-\u17DA\u1800-\u180A\u1944\u1945\u1A1E\u1A1F\u1AA0-\u1AA6\u1AA8-\u1AAD\u1B5A-\u1B60\u1BFC-\u1BFF\u1C3B-\u1C3F\u1C7E\u1C7F\u1CC0-\u1CC7\u1CD3\u2010-\u2027\u2030-\u2043\u2045-\u2051\u2053-\u205E\u207D\u207E\u208D\u208E\u2329\u232A\u2768-\u2775\u27C5\u27C6\u27E6-\u27EF\u2983-\u2998\u29D8-\u29DB\u29FC\u29FD\u2CF9-\u2CFC\u2CFE\u2CFF\u2D70\u2E00-\u2E2E\u2E30-\u2E3B\u3001-\u3003\u3008-\u3011\u3014-\u301F\u3030\u303D\u30A0\u30FB\uA4FE\uA4FF\uA60D-\uA60F\uA673\uA67E\uA6F2-\uA6F7\uA874-\uA877\uA8CE\uA8CF\uA8F8-\uA8FA\uA92E\uA92F\uA95F\uA9C1-\uA9CD\uA9DE\uA9DF\uAA5C-\uAA5F\uAADE\uAADF\uAAF0\uAAF1\uABEB\uFD3E\uFD3F\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE61\uFE63\uFE68\uFE6A\uFE6B\uFF01-\uFF03\uFF05-\uFF0A\uFF0C-\uFF0F\uFF1A\uFF1B\uFF1F\uFF20\uFF3B-\uFF3D\uFF3F\uFF5B\uFF5D\uFF5F-\uFF65]+/g);
@@ -62,7 +63,7 @@ const SPLITTERS = new RegExp(/[\s,\.]+/), JP_SEGMENTER = jpsegmenter.getSegmente
 exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DEFAULT, 
         metadata_langid_key=METADATA_LANGID_KEY_DEFAULT, stopwords_path, no_stemming=false, mem_only=false) {
 
-    if (!blackboard_initialized) {_initBlackboardHooks(); blackboard_initialized = true;}
+    if (!blackboard_initialized) throw ("TF.IDF blackboard hooks not initialized, severe error!");
 
     const dbmemid = mem_only ? dbPathOrMemID : path.resolve(dbPathOrMemID);
     const dbLoadedInMemAlready = IN_MEM_DBS[dbmemid] ? true : false;
@@ -83,13 +84,13 @@ exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA
 
     const db = IN_MEM_DBS[dbmemid], dbObjectWrapper = {     // convert DB to a wrapped object to return back  
         create: async (document, metadata, lang) => {
-            const result = await exports.create(document, metadata, db, lang); return result; },
+            const result = await exports.create(document, metadata, lang, db); return result; },
         createStream: async (stream, metadata, lang) => {
-            const result = await exports.createStream(stream, metadata, db, lang); return result; },
+            const result = await exports.createStream(stream, metadata, lang, db); return result; },
         update: async (oldmetadata, newmetadata) => {
             const result = await exports.update(oldmetadata, newmetadata, db); return result;},
         query: (query, topK, filter_function, cutoff_score, options, lang, autocorrect) => exports.query(query, 
-            topK, filter_function, cutoff_score, options, db, lang, autocorrect),
+            topK, filter_function, cutoff_score, options, lang, autocorrect, db),
         delete: async metadata => {
             const result = await exports.delete(metadata, db); return result; },
         sortForTF: documents => documents.sort((doc1, doc2) => doc1.tf_score < doc2.tf_score ? 1 : 
@@ -138,7 +139,7 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
     EMPTY_DB.tfidfDocStore.data = async (documentHash, local) => {
         if (EMPTY_DB.tfidfDocStore[documentHash]) return EMPTY_DB.tfidfDocStore[documentHash];  // found locally, no need to search more
         if ((!local) && EMPTY_DB.distributed) { // see if other DB instances have it.
-            const dataReplies = await _getDistributedResultFromFunction(EMPTY_DB, "tfidfDocStore", "data", [documentHash]);
+            const dataReplies = await _getDistributedResultFromFunction(EMPTY_DB, "tfidfDocStore", "data", [documentHash], true);
             for (const dataReply of dataReplies) if (dataReply) return dataReply;
         }
         return undefined;   // not found anywhere
@@ -156,45 +157,33 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
         if (!wordObject.docs[documentHash]) wordObject.docs[documentHash] = 1; else wordObject.docs[documentHash]++;
         EMPTY_DB.iindex[word] = wordObject;
     }
-    EMPTY_DB.iindex.getWordCountForDocument = async (word, documentHash, local) => {
-        if (EMPTY_DB.iindex[word]?.docs[documentHash]) return EMPTY_DB.iindex[word].docs[documentHash];
-        else if ((!local) && EMPTY_DB.distributed) {
-            const wordcountReplies = await _getDistributedResultFromFunction(EMPTY_DB, "iindex", "getWordCountForDocument", [word, documentHash]);
-            for (const wordcountReply of wordcountReplies) if (wordcountReply) return wordcountReply;
-            return 0;
-        } else return 0;
+    EMPTY_DB.iindex.getWordCountForDocument = (word, documentHash, iindex) => {
+        if (iindex[word]?.docs[documentHash]) return iindex[word].docs[documentHash]; else return 0;
     }
     EMPTY_DB.iindex.getCountOfLocalDocumentsWithWord = word => {
         return EMPTY_DB.iindex[word]?Object.keys(EMPTY_DB.iindex[word].docs).length:0;
     }
-    EMPTY_DB.iindex.getCountOfDocumentsWithWords = async (words, local) => {
-        const localDocWordCounts = {}; for (const word of words) localDocWordCounts[word] = 
-            await EMPTY_DB.iindex.getCountOfLocalDocumentsWithWord(word, true);
-        const finalDocWordCounts = {...localDocWordCounts}; if ((!local) && EMPTY_DB.distributed) {
-            const wordcountReplies = await _getDistributedResultFromFunction(EMPTY_DB, "iindex", "getCountOfDocumentsWithWords", [words]);
-            for (const word of words) for (const wordcountReply of wordcountReplies)
-                finalDocWordCounts[word] = (finalDocWordCounts[word]||0) + (wordcountReply[word]||0);
-        }
-        return finalDocWordCounts;
+    EMPTY_DB.iindex.getCountOfDocumentsWithWords = (words, iindex) => {
+        const documentWordCounts = {}; for (const word of words) documentWordCounts[word] = 
+            iindex[word]?Object.keys(EMPTY_DB.iindex[word].docs).length:0;
+        return documentWordCounts;
     }
-    EMPTY_DB.iindex.isWordInVocabulary = async (word, local) => {
-        if (EMPTY_DB.iindex[word]) return true; // we know of this locally already
-        else if ((!local) && EMPTY_DB.distributed) {
-            const vocabularyReplies = await _getDistributedResultFromFunction(EMPTY_DB, "iindex", "isWordInVocabulary", [word]);
-            for (const vocabularyReply of vocabularyReplies) if (vocabularyReply) return true;
-            return false;
-        } else return false;
-    }
-    EMPTY_DB.iindex.isWordInLocalVocabulary = async word => EMPTY_DB.iindex[word] != undefined && EMPTY_DB.iindex[word] != null;
+    EMPTY_DB.iindex.isWordInVocabulary = (word, iindex) => { if (iindex[word]) return true; else return false; }
+    EMPTY_DB.iindex.isWordInLocalVocabulary = word => EMPTY_DB.iindex[word] != undefined && EMPTY_DB.iindex[word] != null;
     EMPTY_DB.iindex.getAllLocalWordObjects = _ => Object.values(EMPTY_DB.iindex).filter(value => typeof value !== "function");
     EMPTY_DB.iindex.getAllLocalWords = _ => Object.keys(EMPTY_DB.iindex).filter(key => typeof EMPTY_DB.iindex[key] !== "function");
-    EMPTY_DB.iindex.getDocumentHashesForWord = async (word, local) => {
-        let hashes = Object.keys(EMPTY_DB.iindex[word]?.docs||{}); 
+    EMPTY_DB.iindex.getIIndexSubsetForWords = async (words, local) => {
+        let iindex = {}; for (const word of words) if (EMPTY_DB.iindex[word]) iindex[word] = EMPTY_DB.iindex[word];
         if ((!local) && EMPTY_DB.distributed) {
-            const otherHashesReplies = await _getDistributedResultFromFunction(EMPTY_DB, "iindex", "getDocumentHashesForWord", [word]);
-            for (const otherHashesReply of otherHashesReplies) hashes = hashes.concat(otherHashesReply);
+            const otherIIndexeReplies = await _getDistributedResultFromFunction(EMPTY_DB, "iindex", "getIIndexSubsetForWords", [words]);
+            for (const otherIIndexeReply of otherIIndexeReplies) for (const [word, wordObject] of Object.entries(otherIIndexeReply)) 
+                if (iindex[word]) iindex[word].docs = {...iindex[word].docs, ...wordObject.docs}; else iindex[word] = wordObject;            
         }
-        return hashes;
+        return iindex;    // return the distribued indexes combined into a local in-memory index
+    }
+    EMPTY_DB.iindex.getDocumentHashesForWords = (words, iindex) => {
+        let hashes = []; for (const word of words) hashes = hashes.concat(Object.keys(iindex[word]?.docs||{})); 
+        return [...new Set(hashes)];    // return new hashes
     }
     
     EMPTY_DB[METADATA_DOCID_KEY] = metadata_docid_key; EMPTY_DB.no_stemming = no_stemming;
@@ -262,8 +251,8 @@ exports.writeData = async (pathIn, db) => {
  * @return {object} metadata The document's metadata.
  * @throws {Error} If the document's metadata is missing the document ID field. 
  */
-exports.ingest = exports.create = async function(document, metadata, db, lang) {
-    return await exports.ingestStream(Readable.from(document), metadata, db, lang);
+exports.ingest = exports.create = async function(document, metadata, lang, db) {
+    return await exports.ingestStream(Readable.from(document), metadata, lang, db);
 }
 
 /**
@@ -275,15 +264,17 @@ exports.ingest = exports.create = async function(document, metadata, db, lang) {
  * @return {object} metadata The document's metadata.
  * @throws {Error} If the document's metadata is missing the document ID field. 
  */
-exports.ingestStream = exports.createStream = async function(readstream, metadata, db, lang) {
+exports.ingestStream = exports.createStream = async function(readstream, metadata, lang, db) {
 
     LOG.info(`Starting word extraction for ${JSON.stringify(metadata)}`);
     if ((!lang) && metadata[db[METADATA_LANGID_KEY]]) lang = metadata[db[METADATA_LANGID_KEY]];
     if (!metadata[db[METADATA_DOCID_KEY]]) throw new Error("Missing document ID in metadata.");
 
-    const docHash = _getDocumentHashIndex(metadata, db), datenow = Date.now();
-    LOG.info(`Deleting old document for ${JSON.stringify(metadata)}`);
-    await exports.delete(metadata, db);   // if adding the same document, delete the old one first, will do a distributed delete as well automatically
+    const docHash = _getDocumentHashIndex(metadata, db), datenow = Date.now(), docCheck = db.tfidfDocStore.localData(docHash);
+    if (docCheck) { // do not re-ingest
+        LOG.info(`Skipping re-ingestion for document ${JSON.stringify(metadata)} as it already exists. To re-ingest use delete first or use update.`);
+        return metadata;
+    }
     const newDocument = {metadata: _deepclone(metadata), length: 0, date_created: datenow, date_modified: datenow}; 
     db.tfidfDocStore.localAdd(docHash, newDocument); // add to the local DB
     LOG.info(`Starting word counting for ${JSON.stringify(metadata)}`);
@@ -313,18 +304,16 @@ exports.ingestStream = exports.createStream = async function(readstream, metadat
  * Deletes the given document from the database.
  * @param {object} metadata The metadata for the document to delete.
  * @param {object} db The incoming database
- * @param {boolean} publish Update other cluster members
+ * @param {boolean} local Update other cluster members if needed if set to false (default)
  */
-exports.delete = function(metadata, db, publish=true) {
+exports.delete = function(metadata, db, local=false) {
     const docHash = _getDocumentHashIndex(metadata, db), localDocument = db.tfidfDocStore.localData(docHash);
     
     if (localDocument) {
         for (const wordObject of db.iindex.getAllLocalWordObjects()) db.iindex.deleteLocalDocumentFromWordObject(wordObject, docHash);
         db.tfidfDocStore.localDelete(_getDocumentHashIndex(metadata, db));       // we don't await as it causes multi-threading for cascading deletes, the await is only to delete the text file which doesn't matter much
-    } else if (publish) {
-        const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
-        blackboard.publish(TFIDFDB_DELETE_DOC_TOPIC, {creation_data: _createDBCreationData(db), metadata}, bboptions);  // not found here, but maybe other DBs have it
-    }
+        LOG.info(`Locally deleted document with metadata ${JSON.stringify(metadata)}`);
+    } else if (!local) _getDistributedResultFromFunction(db, "exports", "delete", [metadata]);
 
     return metadata;
 }
@@ -334,19 +323,15 @@ exports.delete = function(metadata, db, publish=true) {
  * @param {object} oldmetadata The old metadata - used to locate the document.
  * @param {object} newmetadata The new metadata
  * @param {object} db The database to operate on
- * @param {boolean} publish Update other cluster members
+ * @param {boolean} local Update other cluster members if needed if set to false (default)
  * @returns 
  */
-exports.update = async (oldmetadata, newmetadata, db, publish=true) => {
+exports.update = async (oldmetadata, newmetadata, db, local=false) => {
     const oldhash = _getDocumentHashIndex(oldmetadata, db), newhash = _getDocumentHashIndex(newmetadata, db),
         document = db.tfidfDocStore.localData(oldhash);
-    if ((!document) && publish) {
-        const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
-        blackboard.publish(TFIDFDB_UPDATE_DOC_TOPIC, {creation_data: _createDBCreationData(db), 
-            oldmetadata, newmetadata}, bboptions);
-        return true;    // not found here, but maybe other DBs have it
-    }
+    if ((!document) && (!local)) return await _getDistributedResultFromFunction(db, "exports", "update", [oldmetadata, newmetadata]);
 
+    // coming here means the document is local
     document.metadata = _deepclone(newmetadata); document.date_modified = Date.now();
 
     await db.tfidfDocStore.localDelete(oldhash); db.tfidfDocStore.localAdd(newhash, document); 
@@ -384,7 +369,7 @@ exports.update = async (oldmetadata, newmetadata, db, publish=true) => {
  * @param {boolean} autocorrect Whether to autocorrect query's spelling mistakes, only works for English
  * @returns {Array} The resulting documents as an array of {metadata, plus other stats} objects.
  */
-exports.query = async (query, topK, filter_function, cutoff_score, options={}, db, lang, autocorrect=true) => {
+exports.query = async (query, topK, filter_function, cutoff_score, options={}, lang, autocorrect=true, db) => {
     const scoredDocs = []; 
 
     if (!query) {   // no query -> no need to score
@@ -398,36 +383,31 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, d
     } 
     
     const queryWords = _getLangNormalizedWords(query, lang||langdetector.getISOLang(query), db, autocorrect), 
-        relevantDocs = [], queryCache = {words:{}};
+        iindexSubset = await db.iindex.getIIndexSubsetForWords(queryWords), totalDocsInDB = await db.tfidfDocStore.totalDocsInDB(),
+        relevantDocs = db.iindex.getDocumentHashesForWords(queryWords, iindexSubset), queryCache = {words:{}};
     let highestScore = 0; 
-    for (const queryWord of queryWords) {
-        const docHashesWithThisWord = await db.iindex.getDocumentHashesForWord(queryWord); 
-        for (const docHash of docHashesWithThisWord) if (!relevantDocs.includes(docHash)) relevantDocs.push(docHash)
-    };
     for (const docHash of relevantDocs) {
         const document = await db.tfidfDocStore.data(docHash); 
-        if (!document) {LOG.warn(`Document is null for hash ${docHash}, ignoring.`); continue;}
+        if (!document) {LOG.warn(`Document is null for hash ${docHash}, ignoring. Usually this means network issue.`); continue;}
         
         if (filter_function && (!options.filter_metadata_last) && (!filter_function(document.metadata))) continue; // drop docs if they don't pass the filter
-        const tfAdjustmentFactor = options.bm25 ? await _getBM25Adjustment(document.length, db) : // handle BM25 or opposite of it here
-            options.punish_verysmall_documents ? await _getVerySmallDocumentPunishment(document.length, db) : 1;  
+        const tfAdjustmentFactor = options.bm25 ? _getBM25Adjustment(document.length, db) : // handle BM25 or opposite of it here
+            options.punish_verysmall_documents ? _getVerySmallDocumentPunishment(document.length, db) : 1;  
 
         let scoreThisDoc = 0, tfScoreThisDoc = 0, queryWordsFoundInThisDoc = 0, 
-            documentsWithWordsCount = queryCache.documentsWithWordsCount || await db.iindex.getCountOfDocumentsWithWords(queryWords);
+            documentsWithWordsCount = queryCache.documentsWithWordsCount || db.iindex.getCountOfDocumentsWithWords(queryWords, iindexSubset);
         if (!queryCache.documentsWithWordsCount) queryCache.documentsWithWordsCount = documentsWithWordsCount;
 
         for (const queryWord of queryWords) {
             if (!queryCache.words[queryWord]) queryCache.words[queryWord] = {};
 
             const isWordInVocabulary = queryCache.words[queryWord].isWordInVocabulary !== undefined ? 
-                queryCache.words[queryWord].isWordInVocabulary : await db.iindex.isWordInVocabulary(queryWord);
+                queryCache.words[queryWord].isWordInVocabulary : db.iindex.isWordInVocabulary(queryWord, iindexSubset);
             if (queryCache.words[queryWord].isWordInVocabulary === undefined) queryCache.words[queryWord].isWordInVocabulary = isWordInVocabulary;
 
             if (!isWordInVocabulary) continue; // query word not found in the vocabulary
 
-            const totalDocsInDB = queryCache.totalDocsInDB || await db.tfidfDocStore.totalDocsInDB();
-            if (!queryCache.totalDocsInDB) queryCache.totalDocsInDB = totalDocsInDB;
-            const tf = await db.iindex.getWordCountForDocument(queryWord, docHash)/document.length, 
+            const tf = db.iindex.getWordCountForDocument(queryWord, docHash, iindexSubset)/document.length, 
                 tfAdusted = tf*tfAdjustmentFactor,
                 docsWithThisWord = documentsWithWordsCount[queryWord],
                 idf = 1+Math.log10(totalDocsInDB/(docsWithThisWord+1)), tfidf = tfAdusted*idf;
@@ -514,7 +494,7 @@ function _getLangNormalizedWords(document, lang, db, autocorrect=false, fastSpli
     return words;
 }
 
-async function _getVerySmallDocumentPunishment(thisDocLength, db) { // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
+function _getVerySmallDocumentPunishment(thisDocLength, db) { // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
     let totalDocLength = 0; for (const hash of db.tfidfDocStore.localDocumentHashes()) totalDocLength += db.tfidfDocStore.localData(hash).length;
     const averageDocLength = totalDocLength/db.tfidfDocStore.localDocumentHashes().length;
     const cappedPercentThidDocLengthToAverageLength = Math.min(thisDocLength/averageDocLength,1);
@@ -524,7 +504,7 @@ async function _getVerySmallDocumentPunishment(thisDocLength, db) { // this func
     return punishment;
 }
 
-async function _getBM25Adjustment(thisDocLength, db) {  // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
+function _getBM25Adjustment(thisDocLength, db) {  // this function doesn't go across the cluster when calculating averages, which may be OK as average should be similar across the cluster.
     let totalDocLength = 0; for (const hash of db.tfidfDocStore.localDocumentHashes()) totalDocLength += db.tfidfDocStore.localData(hash).length;
     const averageDocLength = totalDocLength/db.tfidfDocStore.localDocumentHashes().length;
     const bm25AdjustmentDenominator = thisDocLength/averageDocLength;
@@ -551,38 +531,32 @@ const _createDBCreationData = db => {
 }
 
 function _initBlackboardHooks() {
-    const bboptions = {}; bboptions[blackboard.EXTERNAL_ONLY] = true;
-
-    blackboard.subscribe(TFIDFDB_UPDATE_DOC_TOPIC, async msg => {
-        const {creation_data, oldmetadata, newmetadata} = msg;
-        const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
-            creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
-            creation_data.mem_only))._getRawDB();
-        exports.update(oldmetadata, newmetadata, db, false);
-    }, bboptions);
-
-    blackboard.subscribe(TFIDFDB_DELETE_DOC_TOPIC, async msg => {
-        const {creation_data, metadata} = msg;
-        const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
-            creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
-            creation_data.mem_only))._getRawDB();
-        exports.delete(metadata, db, false);
-    }, bboptions);
+    const bboptions = {}; bboptions[blackboard.NOT_LOCAL_ONLY] = true;
 
     blackboard.subscribe(TFIDFDB_INTERNAL_FUNCTION_CALL_TOPIC, async msg => {
         const {creation_data, module_name, function_name, params, blackboardcontrol} = msg;
+        LOG.info(`TF.IDF got internal function call ${module_name} -> ${function_name}`);
+
         const db = (await exports.get_tfidf_db(creation_data.pathOrMemID, creation_data.metadata_docid_key, 
             creation_data.metadata_langid_key, creation_data.stopwords_path, creation_data.no_stemming, 
             creation_data.mem_only))._getRawDB();
-        const functionParams = [...(params||[]), true], functionResult = await db[module_name][function_name](...functionParams);
+        const functionParams = module_name == "exports" ? [...(params||[]), db, true] : [...(params||[]), true], 
+            functionResult = module_name == "exports" ? 
+                await exports[function_name](...functionParams) : 
+                await db[module_name][function_name](...functionParams);
+        LOG.info(`TF.IDF sent internal function call reply ${module_name} -> ${function_name}`);
         blackboard.sendReply(TFIDFDB_INTERNAL_FUNCTION_CALL_TOPIC, blackboardcontrol, {reply: functionResult});
     }, bboptions);
 }
 
-function _getDistributedResultFromFunction(db, module_name, function_name, params) {
+function _getDistributedResultFromFunction(db, module_name, function_name, params, firstReplyOnly) {
+    const bboptions = {}; if (firstReplyOnly) bboptions[blackboard.FIRST_REPLY_ONLY] = true;
+    bboptions[blackboard.NOT_LOCAL_ONLY] = true;
+
+    LOG.info(`TF.IDF sending internal function call ${module_name} -> ${function_name}`);
     return new Promise(resolve => blackboard.getReply(TFIDFDB_INTERNAL_FUNCTION_CALL_TOPIC, 
         {creation_data: _createDBCreationData(db), module_name, function_name, params}, 
-        conf.cluster_timeout, undefined, replies=>resolve(_unmarshallReplies(replies))));
+        conf.cluster_timeout, bboptions, replies=>resolve(_unmarshallReplies(replies))));
 }
 
 const _unmarshallReplies = replies => {

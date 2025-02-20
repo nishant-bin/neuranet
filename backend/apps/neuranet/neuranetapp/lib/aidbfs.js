@@ -54,8 +54,9 @@ const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT:
  */
 async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamGenerator, metadata={}) {
     LOG.info(`AI DB FS ingestion of file ${pathIn} for ID ${id} and org ${org} started.`);
-    const timeStart = Date.now();
-    if (!(await quota.checkQuota(id, org))) {
+    const timeStart = Date.now(), aiappThis = await aiapp.getAIApp(id, org, brainid, true);
+    if (aiappThis.disable_quota_checks)
+    if ((!(aiappThis.disable_quota_checks)) && (!(await quota.checkQuota(id, org, brainid)))) {
 		LOG.error(`Disallowing the ingest call for the path ${pathIn}, as the user ${id} of org ${org} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}

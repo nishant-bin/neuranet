@@ -60,7 +60,8 @@ exports.answer = async (params) => {
 
 	LOG.debug(`Got LLM_History chat request from ID ${id} of org ${org}. Incoming params are ${JSON.stringify(params)}`);
 
-	if (!(await quota.checkQuota(id, org))) {
+	const aiappThis = await aiapp.getAIApp(id, org, brainid, true);
+    if ((!aiappThis.disable_quota_checks) && (!(await quota.checkQuota(id, org, brainid)))) {
 		const errMsg = `Disallowing the doc chat call, as the user ${id} of org ${org} is over their quota.`;
 		LOG.error(errMsg); params.return_error(errMsg); return;
 	}

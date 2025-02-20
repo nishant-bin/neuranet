@@ -16,6 +16,7 @@ const XBIN_CONSTANTS = LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS;
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 
 const path = require("path");
+const crypto = require("crypto");
 const mustache = require("mustache");
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
@@ -27,7 +28,7 @@ const downloadfile = require(`${XBIN_CONSTANTS.API_DIR}/downloadfile.js`);
 const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
 const textextractor = require(`${NEURANET_CONSTANTS.LIBDIR}/textextractor.js`);
 const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
-const clusterjobhandler = require(`${CONSTANTS.LIBDIR}/distributedjobhandler.js`);
+const timed_expiry_cache = require(`${CONSTANTS.LIBDIR}/timedcache.js`).newcache(NEURANET_CONSTANTS.CONF.fastcache_timeout);
 
 let conf;
 const DEFAULT_MINIMIMUM_SUCCESS_PERCENT = 0.5;
@@ -38,7 +39,7 @@ exports.initSync = _ => {
     conf = JSON.parse(confRendered);
     if (!conf.enabled) return;  // file indexer is disabled
     
-    const bboptions = {}; bboptions[blackboard.LOCAL_CLUSTER_ONLY] = true;  // only operate on local CMS' events
+    const bboptions = {}; bboptions[blackboard.LOCAL_ONLY] = true;  // only operate on local CMS' events
     if (!NEURANET_CONSTANTS.CONF.disable_xbin) blackboard.subscribe(XBIN_CONSTANTS.XBINEVENT, message => _handleFileEvent(message), bboptions);
     if (!NEURANET_CONSTANTS.CONF.disable_private_cms) blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, message => _handleFileEvent(message), bboptions);
     _initPluginsAsync(); 
@@ -47,10 +48,6 @@ exports.initSync = _ => {
 /**
  * Adds the given file to the backend CMS repository. Will also issue new file event so the
  * file is then ingested into the backend AI databases, unless told to otherwise.
- * 
- * Running it as a cluster job means file/io is only once, since XBin FS is shared, it should be same
- * for all instances. If `noaievent` is set to false, then AI events will ensure all local cluster AI
- * instances update themselves regardless.
  * 
  * @param {string} id The user ID of the user ingesting this file.
  * @param {string} org The org of the user ID of the user ingesting this file.
@@ -61,10 +58,8 @@ exports.initSync = _ => {
  * @param {boolean} noaievent If true, the file is added to CMS without further AI processing 
  * @returns {object} Returns result of the format {result: true|false} on success or on failure.
  */
-exports.addFileToCMSRepository = async function(id, org, aiappid, contentsOrStream, cmspath, comment, extrainfo, noaievent=false) {
-    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${aiappid}.${cmspath}.xbin_uploadFile`, 
-        async _ => await uploadfile.uploadFile(id, org, contentsOrStream, cmspath, comment, extrainfo, noaievent),
-        clusterjobhandler.LOCAL_CLUSTER, conf.distribued_jobwait);
+exports.addFileToCMSRepository = async function(id, org, contentsOrStream, cmspath, comment, extrainfo, noaievent=false) {
+    const xbinResult = await uploadfile.uploadFile(id, org, contentsOrStream, cmspath, comment, extrainfo, noaievent);
     if (xbinResult) return xbinResult.result; else {
         LOG.error(`Error adding file ${cmspath} to the CMS repository, distribued job failed probably.`); return false; }
 }
@@ -84,10 +79,8 @@ exports.addFileToCMSRepository = async function(id, org, aiappid, contentsOrStre
  * @param {noaievent} boolean If true, the file is added to CMS without further AI processing 
  * @returns true on success or false on failure.
  */
-exports.deleteFileFromCMSRepository = async function(id, org, aiappid, cmspath, extrainfo, noaievent=false) {
-    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${aiappid}.${cmspath}.xbin_deleteFile`, 
-        async _ => await deletefile.deleteFile({xbin_id: id, xbin_org: org}, cmspath, extrainfo, noaievent),
-        clusterjobhandler.LOCAL_CLUSTER, conf.distribued_jobwait);
+exports.deleteFileFromCMSRepository = async function(id, org, cmspath, extrainfo, noaievent=false) {
+    const xbinResult = await deletefile.deleteFile({xbin_id: id, xbin_org: org}, cmspath, extrainfo, noaievent)
     if (xbinResult) return xbinResult.result; else {
         LOG.error(`Error deleting file ${cmspath} from the CMS repository, distribued job failed probably.`); return false; }
 }
@@ -108,10 +101,8 @@ exports.deleteFileFromCMSRepository = async function(id, org, aiappid, cmspath, 
  * @param {noaievent} boolean If true, the file is added to CMS without further AI processing 
  * @returns true on success or false on failure.
  */
-exports.renameFileFromCMSRepository = async function(id, org, aiappid, cmspathFrom, cmspathTo, extrainfo, noaievent=false) {
-    const xbinResult = await clusterjobhandler.runJob(`${id}.${org}.${aiappid}.${cmspathFrom}.xbin_renameFile`, 
-        async _ => await renamefile.renameFile({xbin_id: id, xbin_org: org}, cmspathFrom, cmspathTo, extrainfo, true),
-        clusterjobhandler.LOCAL_CLUSTER, conf.distribued_jobwait);
+exports.renameFileFromCMSRepository = async function(id, org, cmspathFrom, cmspathTo, extrainfo, noaievent=false) {
+    const xbinResult = await renamefile.renameFile({xbin_id: id, xbin_org: org}, cmspathFrom, cmspathTo, extrainfo, true);
     if (xbinResult) return xbinResult.result; else {
         LOG.error(`Error renaming file ${cmspath} in the CMS repository, distribued job failed probably.`); return false; }
 }
@@ -120,7 +111,7 @@ exports.renameFileFromCMSRepository = async function(id, org, aiappid, cmspathFr
 exports.DO_NOT_FLUSH_AIDB = "doNotFlushAIDB";
 
 async function _handleFileEvent(message) {
-    const awaitPromisePublishFileEvent = async (promise, fullpath, type, id, org, extraInfo) => {  // this is mostly to inform listeners about file being processed events
+    const _awaitPromisePublishFileEvent = async (promise, fullpath, type, id, org, extraInfo) => {  // this is mostly to inform listeners about file being processed events
         const cmspath = await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, fullpath, extraInfo);
         // we have started processing a file
         blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSING, 
@@ -129,6 +120,14 @@ async function _handleFileEvent(message) {
         // we have finished processing this file
         blackboard.publish(NEURANET_CONSTANTS.NEURANETEVENT, {type: NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED, 
             path: fullpath, result: result?result.result:false, subtype: type, id, org, cmspath, extraInfo});
+    }
+
+    const _isDuplicateEvent = message => {
+        const hashAlgo = crypto.createHash("md5"); 
+        hashAlgo.update(path.resolve(message.path)+message.id+message.org);
+        const hash = "_neuranet_fileindexer"+hashAlgo.digest("hex"); 
+        if (!timed_expiry_cache.get(hash)) {timed_expiry_cache.set(hash, "present"); return false;}
+        else return true;
     }
 
     if (message.extraInfo && brainhandler.isAIAppBeingEdited(message.extraInfo)) return;  // we don't handle AI events for edit AI of apps
@@ -142,21 +141,25 @@ async function _handleFileEvent(message) {
         _isNeuranetFileRenamedEvent = message => message.type == XBIN_CONSTANTS.EVENTS.FILE_RENAMED ||
             message.type == NEURANET_CONSTANTS.EVENTS.FILE_RENAMED,
         _isNeuranetFileModifiedEvent = message => message.type == XBIN_CONSTANTS.EVENTS.FILE_MODIFIED ||
-            message.type == NEURANET_CONSTANTS.EVENTS.FILE_MODIFIED;
+            message.type == NEURANET_CONSTANTS.EVENTS.FILE_MODIFIED,
+        _isNeuranetEvent = (!message.isDirectory) && (_isNeuranetFileCreatedEvent || _isNeuranetFileDeletedEvent || _isNeuranetFileRenamedEvent || _isNeuranetFileModifiedEvent);
 
-    if (_isNeuranetFileCreatedEvent(message) && (!message.isDirectory)) 
-        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.lang, message.extraInfo), 
+    if (!_isNeuranetEvent) return;  // not something we can handle
+    if (_isDuplicateEvent(message)) return; // handle only one event per file
+
+    if (_isNeuranetFileCreatedEvent(message)) 
+        _awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.lang, message.extraInfo), 
             message.path, NEURANET_CONSTANTS.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES.INGESTED, message.id, message.org, message.extraInfo);
-    else if (_isNeuranetFileDeletedEvent(message) && (!message.isDirectory)) 
-        awaitPromisePublishFileEvent(_uningestfile(path.resolve(message.path), message.id, message.org, message.extraInfo), 
+    else if (_isNeuranetFileDeletedEvent(message)) 
+        _awaitPromisePublishFileEvent(_uningestfile(path.resolve(message.path), message.id, message.org, message.extraInfo), 
             message.path, NEURANET_CONSTANTS.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES.UNINGESTED, message.id, message.org, message.extraInfo);
-    else if (_isNeuranetFileRenamedEvent(message) && (!message.isDirectory)) 
-        awaitPromisePublishFileEvent(_renamefile(path.resolve(message.from), path.resolve(message.to), message.id, 
+    else if (_isNeuranetFileRenamedEvent(message)) 
+        _awaitPromisePublishFileEvent(_renamefile(path.resolve(message.from), path.resolve(message.to), message.id, 
             message.org, message.extraInfo), message.to, NEURANET_CONSTANTS.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES.RENAMED, message.id, 
             message.org, message.extraInfo);
-    else if (_isNeuranetFileModifiedEvent(message) && (!message.isDirectory)) {
+    else if (_isNeuranetFileModifiedEvent(message)) {
         await _uningestfile(path.resolve(message.path), message.id, message.org, message.extraInfo);
-        awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.lang, message.extraInfo), 
+        _awaitPromisePublishFileEvent(_ingestfile(path.resolve(message.path), message.id, message.org, message.lang, message.extraInfo), 
             message.path, NEURANET_CONSTANTS.FILEINDEXER_FILE_PROCESSED_EVENT_TYPES.MODIFIED, message.id, message.org, message.extraInfo);
     }
 }
@@ -213,12 +216,12 @@ async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
         filepath: pathIn, id, org, lang, minimum_success_percent: DEFAULT_MINIMIMUM_SUCCESS_PERCENT, 
         cmspath, aiappid, extrainfo: extraInfo,
         addFileToCMSRepository: async (contentBufferOrReadStream, cmspath, comment, noaievent) =>
-            await exports.addFileToCMSRepository(id, org, aiappid, contentBufferOrReadStream, 
+            await exports.addFileToCMSRepository(id, org, contentBufferOrReadStream, 
                 cmspath, comment, extraInfo, noaievent),
         deleteFileFromCMSRepository: async (cmspath, noaievent) => 
-            await exports.deleteFileFromCMSRepository(id, org, aiappid, cmspath, extraInfo, noaievent),
+            await exports.deleteFileFromCMSRepository(id, org, cmspath, extraInfo, noaievent),
         renameFileFromCMSRepository: async (cmspath, cmspathTo, noaievent) => 
-            await exports.renameFileFromCMSRepository(id, org, aiappid, cmspath, cmspathTo, extraInfo, noaievent),
+            await exports.renameFileFromCMSRepository(id, org, cmspath, cmspathTo, extraInfo, noaievent),
         getTextReadstream: async function(overridePath) {
             const pathToRead = overridePath||pathIn;
             const inputStream = downloadfile.getReadStream(pathToRead, false);

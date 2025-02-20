@@ -15,57 +15,30 @@ users: ["*"]                                # the * means all users, else must b
 admins: ["thecompany@tekmonks.com"]         # the admins for this app - they can train for example
 api_uploads_cms_path: uploads               # where files are uploaded by index, unindex APIs
 generated_files_path: _neuranet_generated   # where generated files are placed
+ai_cost_quota: 0.6                          # cost quota for the users
+disable_quota_checks: false                 # disable quotas if true
+disable_model_usage_logging: false          # if true, ai model usage logging
 
 # all flows are sequence of commands which follow the same syntax - command, in, out - in is the input
 # to the command, out is the variable holding the output and name points to the command module and entry
 # point. the command sytax is documented below as well.
 
 pregen_flow: 
-  - command: rephrasedoc.generate           # module and entry function can be used using module.entry
-    in: 
-      label: Simplified
-
-      prompt: |
-        Rephrase the document below in simple language in less than {{{words}}} words.
-        {{{fragment}}}
-      prompt_zh: |
-        用少于 {{{words}}} 个单词的简单语言重新表述以下文档。
-        {{{fragment}}}
-      prompt_ja: |
-        以下の文書を {{{words}}} 語以内で簡単な言葉で言い換えてください。
-        {{{fragment}}}
-      prompt_hi: |
-        नीचे दिए गए दस्तावेज़ को सरल भाषा में {{{words}}} से कम शब्दों में दोबारा लिखें।
-        {{{fragment}}}
-
-      models: 
-        - name: simplellm-openai
-          type: chat
-          model_overrides:                  # this allows us to override model params on a per AI app basis, can be a nested path e.g. driver.host if we are calling API at a different host name etc          
-        - name: embedding-openai
-          type: embeddings
-          model_overrides:                      
-      words_promptparam: 700
-      pregenfile_prefix: summary
-      pregenfile_dir: _neuranet_generated
-      pregenfile_ext: txt
-      encoding: utf8
-
   - command: rephrasedoc                    # entry function name is skipped as the default is generate anyways
     in: 
       label: Rephrased
 
       prompt: |                             # these can be prompt, prompt_docISOLanguage, prompt_fragment_fragmentISOLanguage
-        Infer the document and rephrase it in a more generic context that most people without expertise or knowledge can understand.
+        Rephrase the document below with alternate keywords.
         {{{fragment}}}
       prompt_zh: |
-        文書を推測し、専門知識や知識を持たないほとんどの人が理解できる、より一般的な文脈で言い換えます。
+        用替代关键词重新表述下面的文档。
         {{{fragment}}}
       prompt_ja: |
-        文書を推測し、専門知識や知識を持たないほとんどの人が理解できる、より一般的な文脈で言い換えます。
+        以下の文書を別のキーワードで言い換えてください。
         {{{fragment}}}
       prompt_hi: |
-        दस्तावेज़ का अनुमान लगाएं और इसे अधिक सामान्य संदर्भ में दोबारा लिखें जिसे विशेषज्ञता या ज्ञान के बिना अधिकांश लोग समझ सकें।
+        नीचे दिए गए दस्तावेज़ को वैकल्पिक कीवर्ड के साथ पुनः लिखें।
         {{{fragment}}}
 
       models: 
@@ -102,34 +75,40 @@ llm_flow:
 
         The rephrased question is:
       prompt_zh_noinflate: |
-        给定上一个对话和一个新问题，用名词重新表述新问题的代词并添加关键字。
-        如果之前的问题与这个问题不相关，则不要重新表述并返回新问题而不进行修改。
-        上一个对话：
-        {{#session}}
-        {{{role}}}：{{{content}}}
-        {{/session}}
+        给定先前的问题和新问题，用名词重新表述新问题的代词。
+        如果先前的问题与此问题无关，则不要重新表述并返回新问题而不进行修改。
+        先前的问题：
+        {{#flatsession}}
+        {{#user}}
+        {{{.}}}
+        {{/user}}
+        {{/flatsession}}
 
         新问题：{{{question}}}
 
         重新表述的问题是：
       prompt_ja_noinflate: |
-        以前の会話と新しい質問に基づいて、新しい質問の代名詞を名詞に言い換え、キーワードを追加します。
-        以前の質問がこの質問に関連していない場合は、言い換えずに、変更せずに新しい質問を返します。
-        以前の会話:
-        {{#session}}
-        {{{role}}}: {{{content}}}
-        {{/session}}
+        以前の質問と新しい質問が与えられた場合、新しい質問の代名詞を名詞に言い換えます。
+        以前の質問がこの質問に関連していない場合は、言い換えずに新しい質問を変更せずに返します。
+        以前の質問:
+        {{#flatsession}}
+        {{#user}}
+        {{{.}}}
+        {{/user}}
+        {{/flatsession}}
 
         新しい質問: {{{question}}}
 
         言い換えた質問は次のとおりです。
       prompt_hi_noinflate: |
-        पिछली बातचीत और एक नए प्रश्न को देखते हुए, नए प्रश्न के सर्वनामों को संज्ञाओं के साथ फिर से लिखें और कीवर्ड जोड़ें।
-        यदि पिछले प्रश्न इस प्रश्न के लिए प्रासंगिक नहीं हैं, तो फिर से न लिखें और बिना संशोधन के नया प्रश्न वापस करें।
-        पिछली बातचीत:
-        {{#session}}
-        {{role}}}: {{{content}}}
-        {{/session}}
+        पिछले प्रश्नों और एक नए प्रश्न को देखते हुए, नए प्रश्न के सर्वनामों को संज्ञाओं के साथ फिर से लिखें।
+        यदि पिछले प्रश्न इस प्रश्न के लिए प्रासंगिक नहीं हैं, तो फिर से न लिखें और बिना संशोधन के नया प्रश्न लौटाएँ।
+        पिछले प्रश्न:
+        {{#flatsession}}
+        {{#user}}
+        {{.}}}
+        {{/user}}
+        {{/flatsession}}
 
         नया प्रश्न: {{{question}}}
 
@@ -274,15 +253,15 @@ docsearch_flow:
 global_models:
   - name: embedding-openai
     model_overrides:                    
-      read_ai_response_from_samples: false
+      read_ai_response_from_samples: true
 
   - name: chat-knowledgebase-openai
     model_overrides:                    
-      read_ai_response_from_samples: false
+      read_ai_response_from_samples: true
 
   - name: simplellm-openai
     model_overrides:                    
-      read_ai_response_from_samples: false
+      read_ai_response_from_samples: true
 
 
 modules: 

@@ -28,7 +28,8 @@ const DEFAULT_SIMPLE_QA_MODEL = "simplellm-openai", DEBUG_MODE = NEURANET_CONSTA
  * @returns The LLM response, unparsed.
  */
 exports.prompt_answer = async function(promptFileOrPrompt, id, org, aiappid, data, modelNameOrModelObject=DEFAULT_SIMPLE_QA_MODEL) {
-    if (id && !(await quota.checkQuota(id, org))) {  // check quota if the ID was provided
+    const aiappThis = id ? await aiapp.getAIApp(id, org, aiappid, true) : undefined;
+    if (id && (!aiappThis.disable_quota_checks) && !(await quota.checkQuota(id, org, aiappid))) {  // check quota if the ID was provided
 		LOG.error(`SimpleLLM: Disallowing the LLM call, as the user ${id} is over their quota.`);
 		return null;    // quota issue
 	}
@@ -54,6 +55,7 @@ exports.prompt_answer = async function(promptFileOrPrompt, id, org, aiappid, dat
         return null; // LLM call error
     }
 
-    if (id) dblayer.logUsage(id, response.metric_cost, aiModelObject.name);
+    if (id && (!aiappThis.disable_model_usage_logging)) dblayer.logUsage(id, response.metric_cost||0, aiModelObject.name);
+    else LOG.info(`ID ${id} of org ${org} used ${response.metric_cost||0} of AI quota. Not logged, as usage logging is disabled by app ${aiappid}`);
     return response.airesponse;
 }

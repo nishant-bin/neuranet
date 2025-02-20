@@ -9,6 +9,8 @@
 "dynamic_aiapps": true,
 "java_home": "/Users/rvkapoor/Documents/Programs/source/java",
 "db_server_host": "sqlite://{{{hostname}}}",
+"default_ai_cost_quota": 0.6,
+"fastcache_timeout": 10000,
 
 "ai_models": {
     "chat-openai": {

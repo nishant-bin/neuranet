@@ -36,7 +36,8 @@ exports.chat = async params => {
 
 	LOG.debug(`Got chat request from ID ${params.id}. Incoming request is ${JSON.stringify(params)}`);
 
-	if (!(await quota.checkQuota(params.id, params.org))) {
+	const aiappThis = await aiapp.getAIApp(params.id, params.org, params.aiappid, true);
+    if ((!aiappThis.disable_quota_checks) && (!(await quota.checkQuota(params.id, params.org, params.aiappid)))) {
 		LOG.error(`Disallowing the LLM chat call, as the user ${params.id} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
@@ -66,7 +67,8 @@ exports.chat = async params => {
 		LOG.error(`AI library error processing request ${JSON.stringify(params)}`); 
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
 	} else {
-		dblayer.logUsage(params.id, response.metric_cost, aiModelToUse);
+        if (!aiappThis.disable_model_usage_logging) dblayer.logUsage(params.id, response.metric_cost||0, aiModelToUse);
+		else LOG.info(`ID ${params.id} of org ${params.org} used ${response.metric_cost||0} of AI quota. Not logged, as usage logging is disabled by app ${params.aiappid}`);
 		const {aiResponse, promptSummary, responseSummary} = _unmarshallAIResponse(response.airesponse, 
 			params.raw_question||params.session.at(-1).content, params.auto_chat_summary_enabled);
 		if (params.maintain_session != false) {
