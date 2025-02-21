@@ -89,13 +89,13 @@ exports.search = async function(params, _llmstepDefinition) {
 	}
 	let vectorResults = [];
 	for (const vectordb of vectordbs) vectorResults.push(...await vectordb.query(	// just get all the vectors for these documents
-		undefined, undefined, undefined, metadata => documentsToUseDocIDs.includes(
-			metadata[NEURANET_CONSTANTS.NEURANET_DOCID])));
+		undefined, undefined, undefined, 
+		`return [${documentsToUseDocIDs.map(value=>`'${value}'`).join(",")}].includes(metadata['${NEURANET_CONSTANTS.NEURANET_DOCID}'])`));
 	if ((!vectorResults) || (!vectorResults.length)) return _formatResults(params, []);	// no knowledge
 
 	// create an in-memory temporary TF.IDF DB to search for relevant document fragments
 	const tfidfDBInMem = await aitfidfdb.get_tfidf_db(TEMP_MEM_TFIDF_ID+Date.now(), NEURANET_CONSTANTS.NEURANET_DOCID, 
-		NEURANET_CONSTANTS.NEURANET_LANGID, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`, undefined, true, false);
+		NEURANET_CONSTANTS.NEURANET_LANGID, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`, undefined, true);
 	for (const vectorResult of vectorResults) {
 		const uniqueID = (Date.now() + Math.random()).toString().split(".").join(""); vectorResult.metadata.__uniqueid = uniqueID;
 		const temporaryMetadata = {...(vectorResult.metadata)}; temporaryMetadata[NEURANET_CONSTANTS.NEURANET_DOCID]  = uniqueID;

@@ -111,7 +111,7 @@ exports.get_tfidf_db = async function(dbPathOrMemID, metadata_docid_key=METADATA
 exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DEFAULT, 
         metadata_langid_key=METADATA_LANGID_KEY_DEFAULT, stopwords_path, no_stemming=false, mem_only=false) => {
 
-    const EMPTY_DB = {tfidfDocStore: {}, iindex: {}, distributed: conf.distributed};
+    const EMPTY_DB = {tfidfDocStore: {}, iindex: {}, distributed: mem_only?false:conf.distributed};
     EMPTY_DB.empty = _ => {
         for (const word of EMPTY_DB.iindex.getAllLocalWordObjects()) delete EMPTY_DB.iindex[word.word];
         for (const dochash of EMPTY_DB.tfidfDocStore.localDocumentHashes()) delete EMPTY_DB.tfidfDocStore[dochash];
