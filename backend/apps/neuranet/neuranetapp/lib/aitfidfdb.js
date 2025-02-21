@@ -314,8 +314,6 @@ exports.delete = function(metadata, db, local=false) {
         db.tfidfDocStore.localDelete(_getDocumentHashIndex(metadata, db));       // we don't await as it causes multi-threading for cascading deletes, the await is only to delete the text file which doesn't matter much
         LOG.info(`Locally deleted document with metadata ${JSON.stringify(metadata)}`);
     } else if (!local) _getDistributedResultFromFunction(db, "exports", "delete", [metadata]);
-
-    return metadata;
 }
 
 /**
@@ -324,12 +322,12 @@ exports.delete = function(metadata, db, local=false) {
  * @param {object} newmetadata The new metadata
  * @param {object} db The database to operate on
  * @param {boolean} local Update other cluster members if needed if set to false (default)
- * @returns 
  */
 exports.update = async (oldmetadata, newmetadata, db, local=false) => {
     const oldhash = _getDocumentHashIndex(oldmetadata, db), newhash = _getDocumentHashIndex(newmetadata, db),
         document = db.tfidfDocStore.localData(oldhash);
-    if ((!document) && (!local)) return await _getDistributedResultFromFunction(db, "exports", "update", [oldmetadata, newmetadata]);
+    if ((!document) && (!local)) {  // ask owning node to update it
+        _getDistributedResultFromFunction(db, "exports", "update", [oldmetadata, newmetadata], true); return; }
 
     // coming here means the document is local
     document.metadata = _deepclone(newmetadata); document.date_modified = Date.now();
@@ -342,8 +340,6 @@ exports.update = async (oldmetadata, newmetadata, db, local=false) => {
             db.iindex.addLocalDocumentForWordObject(wordObject, newhash, countofThisWordInDoc);
         }
     }
-
-    return newmetadata;
 }
 
 /**

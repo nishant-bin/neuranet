@@ -183,18 +183,21 @@ exports.read = async (vector, metadata, notext, db_path) => {
 }
 
 /**
- * Updates the vector DB's vector with the new metadata provided.
- * @param {array} vector The vector to update
+ * Updates the vector DB's old metadata with the new metadata provided.
  * @param {object} oldmetadata The old metadata
  * @param {object} newmetadata The new metadata
  * @param {string} db_path The DB path where this DB is stored. Must be a folder.
  * @throws Exception on errors 
  */
-exports.update = async (vector, oldmetadata, newmetadata, text, embedding_generator, db_path) => {
-    if (!vector) {_log_error("Update called without a proper index vector", db_path, "Vector to update not provided"); return false;}
-    
-    await exports.delete(vector, oldmetadata, db_path);  // delete or try to delete first - this will remove it from which ever vector DB has it (including distributed)
-    return await exports.create(vector, newmetadata, text, embedding_generator, db_path);  // add it back
+exports.update = async (oldmetadata, newmetadata, db_path) => {
+    const dbToUse = dbs[_get_db_hash(db_path)];
+    const metadataObjectOld = await _readMetadataObject(dbToUse, oldmetadata), 
+        metadataObjectNew = await _readMetadataObject(dbToUse, newmetadata, true);
+    if (!metadataObjectOld) throw new Error("Metadata to update from not found");
+    if (!newmetadata) throw new Error("Metadata to update to not created");
+    metadataObjectNew.vector_objects = metadataObjectOld.vector_objects;
+    const mdindexfileNew = _getFilePathForMetadata(newmetadata), mdindexfileOld = _getFilePathForMetadata(oldmetadata);
+    await memfs.writeFile(mdindexfileNew, JSON.stringify(mdobject)); memfs.rm(mdindexfileOld);
 }
 
 /**
@@ -266,7 +269,13 @@ exports.query = async function(vectorToFindSimilarTo, topK, min_distance, metada
  * @param {object} metadata The metadata for all these vectors
  * @param {string} db_path The DB path where this DB is stored. Must be a folder.
  */
-exports.uningest = async (vectors, metadata, db_path) => { for (const vector of vectors) await exports.delete(vector, metadata, db_path); }
+exports.uningest = async (metadata, db_path) => { 
+    const metadataToDelete = await _readMetadataObject(metadata);
+    if (!metadataToDelete) return;  // already doesn't exist, treat as success
+
+    const vectorsToDelete = metadataToDelete.vector_objects;
+    for (const vector of vectorsToDelete) await exports.delete(vector, metadata, db_path); 
+}
 
 /**
  * Ingests a stream into the database. Memory efficient and should be the function of choice to use
@@ -361,9 +370,9 @@ exports.get_vectordb = async function(db_path, embedding_generator, metadata_doc
             exports.ingeststream(metadata, stream, encoding, chunk_size, split_separators, overlap, 
                 embedding_generator, db_path),
         read: async (vector, metadata, notext) => exports.read(vector, metadata, notext, db_path),
-        update: async (vector, oldmetadata, newmetadata, text) => exports.update(vector, oldmetadata, newmetadata, text, embedding_generator, db_path),
+        update: async (oldmetadata, newmetadata) => exports.update(oldmetadata, newmetadata, db_path),
         delete: async (vector, metadata) =>  exports.delete(vector, metadata, db_path),    
-        uningest: async (vectors, metadata) => exports.uningest(vectors, metadata, db_path),
+        uningest: async (metadata) => exports.uningest(metadata, db_path),
         query: async (vectorToFindSimilarTo, topK, min_distance, metadata_filter_function_or_metadata, notext) => exports.query(
             vectorToFindSimilarTo, topK, min_distance, metadata_filter_function_or_metadata, notext, db_path),
         flush_db: async _ => exports.save_db(db_path, true),

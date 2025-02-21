@@ -142,25 +142,25 @@ async function uningestfile(pathIn, id, org, brainid) {
 		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
     }
 
-    // delete from the TF.IDF DB
-    const docID = _getDocID(pathIn), tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid), 
+    try {
+        // delete from the TF.IDF DB
+        const docID = _getDocID(pathIn), tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid), 
         docsFound = await tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
         metadata = docsFound.length > 0 ? docsFound[0].metadata : null;
-    if (!metadata) {
-        LOG.error(`Document to uningest at path ${pathIn} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
-        return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
-    } else await tfidfDB.delete(metadata);
-    LOG.info(`TF.IDF DB uningestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
+        if (!metadata) {
+            LOG.error(`Document to uningest at path ${pathIn} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
+            return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
+        } else await tfidfDB.delete(metadata);
+        LOG.info(`TF.IDF DB uningestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
 
-    // delete from the Vector DB
-    const uningestResult = await vectordb.uningest(metadata);
-    if (!uningestResult) {
-        LOG.error(`Uningestion of the vectors failed for path ${pathIn}, ID ${id} and org ${org}.`);
+        // delete from the Vector DB
+        await vectordb.uningest(metadata);
+        LOG.info(`Vector DB uningestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
+        return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
+    } catch (err) {
+        LOG.error(`Document to uningest at path ${pathIn} for ID ${id} and org ${org} had errors: ${err}`);
         return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
-    } 
-    
-    LOG.info(`Vector DB uningestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
-    return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
+    }
 }
 
 /**
@@ -174,32 +174,32 @@ async function uningestfile(pathIn, id, org, brainid) {
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
  */
 async function renamefile(from, to, new_referencelink, id, org, brainid) {
-    // update TF.IDF DB 
-    const docID = _getDocID(from), tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid), 
-        docsFound = await tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
-        metadata = docsFound.length > 0 ? docsFound[0].metadata : null, 
-        new_referencelink_encoded = encodeURI(new_referencelink||_getDocID(to)),
-        newmetadata = {...(metadata||{}), referencelink: new_referencelink_encoded, fullpath: to}; 
-    newmetadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(to);
-    if (!metadata) {
-        LOG.error(`Document to rename at path ${path} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
-        return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
-    } else await tfidfDB.update(metadata, newmetadata);
+    try {
+        // update TF.IDF DB 
+        const docID = _getDocID(from), tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid), 
+            docsFound = await tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
+            metadata = docsFound.length > 0 ? docsFound[0].metadata : null, 
+            new_referencelink_encoded = encodeURI(new_referencelink||_getDocID(to)),
+            newmetadata = {...(metadata||{}), referencelink: new_referencelink_encoded, fullpath: to}; 
+        newmetadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(to);
+        if (!metadata) {
+            LOG.error(`Document to rename at path ${path} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
+            return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
+        } else await tfidfDB.update(metadata, newmetadata);
 
-    // update vector DB
-    let vectordb; try { vectordb = await _getVectorDBForIDAndOrgAndBrainID(id, org, brainid); } catch(err) { 
-        LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
-		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
+        // update vector DB
+        let vectordb; try { vectordb = await _getVectorDBForIDAndOrgAndBrainID(id, org, brainid); } catch(err) { 
+            LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
+            return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
+        }
+        await vectordb.update(metadata, newmetadata);
+
+        LOG.info(`Rename of file from ${from} to ${to} for ID ${id} and org ${org} succeeded.`)
+        return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
+    } catch (err) {
+        LOG.error(`Rename of file from ${from} to ${to} for ID ${id} and org ${org} had errors: ${err}`);
+        return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
     }
-
-    const updateResult = await vectordb.update(metadata, newmetadata);
-    if (!updateResult) {
-        LOG.error(`Renaming the vector file paths failed from path ${from} to path ${to} for ID ${id} and org ${org}.`);
-        return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};  
-    }
-
-    LOG.info(`Rename of file from ${from} to ${to} for ID ${id} and org ${org} succeeded.`)
-    return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
 }
 
 /**
