@@ -99,7 +99,7 @@ exports.search = async function(params, _llmstepDefinition) {
 		}
 	} 
 	if (!vectordbs.length) {	// no vector DB worked or found
-		const errMsg = `Can't instantiate any vector DBs user ID ${id} due to ${err}. Giving up.`;
+		const errMsg = `Can't instantiate any vector DBs user ID ${id}. Giving up.`;
 		params.return_error(errMsg, REASONS.INTERNAL); return;
 	}
 	let vectorResults = []; const topK_vectors = params.topK_vectors || aiModelObjectForSearch.topK_vectors;

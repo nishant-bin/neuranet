@@ -49,6 +49,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const memfs = require(`${CONSTANTS.LIBDIR}/memfs.js`);
+const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const conf = require(`${NEURANET_CONSTANTS.CONFDIR}/aidb.json`);
 const textsplitter = require(`${NEURANET_CONSTANTS.LIBDIR}/textsplitter.js`);
