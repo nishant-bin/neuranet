@@ -124,7 +124,7 @@ exports.emptydb = async (dbPathOrMemID, metadata_docid_key=METADATA_DOCID_KEY_DE
             const documentHashesReplies = await _getDistributedResultFromFunction(EMPTY_DB, "tfidfDocStore", "allDocumentHashes");
             for (const documentHashesReply of documentHashesReplies) allDocumentHashes = allDocumentHashes.concat(documentHashesReply);
         }
-        return allDocumentHashes;
+        return [... new Set(allDocumentHashes)];    // filter unique hashes only
     }
     EMPTY_DB.tfidfDocStore.totalDocsInDB = async local => (await EMPTY_DB.tfidfDocStore.allDocumentHashes(local)).length;
     EMPTY_DB.tfidfDocStore.localTotalDocsInDB = _ => (EMPTY_DB.tfidfDocStore.localDocumentHashes()).length;
@@ -348,8 +348,8 @@ exports.update = async (oldmetadata, newmetadata, db, local=false) => {
  * d is the document from the set D of all documents in the given database.
  * @param {string} query The query
  * @param {number} topK TopK where K is the max top documents to return. 
- * @param {function} filter_function Filter function to filter the documents, runs pre-query
- * @param {number} cutoff_score The cutoff score relative to the top document. From 0 to 1.
+ * @param {function} filter_function Filter function to filter the documents, runs pre-query, can be undefined.
+ * @param {number} cutoff_score The cutoff score relative to the top document. From 0 to 1, can be undefined.
  * @param {object} options An object with values below
  *                  {
  *                      ignore_coord: Do not use coord scores, true or false, 
@@ -359,10 +359,11 @@ exports.update = async (oldmetadata, newmetadata, db, local=false) => {
  *                      punish_verysmall_documents: If set to true then very small documents are punished 
  *                                                  as their total information content may be small
  *                      bm25: use the BM25 algorithm 
+ *                      noidf: Do not use IDF in final scores
  *                  }
- * @param {object} db The database to use
  * @param {string} lang The language for the query, if set to null it is auto-detected
- * @param {boolean} autocorrect Whether to autocorrect query's spelling mistakes, only works for English
+ * @param {boolean} autocorrect Whether to autocorrect query's spelling mistakes, only works for English, default is true
+ * @param {object} db The database to use
  * @returns {Array} The resulting documents as an array of {metadata, plus other stats} objects.
  */
 exports.query = async (query, topK, filter_function, cutoff_score, options={}, lang, autocorrect=true, db) => {
@@ -379,8 +380,10 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, l
     } 
     
     const queryWords = _getLangNormalizedWords(query, lang||langdetector.getISOLang(query), db, autocorrect), 
-        iindexSubset = await db.iindex.getIIndexSubsetForWords(queryWords), totalDocsInDB = await db.tfidfDocStore.totalDocsInDB(),
-        relevantDocs = db.iindex.getDocumentHashesForWords(queryWords, iindexSubset), queryCache = {words:{}};
+        iindexSubset = await db.iindex.getIIndexSubsetForWords(queryWords), 
+        totalDocsInDB = options.noidf ? 1 : await db.tfidfDocStore.totalDocsInDB(), // value not used if IDF is disabled
+        relevantDocs = db.iindex.getDocumentHashesForWords(queryWords, iindexSubset), queryCache = {words:{}},
+        documentsWithWordsCount = options.noidf ? {} : db.iindex.getCountOfDocumentsWithWords(queryWords, iindexSubset);    // value not used if IDF is disabled
     let highestScore = 0; 
     for (const docHash of relevantDocs) {
         const document = await db.tfidfDocStore.data(docHash); 
@@ -390,9 +393,7 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, l
         const tfAdjustmentFactor = options.bm25 ? _getBM25Adjustment(document.length, db) : // handle BM25 or opposite of it here
             options.punish_verysmall_documents ? _getVerySmallDocumentPunishment(document.length, db) : 1;  
 
-        let scoreThisDoc = 0, tfScoreThisDoc = 0, queryWordsFoundInThisDoc = 0, 
-            documentsWithWordsCount = queryCache.documentsWithWordsCount || db.iindex.getCountOfDocumentsWithWords(queryWords, iindexSubset);
-        if (!queryCache.documentsWithWordsCount) queryCache.documentsWithWordsCount = documentsWithWordsCount;
+        let scoreThisDoc = 0, tfScoreThisDoc = 0, queryWordsFoundInThisDoc = 0;
 
         for (const queryWord of queryWords) {
             if (!queryCache.words[queryWord]) queryCache.words[queryWord] = {};
@@ -405,8 +406,8 @@ exports.query = async (query, topK, filter_function, cutoff_score, options={}, l
 
             const tf = db.iindex.getWordCountForDocument(queryWord, docHash, iindexSubset)/document.length, 
                 tfAdusted = tf*tfAdjustmentFactor,
-                docsWithThisWord = documentsWithWordsCount[queryWord],
-                idf = 1+Math.log10(totalDocsInDB/(docsWithThisWord+1)), tfidf = tfAdusted*idf;
+                docsWithThisWord = documentsWithWordsCount[queryWord]||0,
+                idf = options.noidf ? 1 : 1+Math.log10(totalDocsInDB/(docsWithThisWord+1)), tfidf = tfAdusted*idf;
             tfScoreThisDoc += tfAdusted; scoreThisDoc += tfidf; if (tfAdusted) queryWordsFoundInThisDoc++;
         }
 

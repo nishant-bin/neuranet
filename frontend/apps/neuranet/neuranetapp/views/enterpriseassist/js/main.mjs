@@ -24,7 +24,7 @@ function initView(data) {
     data.VIEW_PATH = data.viewpath;
     VIEW_PATH = data.viewpath;
     data.show_ai_training = isAdmin;
-    data.collapse_ai_training = false;
+    data.collapse_ai_training = true;
     data.extrainfo = {id: session.get(APP_CONSTANTS.USERID).toString(), 
         org: session.get(APP_CONSTANTS.USERORG).toString(), aiappid: data.activeaiapp.id, mode: "trainaiapp"};
     data.extrainfo_base64_json = util.stringToBase64(JSON.stringify(data.extrainfo));

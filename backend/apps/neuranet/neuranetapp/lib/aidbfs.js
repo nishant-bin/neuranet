@@ -233,6 +233,7 @@ async function _getVectorDBForIDAndOrgAndBrainID(id, org, brainid, embeddingsGen
     // TODO: ensure the brainid which is same as aiappid is mapped to the user here as a security check
     const vectordb = await aivectordb.get_vectordb(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org, brainid)}/vectordb`, 
         embeddingsGenerator, NEURANET_CONSTANTS.NEURANET_DOCID, multithreaded);
+    vectordb.aiappid = brainid;
     return vectordb;
 }
 
@@ -240,6 +241,7 @@ async function _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid) {
     // TODO: ensure the brainid which is same as aiappid is mapped to the user here as a security check
     const tfidfdb = await aitfidfdb.get_tfidf_db(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org, brainid)}/tfidfdb`, 
         NEURANET_CONSTANTS.NEURANET_DOCID, NEURANET_CONSTANTS.NEURANET_LANGID, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`);
+    tfidfdb.aiappid = brainid;
     return tfidfdb;
 }
 

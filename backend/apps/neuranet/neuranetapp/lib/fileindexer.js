@@ -65,6 +65,21 @@ exports.addFileToCMSRepository = async function(id, org, contentsOrStream, cmspa
 }
 
 /**
+ * Reads the given file from the backend CMS repository. 
+ * 
+ * @param {string} id The user ID of the user ingesting this file.
+ * @param {string} org The org of the user ID of the user ingesting this file.
+ * @param {string} fullpath The full path of the file
+ * @param {object} extrainfo Extrainfo object associated with this upload.
+ * @returns {object} Returns text contents of the file.
+ */
+exports.getTextContents = async function(id, org, fullpath, extrainfo) {
+    const cmspath = cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, fullpath, extrainfo);
+    const indexer = await _getFileIndexer(fullpath, id, org, cmspath, extrainfo);
+    return indexer.getTextContents();
+}
+
+/**
  * Removes the given file from the backend CMS repository. Will also issue delete file event so the
  * file is then uningested into the backend AI databases, unless told to otherwise.
  * 
