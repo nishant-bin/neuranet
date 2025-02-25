@@ -4,15 +4,14 @@
  */
 const fs = require("fs");
 const path = require("path");
-const zlib = require("zlib");
 const fspromises = fs.promises;
 const stream = require("stream");
+const cyrptomod = require("crypto");
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 const quotas = require(`${XBIN_CONSTANTS.LIB_DIR}/quotas.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const getfiles = require(`${XBIN_CONSTANTS.API_DIR}/getfiles.js`);
-const ADDABLE_STREAM_TIMEOUT = XBIN_CONSTANTS.CONF.UPLOAD_STREAM_MAX_WAIT||120000;	// 2 minutes to receive new data else we timeout
 
 const UTF8CONTENTTYPE_MATCHER = /^\s*?text.*?;\s*charset\s*=\s*utf-?8\s*$/;
 let _existing_paths = [];	// holds active file paths for append or write operations
@@ -23,8 +22,8 @@ exports.doService = async (jsonReq, _servObject, headers, _url) => {
 	LOG.debug("Got uploadfile request for path: " + jsonReq.path);
 	const headersOrLoginIDAndOrg = jsonReq.id && jsonReq.org ? 
 		{xbin_id: jsonReq.id, xbin_org: jsonReq.org, headers} : headers;
-	const transferID = jsonReq.transfer_id || Date.now(), 
-		fullpath = await cms.getFullPath(headersOrLoginIDAndOrg, jsonReq.path, jsonReq.extraInfo);
+	const fullpath = await cms.getFullPath(headersOrLoginIDAndOrg, jsonReq.path, jsonReq.extraInfo),
+		transferID = jsonReq.transfer_id || _md5Hash(`${fullpath}.${Date.now()}`);
 	if (!await cms.isSecure(headersOrLoginIDAndOrg, fullpath, jsonReq.extraInfo)) {LOG.error(`Path security validation failure: ${jsonReq.path}`); return CONSTANTS.FALSE_RESULT;}
 	
 	LOG.debug(`Resolved full path for upload file: ${fullpath}. Transfer ID is ${transferID}`);
@@ -84,7 +83,7 @@ exports.uploadFile = async function(xbin_id, xbin_org, readstreamOrContents, cms
 
 exports.writeChunk = async function(headersOrLoginIDAndOrg, transferid, fullpath, chunk, startOfFile, 
 		endOfFile, comment, extraInfo, noevent) {
-	const temppath = path.resolve(`${fullpath}${transferid}${XBIN_CONSTANTS.XBIN_TEMP_FILE_SUFFIX}`);
+	const temppath = path.resolve(`${fullpath}.${transferid}${XBIN_CONSTANTS.XBIN_TEMP_FILE_SUFFIX}`);
 	const cmspath = await cms.getCMSRootRelativePath(headersOrLoginIDAndOrg, fullpath, extraInfo);
 
 	if (startOfFile) {	// delete the old files if they exist
@@ -118,7 +117,7 @@ exports.writeUTF8File = async function (headersOrLoginIDAndOrg, inpath, data, ex
 
 	const cmsHostingFolder = await cms.getCMSRootRelativePath(headersOrLoginIDAndOrg, path.dirname(fullpath), extraInfo); 
 	try { await exports.createFolder(headersOrLoginIDAndOrg, cmsHostingFolder, extraInfo); }	// create the hosting folder if needed.
-	catch (err) {LOG.error(`Error uploading file ${fullpath}, parent folder creation failed. Error is ${err}`); return CONSTANTS.FALSE_RESULT;}
+	catch (err) {LOG.error(`Error uploading file ${fullpath}, parent folder creation failed. Error is ${err}`); throw err;}
 
 	let additionalBytesToWrite = data.length; 
 	try {additionalBytesToWrite = data.length - (await exports.getFileStats(fullpath)).size;} catch (err) {};	// file may not exist at all
@@ -298,36 +297,30 @@ async function _getSecureFullPath(headers, inpath, extraInfo) {
  * @param {boolean} isZippable - Indicates if the file should be compressed.
  */
 async function _appendOrWrite(filepath, data, startOfFile, endOfFile, isZippable) {
-	try {
-		if (isZippable) data = zlib.gzipSync(data); // Compress the data if zippable is true.
-	
+	try {	
 		if (startOfFile && !_existing_paths.includes(filepath)) { // extra condition check because sometimes start is true multiple times for the same file
-			fs.writeFileSync(filepath, data); _existing_paths.push(filepath); // always overwrite for a newfile upload event
-			LOG.info(`** File created at ${filepath} with initial data. **`);
+			await fs.promises.writeFile(filepath, data); _existing_paths.push(filepath); // always overwrite for a newfile upload event
+			LOG.info(`File created at ${filepath} with initial data.`);
 		} else {
-			const writeStream = fs.createWriteStream(filepath, { flags: 'a' });
-			writeStream.write(data); writeStream.end();
-	
-			await Promise.race([
-				new Promise((resolve, reject) => {
-				writeStream.on('finish', resolve);
-				writeStream.on('error', reject);
-				}),
-				new Promise((_, reject) => setTimeout(() => 
-						reject(new Error('Stream write timeout')), ADDABLE_STREAM_TIMEOUT))
-			]);
-	
-			LOG.info(`** Data appended to ${filepath}. **`);
+			await fspromises.appendFile(filepath, data);
+			LOG.info(`Data appended to ${filepath}.`);
 		}
 	
 		if (endOfFile) { 
 			_existing_paths = _existing_paths.filter(path => path!=filepath);
-			LOG.info(`** End of file reached for ${filepath}. **`);
+			if (isZippable) {	// Compress the file if zippable is true.
+				await utils.gzipFile(filepath, filepath+".gz"); 
+				await fspromises.rename(filepath+".gz", filepath);
+			}
+			LOG.info(`End of file reached for ${filepath}.`);
 		}
 	} catch (error) {
-	  	LOG.error(`** Skipping the chunk in _appendOrWrite for ${filepath} due to: ${error.message} **`);
+	  	LOG.error(`Skipping the chunk in _appendOrWrite for ${filepath} due to: ${error.message}`);
+		throw error;
 	}
 }
+
+const _md5Hash = text => cyrptomod.createHash("md5").update(text).digest("hex");
 
 const validateRequest = jsonReq => (jsonReq && jsonReq.path && jsonReq.data && 
 	(jsonReq.startOfFile !== undefined) && (jsonReq.endOfFile  !== undefined) && (jsonReq.startOfFile || jsonReq.transfer_id));

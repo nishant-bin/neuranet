@@ -17,7 +17,7 @@ exports.initSync = _ => blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, m
 
     const usermemory = _getUserMemory(message.id, message.org);
     const percentComplete = _calculateAndUpdatePercentage(message);
-    const thisFilePreviouslyDone = usermemory[message.cmspath].done;    
+    const thisFilePreviouslyDone = usermemory[message.cmspath]?.done;    
     usermemory[message.cmspath] = {...message, path: message.cmspath,   // overwrite full path as we don't want to send this out
         done: thisFilePreviouslyDone || (message.type == NEURANET_CONSTANTS.EVENTS.AIDB_FILE_PROCESSED),    // if done previously a delayed processing message delivery may override it, so prevent that here
         result: message.result, percentage: percentComplete};
