@@ -40,7 +40,7 @@ div#chat {
     border: 1px solid #03B3FF;
     border-radius: 0.5em;
     box-sizing: border-box;
-    height: 80%;
+    height: calc(100% - 10em);
     margin-bottom: 2em;
     padding: 0.5em;
     display: flex;
@@ -88,30 +88,79 @@ span#mainspan {
 
 div#message {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     justify-content: space-between;
     flex-grow: 1;
-    height: calc(20% - 2em);
+    height: 8em;
     overflow: auto;
     position: relative;
+    border: 1px solid #03B3FF;
+    border-radius: 0.5em;
+}
+div#message div#disabled {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    background-color: #f4f4f4;
+    opacity: 0.5;
+    display: none;
 }
 textarea#messagearea {
     width: 100%;
     height: 100%;
     outline: none;
-    border: 1px solid #03B3FF;
     resize: none;
-    border-radius: 0.5em;
-    padding: 1em 7em 1em 1em;
+    padding: 1em;
     font-family: sans-serif;
     color: #0082ba;
+    border: 0;
 }
-img#send {
-    position: absolute;
-    right: 2em;
-    top: calc((100% - 3em) / 2);
-    height: 3em;
-    width: 3em;
+span#messagecontrols {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    grid-gap: 1em;
+    align-items: center;
+    height: 2em;
+    margin: 0.5em;
+    font-size: smaller;
+    color: #007BB0;
+}
+span#messagecontrols img {height: 1.8em; width: 1.8em;}
+span#messagecontrols span#attachedfiles {
+    flex-grow: 1; 
+    margin-left: 0.2em;
+}
+span#messagecontrols span#attachedfiles span.fileicon {
+    user-select: none;
+    border: 1px solid #87dbff;
+    padding: 0.5em;
+    font-size: x-small;
+    box-sizing: border-box;
+    border-radius: 0.5em;
+    align-items: center;
+    display: flex;
+    flex-direction: row;
+    width: 8em;
+    color: #00a1e6;
+}
+span#messagecontrols span#attachedfiles span.fileicon img#fileicon {height: 1em; width: 1em;}
+span#messagecontrols span#attachedfiles span.fileicon span#name {
+    max-width: 6em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 6em;
+    margin-left: 0.5em;
+    min-width: 6em;
+}
+span#messagecontrols span#attachedfiles span.fileicon img#cross {
+    height: 1.5em;
+    width: 1.5em;
+    position: relative;
+    top: -1em;
+    left: -0.6em;
+    visibility: hidden;
 }
 
 span#usercontentholder, span#aicontentholder {
@@ -156,11 +205,6 @@ span#userprompt, span#airesponse {
 span#spacer {flex-grow: 1;}
 span#userprompt {background-color: #C8EDFF;}
 span#airesponse {background-color: #EAF8FF;}
-
-textarea.readonly {
-    background-color: #f4f4f4;
-    color: #d6dfe3;
-}
 </style>
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_START}}}
 	div#start {flex-direction: column;}
@@ -186,13 +230,22 @@ textarea.readonly {
 
     <div id="start" class="visible">
         <span id="mainimage"><img id="mainimage" src="{{{COMPONENT_PATH}}}/img/robot.svg"></span>
-        <span id="mainspan"><p>{{{i18n.NeuralNetReady}}}</p><p>{{i18n.TypeMessage}}</p></span>
+        <span id="mainspan"><p>{{i18n.NeuralNetReady}}</p><p>{{i18n.TypeMessage}}</p></span>
     </div>
 </div>
 
 <div id="message">
-    <textarea id="messagearea"></textarea>
-    <img id="send" onclick="monkshu_env.components['chat-box'].send(this)" src="{{{COMPONENT_PATH}}}/img/send.svg">
+    <div id="disabled"></div>
+    <textarea id="messagearea" onkeyup="
+        const multiline = this.parentNode.querySelector('input#multiline').checked;
+        if (event.key == 'Enter' && (!multiline)) monkshu_env.components['chat-box'].send(this)
+    "></textarea>
+    <span id="messagecontrols">
+        <span id="attachedfiles"><!-- attached files go here --></span>
+        <input type="checkbox" id="multiline" onclick="this.parentNode.parentNode.querySelector('textarea#messagearea').focus()"><label for="multiline">{{i18n.Multiline}}</label>
+        {{#ATTACHMENT_ALLOWED}}<img id="attach" onclick="monkshu_env.components['chat-box'].attach(this)" src="{{{COMPONENT_PATH}}}/img/attach.svg">{{/ATTACHMENT_ALLOWED}}
+        <img id="send" onclick="monkshu_env.components['chat-box'].send(this)" src="{{{COMPONENT_PATH}}}/img/send.svg">
+    </span>
 </div>
 
 <template id="chatresponse_insertion_template">
@@ -216,6 +269,17 @@ textarea.readonly {
                 this.parentNode.parentNode.dataset.content, 
                 'text/markdown; charset=UTF-8', 
                 `chat_${new Date(Date.now()).toLocaleString().replaceAll(' ', '_').replaceAll(',', '')}.html`)">
+    </span>
+</template>
+
+<template id="fileattachment_insertion_template">
+    <span class="fileicon" id="&#123;&#123;&#123;fileid&#125;&#125;&#125;" 
+            onmouseover="this.querySelector('img#cross').style.visibility='visible'"
+            onmouseleave="this.querySelector('img#cross').style.visibility='hidden'">
+        <img id="fileicon" src="{{{COMPONENT_PATH}}}/img/file.svg">
+        <span id="name">&#123;&#123;filename&#125;&#125;</span>
+        <img id="cross" src="{{{COMPONENT_PATH}}}/img/cross.svg" 
+            onclick="monkshu_env.components['chat-box'].detach(this, '&#123;&#123;&#123;fileid&#125;&#125;&#125;')">
     </span>
 </template>
 

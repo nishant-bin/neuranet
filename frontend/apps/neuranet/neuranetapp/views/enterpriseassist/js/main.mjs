@@ -71,9 +71,9 @@ async function processAssistantResponse(result, _chatboxid, _aiappid) {
     return {ok: true, response: resultFinal};
 }
 
-const getAssistantRequest = (question, _chatboxid, aiappid) => {
+const getAssistantRequest = (question, files, _chatboxid, aiappid) => {
     return {id: session.get(APP_CONSTANTS.USERID), org: session.get(APP_CONSTANTS.USERORG), question, 
-        session_id: chatsessionID, aiappid};
+        session_id: chatsessionID, aiappid, files};
 }
 
 export const main = {initView, getNotifications, processAssistantResponse, getAssistantRequest};

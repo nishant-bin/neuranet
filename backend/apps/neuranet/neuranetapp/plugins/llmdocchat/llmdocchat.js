@@ -22,12 +22,15 @@
  */
 
 const mustache = require("mustache");
+const {Readable} = require("stream");
 const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const llmchat = require(`${NEURANET_CONSTANTS.LIBDIR}/llmchat.js`);
+const textextractor = require(`${NEURANET_CONSTANTS.LIBDIR}/textextractor.js`);
 const llmflowrunner = require(`${NEURANET_CONSTANTS.LIBDIR}/llmflowrunner.js`);
+const neuranetutils = require(`${NEURANET_CONSTANTS.LIBDIR}/neuranetutils.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
 
 const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-openai", 
@@ -41,9 +44,13 @@ const REASONS = llmflowrunner.REASONS, CHAT_MODEL_DEFAULT = "chat-knowledgebase-
  *                            org - User's Org
  *                            session_id - The session ID for a previous session if this is a continuation
  *                            prompt - The chat prompt
+ *                            question - The question asked
+ * 							  files - Attached files to the question
  * 							  brainid - The brain ID
  * 							  auto_summary - Set to true to reduce session size but can cause response errors
  * 							  model - The chat model to use, with overrides
+ * 							  documents - Documents to use for the chat
+ * 							  matchers_for_reference_links - The matchers for reference links
  *                            <anything else> - Used to expand the prompt, including user's queries
  * @param {Object} _llmstepDefinition Not used.
  * 
@@ -100,8 +107,19 @@ exports.answer = async (params) => {
 		}
 		metadatasForResponse.push(metadataThis) 
 	};
+	let filesForPrompt = undefined; if (params.files) for (const file of params.files) {
+		const textsteam = await textextractor.extractTextAsStreams(Readable.from(Buffer.from(file.bytes64, "base64")), file.filename);
+		const text = await neuranetutils.readFullFile(textsteam, "utf8");
+		if (text) {
+			if (!filesForPrompt) filesForPrompt = []; 
+			filesForPrompt.push({filename: file.filename, text}); 
+			const metadataForReferenceThisFile = {}; 
+			metadataForReferenceThisFile[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY] = file.filename;
+			metadatasForResponse.push(metadataForReferenceThisFile);
+		}
+	}
 	const knowledgebasePromptTemplate =  params[`prompt_${languageDetectedForQuestion}`] || params.prompt;
-	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, {...params, documents: documentsForPrompt});
+	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, {...params, documents: documentsForPrompt, files: filesForPrompt});
 
 	const paramsChat = { id, org, maintain_session: true, session_id, model: aiModelObjectForChat,
         session: [{"role": aiModelObjectForChat.user_role, "content": knowledegebaseWithQuestion}],

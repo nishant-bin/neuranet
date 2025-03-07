@@ -18,6 +18,7 @@ export const i18n = {
 "ChatAIError": "AI error in processing. Please reload the page to start a new conversation.",
 "NeuralNetReady": "AI Neural Network<br>Ready...",
 "TypeMessage": "Type Message",
+"Multiline": "Multiline",
 
 "ViewLabel_gencode": "Generate Code",
 "ViewLabel_enterpriseassist": "Enterprise Assistant",

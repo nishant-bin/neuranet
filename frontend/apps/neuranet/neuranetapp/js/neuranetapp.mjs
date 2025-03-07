@@ -22,7 +22,7 @@ const main = async (data, mainLoginAppModule) => {
     loginappMain = mainLoginAppModule; loginappMain.addGoHomeListener(gohome);
     APP_CONSTANTS.VIEWS_PATH = util.resolveURL(`${APP_CONSTANTS.EMBEDDED_APP_PATH}/views`);
     await _createdata(data); 
-    data.maincontent = await router.loadHTML(MAIN_HTML, {...data}); 
+    data.maincontent = await router.loadHTML(MAIN_HTML, {...data});     // this is the main entry point - main.mjs of loginapp calls it
 }
 
 async function refreshAIApps() {
