@@ -15,9 +15,9 @@ users: ["*"]                                # the * means all users, else must b
 admins: ["thecompany@tekmonks.com"]         # the admins for this app - they can train for example
 api_uploads_cms_path: uploads               # where files are uploaded by index, unindex APIs
 generated_files_path: _neuranet_generated   # where generated files are placed
-ai_cost_quota: 0.6                          # cost quota for the users
-disable_quota_checks: false                 # disable quotas if true
-disable_model_usage_logging: false          # if true, ai model usage logging
+ai_cost_quota: 0.6                          # cost quota for the users, -1 disables checks also
+disable_quota_checks: true                  # disable quotas if true
+disable_model_usage_logging: true           # if true, ai model usage logging
 
 # all flows are sequence of commands which follow the same syntax - command, in, out - in is the input
 # to the command, out is the variable holding the output and name points to the command module and entry
@@ -115,25 +115,26 @@ llm_flow:
         फिर से लिखा गया प्रश्न है:
     out: searchquery
 
-  - command: doctfidfsearch.search          # only if forced, perfrom a non-llm search
-    condition_js: |                         # _js means run the code - assign value to the property
-      if (request.force_nonllm_search) return true; else return false;
+  - command: doctfidfsearch.search          
+    condition_js: |                         # _js means run the code - assign value to the property, condition being false skips the module
+      if (request.force_llm_search) return false; else return true;
     in: 
       query: "{{{searchquery}}}"                  # inbuilt variable contains the user's query
-      topK_tfidf: 3
+      topK: 3
       cutoff_score_tfidf_js: request.cutoff_score_tfidf || 0.40
-      topK_vectors: 3
-      min_distance_vectors: 0
+      embeddings_model: 
+        name: embedding-openai
       aiappid: "{{{aiappid}}}"  
       bridges_js: return (request.bridges||[aiappid])
       metadata_filter_function: "{{{request.metadata_filter_function}}}"
       punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
       bm25_js: "return request.bm25 !== undefined ? request.bm25 : false"
+      chunk_size: 128000
     out: airesponse.documents
 
-  - command: docvectorsearch.search         # unless forced, this is the default
+  - command: docvectorsearch.search         
     condition_js: |
-      if (request.force_nonllm_search) return false; else return true;
+      if (request.force_llm_search) return true; else return false;
     in: 
       query: "{{{searchquery}}}"
       topK_tfidf: 3
@@ -161,10 +162,17 @@ llm_flow:
         - (?:.+\/)?_neuranet_generated\/summary_(.+)\.txt
         - (?:.+\/)?_neuranet_generated\/reworded_(.+)\.txt
       documents_js: return airesponse.documents  
+      files_js: return request.files
       prompt_noinflate: |                   # means do not inflate this at the flow engine - the calling command will use it as is
-        Answer the following question only using the documents provided below.
-        Question:
-        {{{question}}}
+        Answer the following question only using the documents provided below. 
+        {{#files.length}}Also use information from the files attached.{{/files.length}}
+
+        {{#files.length}}Files attached:{{/files.length}}
+        {{#files}}
+        Filename: {{{filename}}}
+        {{{text}}}
+
+        {{/files}}
 
         Documents:
         {{#documents}}
@@ -172,11 +180,20 @@ llm_flow:
 
         {{/documents}}
 
+        Question:
+        {{{question}}}
+
         The answer is:
       prompt_zh_noinflate: |                # means do not inflate this at the flow engine - the calling command will use it as is
         仅使用下面提供的文件回答以下问题。
-        问题：
-        {{{question}}}
+        {{#files.length}}也使用附件中的信息。{{/files.length}}
+
+        {{#files.length}}附件：{{/files.length}}
+        {{#files}}
+        文件名：{{{filename}}}
+        {{{text}}}
+
+        {{/files}}
 
         文件：
         {{#documents}}
@@ -184,23 +201,41 @@ llm_flow:
 
         {{/documents}}
 
-        答案是：
-      prompt_ja_noinflate: |                   
-        以下に提供される文書のみを使用して、次の質問に答えてください。
-        質問：
+        问题：
         {{{question}}}
 
-        書類:
+        答案是：
+      prompt_ja_noinflate: |                   
+        以下の質問には、下記のドキュメントのみを使用して回答してください。
+        {{#files.length}}添付ファイルの情報も使用してください。{{/files.length}}
+
+        {{#files.length}}添付ファイル:{{/files.length}}
+        {{#files}}
+        ファイル名: {{{filename}}}
+        {{{text}}}
+
+        {{/files}}
+
+        ドキュメント:
         {{#documents}}
         {{{content}}}
 
         {{/documents}}
 
+        質問:
+        {{{question}}}
+
         答えは次のとおりです:
       prompt_hi_noinflate: |                   # means do not inflate this at the flow engine - the calling command will use it as is
         निम्नलिखित प्रश्न का उत्तर केवल नीचे दिए गए दस्तावेज़ों का उपयोग करके दें।
-        सवाल:
-        {{{question}}}
+        {{#files.length}}संलग्न फ़ाइलों से जानकारी का भी उपयोग करें।{{/files.length}}
+
+        {{#files.length}}संलग्न फ़ाइलें:{{/files.length}}
+        {{#files}}
+        फ़ाइल नाम: {{{filename}}}
+        {{{text}}}
+
+        {{/files}}
 
         दस्तावेज़:
         {{#documents}}
@@ -208,32 +243,36 @@ llm_flow:
 
         {{/documents}}
 
-        जवाब है:
+        प्रश्न:
+        {{{question}}}
+
+        उत्तर है:
       model: 
         name: chat-knowledgebase-openai
     out: airesponse                         # the final response must output to this property - airesponse for LLM flows
 
 
 docsearch_flow:
-  - command: doctfidfsearch.search          # only if forced, perfrom a non-llm search
-    condition_js: |                         # _js means run the code - assign value to the property
-      if (request.force_nonllm_search) return true; else return false;
+  - command: doctfidfsearch.search         
+    condition_js: |                         # _js means run the code - assign value to the property, condition being false skips the module
+      if (request.force_llm_search) return false; else return true;
     in: 
       query: "{{{query}}}"                  # inbuilt variable contains the user's query
-      topK_tfidf: 3
+      topK: 6
       cutoff_score_tfidf_js: request.cutoff_score_tfidf || 0.40
-      topK_vectors: 3
-      min_distance_vectors: 0
+      embeddings_model: 
+        name: embedding-openai
       aiappid: "{{{aiappid}}}"  
       bridges_js: return (request.bridges||[aiappid])
       metadata_filter_function: "{{{request.metadata_filter_function}}}"
       punish_verysmall_documents_js: "return request.punish_verysmall_documents !== undefined ? request.punish_verysmall_documents : false"
       bm25_js: "return request.bm25 !== undefined ? request.bm25 : false"
+      chunk_size: 20000
     out: airesponse.documents
 
-  - command: docvectorsearch.search         # unless forced, this is the default
+  - command: docvectorsearch.search         # unless forced, this is not the default
     condition_js: |
-      if (request.force_nonllm_search) return false; else return true;
+      if (request.force_llm_search) return true; else return false;
     in: 
       query: "{{{query}}}"
       topK_tfidf: 3
