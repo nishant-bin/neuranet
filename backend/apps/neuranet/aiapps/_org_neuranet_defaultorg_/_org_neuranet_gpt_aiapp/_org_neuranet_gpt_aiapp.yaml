@@ -23,8 +23,44 @@ llm_flow:
       session_id: "{{{request.session_id}}}" 
       auto_summary: false                   # controls session auto-summary, setting to true will lead to random errors but shorter sessions        
       question: "{{{query}}}"
+      files_js: return request.files        # _js means evaluate Javascript to find the value
       aiappid: "{{{aiappid}}}"
-      prompt_noinflate: "{{{question}}}"    # means do not inflate this at the flow engine - the calling command will use it as is
+      prompt_noinflate: |                   # means do not inflate this at the flow engine - the calling command will use it as is
+        {{#files.length}}Files attached:{{/files.length}}
+        {{#files}}
+        Filename: {{{filename}}}
+        {{{text}}}
+
+        {{/files}}
+
+        {{{question}}}
+      prompt_zh_noinflate: |
+        {{#files.length}}文件附加:{{/files.length}}
+        {{#files}}
+        文件名: {{{filename}}}
+        {{{text}}}
+
+        {{/files}}
+
+        {{{question}}}
+      prompt_ja_noinflate: |                   
+        {{#files.length}}ファイル添付:{{/files.length}}
+        {{#files}}
+        ファイル名: {{{filename}}}
+        {{{text}}}
+
+        {{/files}}
+
+        {{{question}}}
+      prompt_hi_noinflate: |                   
+        {{#files.length}}फाइलें:{{/files.length}}
+        {{#files}}
+        फ़ाइल नाम: {{{filename}}}
+        {{{text}}}
+
+        {{/files}}
+
+        {{{question}}}
       model: 
         name: simplellm-openai
     out: airesponse                         # the final response must output to this property - airesponse for LLM flows
