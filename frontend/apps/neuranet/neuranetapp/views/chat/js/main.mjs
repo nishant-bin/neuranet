@@ -25,8 +25,8 @@ async function processChatResponse(result, _chatboxid) {
     return {ok: true, response: result.response};
 }
 
-function getChatRequest(question, _chatboxid, aiappid) {
-    return {id: session.get(APP_CONSTANTS.USERID), org: session.get(APP_CONSTANTS.USERORG), question, 
+function getChatRequest(question, files, _chatboxid, aiappid) {
+    return {id: session.get(APP_CONSTANTS.USERID), org: session.get(APP_CONSTANTS.USERORG), question, files,
         session_id: chatsessionID, aiappid};
 }
 

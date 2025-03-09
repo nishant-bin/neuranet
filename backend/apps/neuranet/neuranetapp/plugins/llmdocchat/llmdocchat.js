@@ -119,7 +119,8 @@ exports.answer = async (params) => {
 		}
 	}
 	const knowledgebasePromptTemplate =  params[`prompt_${languageDetectedForQuestion}`] || params.prompt;
-	const knowledegebaseWithQuestion = mustache.render(knowledgebasePromptTemplate, {...params, documents: documentsForPrompt, files: filesForPrompt});
+	const knowledegebaseWithQuestion = mustache.render(
+		knowledgebasePromptTemplate, {...params, documents: documentsForPrompt, files: filesForPrompt}).trim();
 
 	const paramsChat = { id, org, maintain_session: true, session_id, model: aiModelObjectForChat,
         session: [{"role": aiModelObjectForChat.user_role, "content": knowledegebaseWithQuestion}],

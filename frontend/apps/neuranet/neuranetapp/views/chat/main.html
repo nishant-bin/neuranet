@@ -5,6 +5,6 @@ chat-box#generalchat {
 }
 </style>
 <chat-box id="generalchat" chatapi="{{APP_CONSTANTS.API_PATH}}/{{aiendpoint}}"
-    attach="true" attachaccepts=".txt,.docx.,.pdf,.xlsx"
+    attach="true" attachaccepts=".txt,.docx.,.pdf,.xlsx" maxattachsize="4194304" maxattachsizeerror="{{i18n.MaxSizeError}}"
     onresult="window.monkshu_env.apps.neuranetapp.chat_main.processChatResponse(result, 'generalchat', '{{{activeaiapp.id}}}')"
-    onrequest="window.monkshu_env.apps.neuranetapp.chat_main.getChatRequest(prompt, 'generalchat', '{{{activeaiapp.id}}}')"></chat-box>
+    onrequest="window.monkshu_env.apps.neuranetapp.chat_main.getChatRequest(prompt, files, 'generalchat', '{{{activeaiapp.id}}}')"></chat-box>

@@ -19,6 +19,7 @@ export const i18n = {
 "NeuralNetReady": "AI Neural Network<br>Ready...",
 "TypeMessage": "Type Message",
 "Multiline": "Multiline",
+"MaxSizeError": "Please attach a file smaller than 4 MB",
 
 "ViewLabel_gencode": "Generate Code",
 "ViewLabel_enterpriseassist": "Enterprise Assistant",

@@ -40,8 +40,8 @@ div#chat {
     border: 1px solid #03B3FF;
     border-radius: 0.5em;
     box-sizing: border-box;
-    height: calc(100% - 10em);
-    margin-bottom: 2em;
+    height: calc(100% - 7em);
+    margin-bottom: 1.5em;
     padding: 0.5em;
     display: flex;
     flex-direction: row;
@@ -91,7 +91,6 @@ div#message {
     flex-direction: column;
     justify-content: space-between;
     flex-grow: 1;
-    height: 8em;
     overflow: auto;
     position: relative;
     border: 1px solid #03B3FF;
@@ -121,7 +120,7 @@ span#messagecontrols {
     justify-content: flex-start;
     grid-gap: 1em;
     align-items: center;
-    height: 2em;
+    height: 1.5em;
     margin: 0.5em;
     font-size: smaller;
     color: #007BB0;
@@ -198,13 +197,49 @@ span#userprompt, span#airesponse {
     color: #005C84;
     border-radius: 0.2em;
     border: 1px solid #AED6E9;
-    max-width: calc(100% - 3.36em);
+    max-width: calc(100% - 9em);
     overflow: hidden;
     text-overflow: ellipsis;
 }
 span#spacer {flex-grow: 1;}
 span#userprompt {background-color: #C8EDFF;}
-span#airesponse {background-color: #EAF8FF;}
+span#airesponse {background-color: #EAF8FF; color: #005C84;}
+span#airesponse.content {width: calc(100% - 10em);}
+span#airesponse table { 
+    border: 1px solid #005C84;
+    border-collapse: separate;
+    border-left: 0;
+    border-radius: 0.5em;
+    border-spacing: 0px;
+    color: #005C84;
+    width: 100%;
+}
+span#airesponse table thead {
+    display: table-header-group;
+    vertical-align: middle;
+    border-color: inherit;
+    border-collapse: separate;
+}
+span#airesponse table tr {
+    display: table-row;
+    vertical-align: inherit;
+    border-color: inherit;
+}
+span#airesponse table th, span#airesponse table td {
+    padding: 0.5em; 
+    text-align: left;
+    vertical-align: top;
+    border-left: 1px solid #005C84;    
+}
+span#airesponse table td {
+    border-top: 1px solid #005C84;    
+}
+span#airesponse table thead:first-child tr:first-child th:first-child, span#airesponse table tbody:first-child tr:first-child td:first-child {
+    border-radius: 0.5em 0 0 0;
+}
+span#airesponse table thead:last-child tr:last-child th:first-child, span#airesponse table tbody:last-child tr:last-child td:first-child {
+    border-radius: 0 0 0 0.5em;
+}
 </style>
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_START}}}
 	div#start {flex-direction: column;}
@@ -230,7 +265,7 @@ span#airesponse {background-color: #EAF8FF;}
 
     <div id="start" class="visible">
         <span id="mainimage"><img id="mainimage" src="{{{COMPONENT_PATH}}}/img/robot.svg"></span>
-        <span id="mainspan"><p>{{i18n.NeuralNetReady}}</p><p>{{i18n.TypeMessage}}</p></span>
+        <span id="mainspan"><p>{{{i18n.NeuralNetReady}}}</p><p>{{i18n.TypeMessage}}</p></span>
     </div>
 </div>
 

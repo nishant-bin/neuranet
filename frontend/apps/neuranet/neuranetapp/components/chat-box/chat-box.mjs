@@ -13,13 +13,13 @@ import {router} from "/framework/js/router.mjs";
 import {apimanager as apiman} from "/framework/js/apimanager.mjs";
 import {monkshu_component} from "/framework/js/monkshu_component.mjs";
 
-const COMPONENT_PATH = util.getModulePath(import.meta); 
-let API_CHAT, FILES_ATTACHED=[];
+const COMPONENT_PATH = util.getModulePath(import.meta), DEFAULT_MAX_ATTACH_SIZE = 4194304, 
+    DEFAULT_MAX_ATTACH_SIZE_ERROR = "File size is larger than allowed size";
 
 async function elementConnected(host) {
-    API_CHAT = host.getAttribute("chatapi"); 
     const ATTACHMENT_ALLOWED = host.getAttribute("attach")?.toLowerCase() == "true";
 	chat_box.setDataByHost(host, {COMPONENT_PATH, ATTACHMENT_ALLOWED: ATTACHMENT_ALLOWED?"true":undefined});
+    const memory = chat_box.getMemoryByHost(host); memory.FILES_ATTACHED = [];
 }
 
 async function elementRendered(host) {
@@ -36,10 +36,10 @@ async function send(containedElement) {
     const divDisabled = shadowRoot.querySelector("div#message div#disabled"), buttonSendImg = shadowRoot.querySelector("img#send");
     divDisabled.style.display = "block"; buttonSendImg.src = `${COMPONENT_PATH}/img/spinner.svg`; 
     const oldInsertion = _insertAIResponse(shadowRoot, userMessageArea, userPrompt, undefined, undefined, false);
-    const onRequest = host.getAttribute("onrequest");
+    const onRequest = host.getAttribute("onrequest"), api_chat = host.getAttribute("chatapi");
     const requestProcessor = util.createAsyncFunction(`return await ${onRequest};`), 
-        request = await requestProcessor({prompt: userPrompt, files: FILES_ATTACHED});
-    const result = await apiman.rest(`${API_CHAT}`, "POST", request, true);
+        request = await requestProcessor({prompt: userPrompt, files: _getMemory(containedElement).FILES_ATTACHED});
+    const result = await apiman.rest(`${api_chat}`, "POST", request, true);
 
     const onResult = host.getAttribute("onresult"), resultProcessor = util.createAsyncFunction(`return await ${onResult};`), 
         processedResult = await resultProcessor({result});
@@ -55,9 +55,11 @@ async function send(containedElement) {
 
 async function attach(containedElement) {
     const host = chat_box.getHostElement(containedElement), accepts = host.getAttribute("attachaccepts") || "*/*";
-    const {name, data} = await util.uploadAFile(accepts, "binary");
+    const {name, data} = await util.uploadAFile(accepts, "binary", 
+        host.getAttribute("maxattachsize")||DEFAULT_MAX_ATTACH_SIZE, host.getAttribute("maxattachsizeerror")||DEFAULT_MAX_ATTACH_SIZE_ERROR);
     const bytes64 = await util.bufferToBase64(data), fileid = name.replaceAll(".","_")+"_"+Date.now();
-    const fileObject = {filename: name, bytes64, fileid}; FILES_ATTACHED.push(fileObject);
+    const fileObject = {filename: name, bytes64, fileid}; 
+    const memory = _getMemory(containedElement); memory.FILES_ATTACHED.push(fileObject);
 
     const shadowRoot = chat_box.getShadowRootByContainedElement(containedElement);
     const insertionHTML = shadowRoot.querySelector("template#fileattachment_insertion_template").innerHTML.trim();   // clone
@@ -69,7 +71,8 @@ async function attach(containedElement) {
 }
 
 async function detach(containedElement, fileid) {
-    FILES_ATTACHED = FILES_ATTACHED.filter(fileobject => fileobject.fileid != fileid);
+    const memory = _getMemory(containedElement);
+    memory.FILES_ATTACHED = memory.FILES_ATTACHED.filter(fileobject => fileobject.fileid != fileid);
     const shadowRoot = chat_box.getShadowRootByContainedElement(containedElement);
     const insertionNode = shadowRoot.querySelector("span#attachedfiles");
     const nodeToDelete = insertionNode.querySelector(`span#${fileid}`);
@@ -77,7 +80,8 @@ async function detach(containedElement, fileid) {
 }
 
 function _detachAllFiles(shadowRoot, clearAttachedFileMemory) {
-    if (clearAttachedFileMemory) FILES_ATTACHED = [];
+    const containedElement = shadowRoot.querySelector("div#body");
+    if (clearAttachedFileMemory) {const memory = _getMemory(containedElement); memory.FILES_ATTACHED = [];}
     const insertionNode = shadowRoot.querySelector("span#attachedfiles");
     while (insertionNode.firstChild) insertionNode.removeChild(insertionNode.firstChild);
 }
@@ -114,6 +118,8 @@ function _markdownToHTML(text) {
         return text;
     }
 }
+
+const _getMemory = containedElement => chat_box.getMemoryByContainedElement(containedElement);
  
 export const chat_box = {trueWebComponentMode: true, elementConnected, elementRendered, send, attach, detach}
 monkshu_component.register("chat-box", `${COMPONENT_PATH}/chat-box.html`, chat_box);
