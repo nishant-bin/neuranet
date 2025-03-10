@@ -193,7 +193,7 @@ exports.initNewAIAppForOrg = async function(aiappid, label, id, org) {
                 NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP, aiappid).replace(
                     `label: ${NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP_LABEL}`, `label: ${label}`); 
             const fileBuffer = Buffer.from(fileContents, "utf8");
-            result = await fileindexer.addFileToCMSRepository(id, org, aiappid,  // app dir is CMS managed so this is needed
+            result = await fileindexer.addFileToCMSRepository(id, org,  // app dir is CMS managed so this is needed
                 fileBuffer, relativePath, `AI app file for ${aiappid}`, brainhandler.createExtraInfo(
                     id, org, aiappid, undefined, NEURANET_CONSTANTS.AIAPPMODES.EDIT), true);    // no ai event is true as we don't add this file to the AI
         });
