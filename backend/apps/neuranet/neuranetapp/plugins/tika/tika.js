@@ -77,13 +77,13 @@ exports.getContentStream = async function (inputstream, filepath, forcetika) {
     const extension = path.extname(filepath);
     if (!tikaconf.supported_types.includes(extension)) throw(`Unsupported file ${filepath}`);
 
+    const _canAccessFile = async filepath => { try{
+        await fspromises.access(filepath, fs.R_OK | fs.W_OK); return true;} catch (err) {return false;} };
     const _md5sum = text => crypto.createHash("md5").update(text).digest("hex");
-    const basename = path.basename(filepath), stats = await fspromises.stat(filepath);
+    const basename = path.basename(filepath), stats = await _canAccessFile(filepath) ? await fspromises.stat(filepath) : {};
     const tempPrefix = _md5sum(filepath+"_"+stats.size+"_"+stats.mtimeMs);
     const finalReadPath = `${TIKA_TEMP_SUBDIR_READ}/${tempPrefix}_${basename}`;
     const finalWritePath = `${TIKA_TEMP_SUBDIR_WRITE}/${tempPrefix}_${basename}.txt`;
-    const _canAccessFile = async filepath => { try{
-        await fspromises.access(filepath, fs.R_OK | fs.W_OK); return true;} catch (err) {return false;} };
     const already_read = await _canAccessFile(finalReadPath), already_extracted = await _canAccessFile(finalWritePath);
 
     const workingareaReadPath = `${TIKA_TEMP_SUBDIR_READ}/${Date.now()}_${basename}`;
