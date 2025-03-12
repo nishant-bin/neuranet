@@ -54,12 +54,18 @@ async function send(containedElement) {
 }
 
 async function attach(containedElement) {
-    const host = chat_box.getHostElement(containedElement), accepts = host.getAttribute("attachaccepts") || "*/*";
+    const memory = _getMemory(containedElement), host = chat_box.getHostElement(containedElement);
+    const maxattachments = host.getAttribute("maxattachments"), accepts = host.getAttribute("attachaccepts") || "*/*";
+    if (maxattachments && (memory.FILES_ATTACHED.length >= parseInt(maxattachments))) {
+        alert(host.getAttribute("maxattachmentserror")||DEFAULT_MAX_ATTACHMENTS_ERROR);
+        return;
+    }
+
     const {name, data} = await util.uploadAFile(accepts, "binary", 
         host.getAttribute("maxattachsize")||DEFAULT_MAX_ATTACH_SIZE, host.getAttribute("maxattachsizeerror")||DEFAULT_MAX_ATTACH_SIZE_ERROR);
     const bytes64 = await util.bufferToBase64(data), fileid = name.replaceAll(".","_")+"_"+Date.now();
     const fileObject = {filename: name, bytes64, fileid}; 
-    const memory = _getMemory(containedElement); memory.FILES_ATTACHED.push(fileObject);
+    memory.FILES_ATTACHED.push(fileObject);
 
     const shadowRoot = chat_box.getShadowRootByContainedElement(containedElement);
     const insertionHTML = shadowRoot.querySelector("template#fileattachment_insertion_template").innerHTML.trim();   // clone

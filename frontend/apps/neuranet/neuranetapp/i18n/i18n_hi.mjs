@@ -20,6 +20,7 @@ export const i18n = {
 "TypeMessage": "Type Message",
 "Multiline": "Multiline",
 "MaxSizeError": "Please attach a file smaller than 4 MB",
+"MaxAttachmentsError": "Maximum of 4 files can be attached.",
 
 "ViewLabel_gencode": "Generate Code",
 "ViewLabel_enterpriseassist": "Enterprise Assistant",

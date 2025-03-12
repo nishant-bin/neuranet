@@ -19,7 +19,8 @@ export const i18n = {
 "NeuralNetReady": "AI Neural Network<br>Ready...",
 "TypeMessage": "Type Message",
 "Multiline": "Multiline",
-"MaxSizeError": "Please attach a file smaller than 4 MB",
+"MaxSizeError": "Please attach a file smaller than 4 MB.",
+"MaxAttachmentsError": "Maximum of 4 files can be attached.",
 
 "ViewLabel_gencode": "Generate code",
 "ViewLabel_enterpriseassist": "Enterprise assistant",

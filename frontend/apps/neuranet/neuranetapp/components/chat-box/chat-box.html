@@ -130,6 +130,16 @@ span#messagecontrols span#attachedfiles {
     flex-grow: 1; 
     margin-left: 0.2em;
 }
+span#attachedfiles {
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+    overflow-x: auto;
+    grid-gap: 0.8em;
+    height: 2.5em;
+    align-items: flex-end;
+    margin-bottom: 0.5em;
+}
 span#messagecontrols span#attachedfiles span.fileicon {
     user-select: none;
     border: 1px solid #87dbff;
@@ -142,6 +152,7 @@ span#messagecontrols span#attachedfiles span.fileicon {
     flex-direction: row;
     width: 8em;
     color: #00a1e6;
+    height: 2.5em;
 }
 span#messagecontrols span#attachedfiles span.fileicon img#fileicon {height: 1em; width: 1em;}
 span#messagecontrols span#attachedfiles span.fileicon span#name {
