@@ -139,7 +139,7 @@ async function _handleFileEvent(message) {
 
     const _isDuplicateEvent = message => {
         const hashAlgo = crypto.createHash("md5"); 
-        hashAlgo.update(path.resolve(message.path)+message.id+message.org);
+        hashAlgo.update(path.resolve(message.path||message.from)+message.id+message.org);
         const hash = "_neuranet_fileindexer"+hashAlgo.digest("hex"); 
         if (!timed_expiry_cache.get(hash)) {timed_expiry_cache.set(hash, "present"); return false;}
         else return true;
