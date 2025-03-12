@@ -113,7 +113,7 @@ exports.getContentStream = async function (inputstream, filepath, forcetika) {
                     resolve(fs.createReadStream(finalWritePath)); } });
             } catch (err) {
                 LOG.error(`Tika error parsing file ${filepath} error is ${err}.`); outstream.end();
-                if (!resolved) {resolved = true; reject(error);}
+                if (!resolved) {resolved = true; reject(err);}
             }
         });
 
