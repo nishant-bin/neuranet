@@ -197,8 +197,8 @@ exports.update = async (oldmetadata, newmetadata, db_path) => {
     if (!metadataObjectOld) throw new Error("Metadata to update from not found");
     if (!newmetadata) throw new Error("Metadata to update to not created");
     metadataObjectNew.vector_objects = metadataObjectOld.vector_objects;
-    const mdindexfileNew = _getFilePathForMetadata(newmetadata), mdindexfileOld = _getFilePathForMetadata(oldmetadata);
-    await memfs.writeFile(mdindexfileNew, JSON.stringify(mdobject)); memfs.rm(mdindexfileOld);
+    const mdindexfileNew = _getFilePathForMetadata(dbToUse, newmetadata), mdindexfileOld = _getFilePathForMetadata(dbToUse, oldmetadata);
+    await memfs.writeFile(mdindexfileNew, JSON.stringify(metadataObjectNew)); memfs.rm(mdindexfileOld);
 }
 
 /**
