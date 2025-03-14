@@ -316,7 +316,7 @@ exports.ingeststream = async function(metadata, stream, encoding="utf8", chunk_s
 
         const _handleError = err => {
             had_error = true; _freeTempMemoryForIngestedData(dbToUse, metadata);
-            _log_error(`Vector ingection failed, the related metadata was ${JSON.stringify(metadata)}`, db_path, err); 
+            _log_error(`Vector ingestion failed, the related metadata was ${JSON.stringify(metadata)}`, db_path, err); 
             reject(err);
         }
 

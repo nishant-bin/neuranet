@@ -1,10 +1,10 @@
 /**
- * This strategy is to first find matching documents using TF.IDF and 
+ * This strategy is to first find matching documents using NN's TF.IDF and 
  * then use only their vectors for a sematic search to build the final 
  * answer. This is a much superior search and memory strategy to little 
  * embeddings vector search as it firsts finds the most relevant documents 
  * and the uses vectors only because the LLM prompt sizes are small. 
- * It also allows rejustments later to better train the LLMs.
+ * It also allows rejustments later to better train the LLMs. Uses NN's DBs.
  * 
  * @returns search returns array of {metadata, text} objects matching the 
  * 			resulting documents. The texts are shards of the document of
@@ -16,8 +16,8 @@
 
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
-const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
+const pluginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/pluginhandler.js`);
 const llmflowrunner = require(`${NEURANET_CONSTANTS.LIBDIR}/llmflowrunner.js`);
 
 const REASONS = llmflowrunner.REASONS;
@@ -59,7 +59,8 @@ exports.search = async function(params, _llmstepDefinition) {
 	const tfidfSearchOptions = {punish_verysmall_documents: params.punish_verysmall_documents||false, 
 		ignore_coord: params.ignore_coord, max_coord_boost: params.max_coord_boost, bm25: params.bm25||false};
 
-    const tfidfDBs = []; for (const brainidThis of brainids) tfidfDBs.push(...await aidbfs.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainidThis));
+	const nntfidfdbPlugin = pluginhandler.getPlugin("nntfidfdb");
+    const tfidfDBs = []; for (const brainidThis of brainids) tfidfDBs.push(...await nntfidfdbPlugin.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainidThis));
 	if (!tfidfDBs.length) {	// no TF.IDF DB worked or found
 		const errMsg = `Can't instantiate any TF.IDF DBs user ID ${id}. Giving up.`;
 		params.return_error(errMsg, REASONS.INTERNAL); return;
@@ -89,9 +90,10 @@ exports.search = async function(params, _llmstepDefinition) {
 		LOG.error(err); params.return_error(err, REASONS.INTERNAL); return;
 	}
 
+	const nntvectordbPlugin = pluginhandler.getPlugin("nntvectordb");
 	let vectordbs = []; for (const brainidThis of brainids) {
 		try {
-			vectordbs.push(...await aidbfs.getVectorDBsForIDAndOrgAndBrainID(id, org, brainidThis, embeddingsGenerator, 
+			vectordbs.push(...await nntvectordbPlugin.getVectorDBsForIDAndOrgAndBrainID(id, org, brainidThis, embeddingsGenerator, 
 				NEURANET_CONSTANTS.CONF.multithreaded)) 
 		} catch (err) { 
 			const errMsg = `Can't instantiate the vector DB for brain ID ${brainidThis} user ID ${id} due to ${err}. Skipping this DB.`;

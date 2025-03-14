@@ -2,13 +2,8 @@
  * Unified interface for AI DB file handling. Other services should use this
  * for DB file ingestion, uningestion and update operations. 
  * 
- * Internally ingests into two databases - TF.IDF which  is useful for finding 
- * complete documents matching a query, and the vector DB which is useful for finding 
- * semantic portion of the matching documents useful for answering the query.
- * 
- * Together these two AI DBs comprise the Neuranet knowledgebase which is 
- * then used for in-context training when the user is interacting with the AI. 
- * 
+ * Internally can ingest into configured AI databases. These are configured in the AI app's
+ * YAML files.
  * 
  * Neuranet Distributed DB design 
  * 	- Xbin Publishes the event to the entire distributed cluster, NFS volume is shared
@@ -31,14 +26,9 @@ const crypto = require("crypto");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
-const conf = require(`${NEURANET_CONSTANTS.CONFDIR}/aidb.json`);
-const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 const pluginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/pluginhandler.js`);
-const aitfidfdb = conf.aitfidfdb_module?.trim().length?pluginhandler.getPlugin(conf.aitfidfdb_module):require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
-const aivectordb = conf.aivectordb_module?.trim().length?pluginhandler.getPlugin(conf.aivectordb_module):require(`${NEURANET_CONSTANTS.LIBDIR}/aivectordb.js`);
 
-const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, 
-	MODEL_DEFAULT = "embedding-openai", UNKNOWN_ORG = "unknownorg";
+const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, UNKNOWN_ORG = "unknownorg";
 
 /**
  * Ingests the given file into the AI DBs. It must be a simple text file.
@@ -55,64 +45,39 @@ const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT:
 async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamGenerator, metadata={}) {
     LOG.info(`AI DB FS ingestion of file ${pathIn} for ID ${id} and org ${org} started.`);
     const timeStart = Date.now(), aiappThis = await aiapp.getAIApp(id, org, brainid, true);
-    if (aiappThis.disable_quota_checks)
     if ((!(aiappThis.disable_quota_checks)) && (!(await quota.checkQuota(id, org, brainid)))) {
 		LOG.error(`Disallowing the ingest call for the path ${pathIn}, as the user ${id} of org ${org} is over their quota.`);
 		return {reason: REASONS.LIMIT, ...CONSTANTS.FALSE_RESULT};
 	}
     LOG.info(`Time taken till quota check for ${pathIn} is ${(Date.now()-timeStart)} ms.`);
-    
-    const aiModelToUseForEmbeddings = MODEL_DEFAULT, 
-        aiModelObjectForEmbeddings = await aiapp.getAIModel(aiModelToUseForEmbeddings, undefined, id, org, brainid), 
-        embeddingsGenerator = async text => {
-			const response = await embedding.createEmbeddingVector(id, org, brainid, text, aiModelToUseForEmbeddings); 
-			if (response.reason != embedding.REASONS.OK) return null;
-			else return response.embedding;
-		}
-    let vectordb; try { vectordb = await _getVectorDBForIDAndOrgAndBrainID(id, org, brainid, embeddingsGenerator) } catch(err) { 
-        LOG.error(`Can't instantiate the vector DB ${vectorDB_ID} for ID ${id} and org ${org}. Unable to continue.`);
-		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
-    }
-    LOG.info(`Time taken till getting Vector DB for ${pathIn} is ${(Date.now()-timeStart)} ms.`);
-
 
     const metadataFinal = {...metadata, id, date_created: Date.now(), fullpath: pathIn}; 
-    metadataFinal[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(pathIn); 
-    metadataFinal[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY] = encodeURI(referencelink||_getDocID(pathIn));
+    metadataFinal[NEURANET_CONSTANTS.NEURANET_DOCID] = getDocID(pathIn); 
+    metadataFinal[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY] = encodeURI(referencelink||getDocID(pathIn));
 
     const _getExtractedTextStream = _ => streamGenerator ? streamGenerator() : fs.createReadStream(pathIn);
 
-    // ingest into the TF.IDF DB
-    const tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid); 
-    LOG.info(`Time taken till getting TFIDF DB for ${pathIn} is ${(Date.now()-timeStart)} ms.`);
-
-    try {        
-        LOG.info(`Starting text extraction and TFIDF ingestion of file ${pathIn}.`);
-        await tfidfDB.createStream(await _getExtractedTextStream(), metadataFinal);
-    } catch (err) {
-        LOG.error(`TF.IDF ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
-        return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
+    // ingest into the DBs configured
+    const dbsIngested = [];
+    for (const db of aiappThis.ingestiondbs) {
+        const dbThis = pluginhandler.getPlugin(db);
+        LOG.info(`Starting text extraction and ${dbThis.name} ingestion of file ${pathIn}.`);
+        try { 
+            await dbThis.createStream(id, org, brainid, await _getExtractedTextStream(), metadataFinal, lang); 
+            LOG.info(`Time taken till ${dbThis.name} ingestion of file ${pathIn}} is ${(Date.now()-timeStart)} ms.`);
+            dbsIngested.push(dbThis);
+        } catch (err) {
+            LOG.error(`${dbThis.name} ingestion failed for path ${pathIn} for DB ${dbThis.name} for ID ${id} and org ${org} with error ${err}.`); 
+            for (const dbIngested of dbsIngested) try {dbIngested.uningestfile(pathIn, id, org, brainid)} catch (err) { // try to keep the DBs in sync
+                LOG.error(`DB uningestion failed for file ${pathIn} for id ${id} and org ${org} due to error ${err}.`);
+                LOG.error(`AI DBs are out of sync. Manual cleanup needed for file ${pathIn}.`);
+            }
+            return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
+        }
     }
-    LOG.info(`Ended text extraction and TFIDF ingestion of file ${pathIn}.`);
-    LOG.info(`Time taken till TFIDF ingestion for ${pathIn} is ${(Date.now()-timeStart)} ms.`);
-
-
-    // ingest into the vector DB
-    LOG.info(`Starting Vector DB ingestion of file ${pathIn}.`);
-	try { 
-        const chunkSize = aiModelObjectForEmbeddings.vector_chunk_size[lang] || aiModelObjectForEmbeddings.vector_chunk_size["*"],
-            split_separators = aiModelObjectForEmbeddings.split_separators[lang] || aiModelObjectForEmbeddings.split_separators["*"];
-        await vectordb.ingeststream(metadataFinal, await _getExtractedTextStream(), aiModelObjectForEmbeddings.encoding, 
-            chunkSize, split_separators, aiModelObjectForEmbeddings.overlap);
-    } catch (err) { 
-        tfidfDB.delete(metadataFinal);   // delete the file from tf.idf DB too to keep them in sync
-        LOG.error(`Vector ingestion failed for path ${pathIn} for ID ${id} and org ${org} with error ${err}.`); 
-        return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
-    }
-    LOG.info(`Ended Vector DB ingestion of file ${pathIn}.`);
-    LOG.info(`Time taken till Vector DB ingestion for ${pathIn} is ${(Date.now()-timeStart)} ms.`);
 
     LOG.info(`AI DB FS ingestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
+    LOG.info(`Time taken till full ingestion of file ${pathIn}} is ${(Date.now()-timeStart)} ms.`);
     return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
 }
 
@@ -124,8 +89,11 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
  * @throws Exception on error
  */
 async function flush(id, org, brainid) {
-    const tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid); 
-    await tfidfDB.flush(); 
+    const aiappThis = await aiapp.getAIApp(id, org, brainid, true);
+    for (const db of aiappThis.ingestiondbs) {
+        const dbThis = pluginhandler.getPlugin(db);
+        await dbThis.flush(id, org, brainid); 
+    }
 }
 
 /**
@@ -137,28 +105,16 @@ async function flush(id, org, brainid) {
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
  */
 async function uningestfile(pathIn, id, org, brainid) {
-    let vectordb; try { vectordb = await _getVectorDBForIDAndOrgAndBrainID(id, org, brainid); } catch(err) { 
-        LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
-		return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
-    }
-
+    const aiappThis = await aiapp.getAIApp(id, org, brainid, true);
     try {
-        // delete from the TF.IDF DB
-        const docID = _getDocID(pathIn), tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid), 
-        docsFound = await tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
-        metadata = docsFound.length > 0 ? docsFound[0].metadata : null;
-        if (!metadata) {
-            LOG.error(`Document to uningest at path ${pathIn} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
-            return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
-        } else await tfidfDB.delete(metadata);
-        LOG.info(`TF.IDF DB uningestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
-
-        // delete from the Vector DB
-        await vectordb.uningest(metadata);
-        LOG.info(`Vector DB uningestion of file ${pathIn} for ID ${id} and org ${org} succeeded.`);
+        for (const db of aiappThis.ingestiondbs) {
+            const dbThis = pluginhandler.getPlugin(db);
+            await dbThis.uningestfile(pathIn, id, org, brainid); 
+        }
         return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
     } catch (err) {
-        LOG.error(`Document to uningest at path ${pathIn} for ID ${id} and org ${org} had errors: ${err}`);
+        LOG.error(`Document to uningest at path ${pathIn} for ID ${id} and org ${org} had errors: ${err}. DB that failed was ${dbThis.name}.`);
+        LOG.error(`AI DBs are out of sync. Manual cleanup needed for file ${pathIn}.`);
         return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
     }
 }
@@ -175,78 +131,22 @@ async function uningestfile(pathIn, id, org, brainid) {
  */
 async function renamefile(from, to, new_referencelink, id, org, brainid) {
     try {
-        // update TF.IDF DB 
-        const docID = _getDocID(from), tfidfDB = await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid), 
-            docsFound = await tfidfDB.query(null, null, metadata => metadata[NEURANET_CONSTANTS.NEURANET_DOCID] == docID), 
-            metadata = docsFound.length > 0 ? docsFound[0].metadata : null, 
-            new_referencelink_encoded = encodeURI(new_referencelink||_getDocID(to)),
-            newmetadata = {...(metadata||{}), referencelink: new_referencelink_encoded, fullpath: to}; 
-        newmetadata[NEURANET_CONSTANTS.NEURANET_DOCID] = _getDocID(to);
-        if (!metadata) {
-            LOG.error(`Document to rename at path ${path} for ID ${id} and org ${org} not found in the TF.IDF DB. Dropping the request.`);
-            return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
-        } else await tfidfDB.update(metadata, newmetadata);
-
-        // update vector DB
-        let vectordb; try { vectordb = await _getVectorDBForIDAndOrgAndBrainID(id, org, brainid); } catch(err) { 
-            LOG.error(`Can't instantiate the vector DB ${vectordb} for ID ${id} and org ${org}. Unable to continue.`); 
-            return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT}; 
+        const aiappThis = await aiapp.getAIApp(id, org, brainid, true);
+        for (const db of aiappThis.ingestiondbs) {
+            const dbThis = pluginhandler.getPlugin(db);
+            await dbThis.renamefile(from, to, new_referencelink, id, org, brainid); 
         }
-        await vectordb.update(metadata, newmetadata);
-
         LOG.info(`Rename of file from ${from} to ${to} for ID ${id} and org ${org} succeeded.`)
         return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
     } catch (err) {
-        LOG.error(`Rename of file from ${from} to ${to} for ID ${id} and org ${org} had errors: ${err}`);
+        LOG.error(`Rename of file from ${from} to ${to} for ID ${id} and org ${org} had errors: ${err}. DB that failed was ${dbThis.name}.`);
+        LOG.error(`AI DBs are out of sync. Manual cleanup needed for file ${from}.`);
         return {reason: REASONS.INTERNAL, ...CONSTANTS.FALSE_RESULT};
     }
 }
 
-/**
- * Returns the TF.IDF DB instances for the given ID, ORG and brain IDs. Useful for searching only. 
- * Ingestion should be done via a CMS operation which auto-triggers this module.
- * @param {string} id The user ID
- * @param {string} org The user ORG
- * @param {string} brainid The brain ID
- * @returns The TF.IDF DB instances, throws an exception on error.
- */
-async function getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainid) {
-    return [await _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid,)];
-}
+const getDBID = (_id, org, brainid) => `${(org||UNKNOWN_ORG).toLowerCase()}/${brainid}`;
 
-/**
- * Returns the Vector DB instances for the given ID, ORG, brain ID and embeddings generator. 
- * Useful for searching only. Ingestion should be done via a CMS operation which 
- * auto-triggers this module.
- * @param {string} id The user ID
- * @param {string} org The user ORG
- * @param {string} brainid The brain ID
- * @param {function} embeddingsGenerator The vector embeddings generator to use. Function that takes text and returns a vector of floats.
- * @param {boolean} multithreaded Should the vector DB run multithreaded
- * @returns The Vector DB instances, throws an exception on error.
- */
-async function getVectorDBsForIDAndOrgAndBrainID(id, org, brainid, embeddingsGenerator, multithreaded) {
-    return [await _getVectorDBForIDAndOrgAndBrainID(id, org, brainid, embeddingsGenerator, multithreaded)];
-}
+const getDocID = pathIn => crypto.createHash("md5").update(path.resolve(pathIn)).digest("hex");
 
-async function _getVectorDBForIDAndOrgAndBrainID(id, org, brainid, embeddingsGenerator, multithreaded) {
-    // TODO: ensure the brainid which is same as aiappid is mapped to the user here as a security check
-    const vectordb = await aivectordb.get_vectordb(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org, brainid)}/vectordb`, 
-        embeddingsGenerator, NEURANET_CONSTANTS.NEURANET_DOCID, multithreaded);
-    vectordb.aiappid = brainid;
-    return vectordb;
-}
-
-async function _getTFIDFDBForIDAndOrgAndBrainID(id, org, brainid) {
-    // TODO: ensure the brainid which is same as aiappid is mapped to the user here as a security check
-    const tfidfdb = await aitfidfdb.get_tfidf_db(`${NEURANET_CONSTANTS.AIDBPATH}/${_getDBID(id, org, brainid)}/tfidfdb`, 
-        NEURANET_CONSTANTS.NEURANET_DOCID, NEURANET_CONSTANTS.NEURANET_LANGID, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`);
-    tfidfdb.aiappid = brainid;
-    return tfidfdb;
-}
-
-const _getDBID = (_id, org, brainid) => `${(org||UNKNOWN_ORG).toLowerCase()}/${brainid}`;
-
-const _getDocID = pathIn => crypto.createHash("md5").update(path.resolve(pathIn)).digest("hex");
-
-module.exports = {ingestfile, uningestfile, renamefile, flush, getVectorDBsForIDAndOrgAndBrainID, getTFIDFDBsForIDAndOrgAndBrainID};
+module.exports = {ingestfile, uningestfile, renamefile, flush, getDBID, getDocID};

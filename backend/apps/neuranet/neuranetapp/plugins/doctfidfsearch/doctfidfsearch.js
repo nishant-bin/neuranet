@@ -1,8 +1,8 @@
 /**
- * This strategy is to first find matching documents using TF.IDF and 
- * then use only their vectors for another TF search to build the final 
- * answer. This strategy works good for non-English languages, specially
- * Japanese and Chinese.
+ * This strategy is to first find matching documents using NN's TF.IDF and 
+ * then split them into context sized pieces and perform a second level TD.IDF
+ * search on the chunks for the top chunks. This strategy works good in general
+ * for all languages as long as cross-language search is not needed. 
  * 
  * @returns search returns array of {metadata, text} objects matching the 
  * 			resulting documents. The texts are shards of the document of
@@ -14,11 +14,10 @@
 
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
-const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
-const aitfidfdb = require(`${NEURANET_CONSTANTS.LIBDIR}/aitfidfdb.js`);
 const fileindexer = require(`${NEURANET_CONSTANTS.LIBDIR}/fileindexer.js`);
 const textsplitter = require(`${NEURANET_CONSTANTS.LIBDIR}/textsplitter.js`);
 const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
+const pluginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/pluginhandler.js`);
 const llmflowrunner = require(`${NEURANET_CONSTANTS.LIBDIR}/llmflowrunner.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
 
@@ -57,7 +56,8 @@ exports.search = async function(params, _llmstepDefinition) {
 	const tfidfSearchOptions = {punish_verysmall_documents: params.punish_verysmall_documents||false, 
 		ignore_coord: params.ignore_coord, max_coord_boost: params.max_coord_boost, bm25: params.bm25||false};
 
-    const tfidfDBs = []; for (const brainidThis of brainids) tfidfDBs.push(...await aidbfs.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainidThis));
+	const nntfidfdbPlugin = pluginhandler.getPlugin("nntfidfdb");
+    const tfidfDBs = []; for (const brainidThis of brainids) tfidfDBs.push(...await nntfidfdbPlugin.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainidThis));
 	if (!tfidfDBs.length) {	// no TF.IDF DB worked or found
 		const errMsg = `Can't instantiate any TF.IDF DBs user ID ${id}. Giving up.`;
 		params.return_error(errMsg, REASONS.INTERNAL); return;
@@ -89,8 +89,7 @@ exports.search = async function(params, _llmstepDefinition) {
 
 	// re-rank by a second level TF.IDF on the chunks by creating an in-memory temporary TF.IDF DB 
 	// to search for relevant document fragments
-	const tfidfDBInMem = await aitfidfdb.get_tfidf_db(TEMP_MEM_TFIDF_ID+Date.now(), NEURANET_CONSTANTS.NEURANET_DOCID, 
-		NEURANET_CONSTANTS.NEURANET_LANGID, `${NEURANET_CONSTANTS.CONFDIR}/stopwords-iso.json`, undefined, true);
+	const tfidfDBInMem = await nntfidfdbPlugin.getInMemTFIDFDB(TEMP_MEM_TFIDF_ID+Date.now());
 	for (const vectorResult of dummyVectorResults) {
 		const uniqueID = (Date.now() + Math.random()).toString().split(".").join(""); vectorResult.metadata.__uniqueid = uniqueID;
 		const temporaryMetadata = {...(vectorResult.metadata)}; temporaryMetadata[NEURANET_CONSTANTS.NEURANET_DOCID]  = uniqueID;
