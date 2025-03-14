@@ -18,6 +18,8 @@ generated_files_path: _neuranet_generated   # where generated files are placed
 ai_cost_quota: 0.6                          # cost quota for the users, -1 disables checks also
 disable_quota_checks: true                  # disable quotas if true
 disable_model_usage_logging: true           # if true, ai model usage logging
+default_embeddings_model: embedding-openai  # model for embedding file ingestion
+ingestiondbs: ["nntfidfdb", "nnvectordb"]   # the ingestion databases
 
 # all flows are sequence of commands which follow the same syntax - command, in, out - in is the input
 # to the command, out is the variable holding the output and name points to the command module and entry
