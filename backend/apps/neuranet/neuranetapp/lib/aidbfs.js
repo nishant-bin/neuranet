@@ -26,9 +26,18 @@ const crypto = require("crypto");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
+const conf = require(`${NEURANET_CONSTANTS.CONFDIR}/aidb.json`);
 const pluginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/pluginhandler.js`);
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, UNKNOWN_ORG = "unknownorg";
+
+/** Inits the module, must be called in the app init */
+exports.initSync = function() {
+    if (conf.aidbs_to_init) for (const db of conf.aidbs_to_init) {
+        const dbThis = pluginhandler.getPlugin(db);
+        dbThis.init();
+    }
+}
 
 /**
  * Ingests the given file into the AI DBs. It must be a simple text file.
@@ -42,7 +51,7 @@ const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT:
  * @param {object} metadata The file's associated metadata, or null
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
  */
-async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamGenerator, metadata={}) {
+exports.ingestfile = async function(pathIn, referencelink, id, org, brainid, lang, streamGenerator, metadata={}) {
     LOG.info(`AI DB FS ingestion of file ${pathIn} for ID ${id} and org ${org} started.`);
     const timeStart = Date.now(), aiappThis = await aiapp.getAIApp(id, org, brainid, true);
     if ((!(aiappThis.disable_quota_checks)) && (!(await quota.checkQuota(id, org, brainid)))) {
@@ -52,8 +61,8 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
     LOG.info(`Time taken till quota check for ${pathIn} is ${(Date.now()-timeStart)} ms.`);
 
     const metadataFinal = {...metadata, id, date_created: Date.now(), fullpath: pathIn}; 
-    metadataFinal[NEURANET_CONSTANTS.NEURANET_DOCID] = getDocID(pathIn); 
-    metadataFinal[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY] = encodeURI(referencelink||getDocID(pathIn));
+    metadataFinal[NEURANET_CONSTANTS.NEURANET_DOCID] = exports.getDocID(pathIn); 
+    metadataFinal[NEURANET_CONSTANTS.REFERENCELINK_METADATA_KEY] = encodeURI(referencelink||exports.getDocID(pathIn));
 
     const _getExtractedTextStream = _ => streamGenerator ? streamGenerator() : fs.createReadStream(pathIn);
 
@@ -88,7 +97,7 @@ async function ingestfile(pathIn, referencelink, id, org, brainid, lang, streamG
  * @param {string} brainid The brain ID
  * @throws Exception on error
  */
-async function flush(id, org, brainid) {
+exports.flush = async function(id, org, brainid) {
     const aiappThis = await aiapp.getAIApp(id, org, brainid, true);
     for (const db of aiappThis.ingestiondbs) {
         const dbThis = pluginhandler.getPlugin(db);
@@ -104,7 +113,7 @@ async function flush(id, org, brainid) {
  * @param {string} brainid The brain ID
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
  */
-async function uningestfile(pathIn, id, org, brainid) {
+exports.uningestfile = async function(pathIn, id, org, brainid) {
     const aiappThis = await aiapp.getAIApp(id, org, brainid, true);
     try {
         for (const db of aiappThis.ingestiondbs) {
@@ -129,7 +138,7 @@ async function uningestfile(pathIn, id, org, brainid) {
  * @param {string} brainid The brain ID
  * @returns A promise which resolves to {result: true|false, reason: reason for failure if false}
  */
-async function renamefile(from, to, new_referencelink, id, org, brainid) {
+exports.renamefile = async function(from, to, new_referencelink, id, org, brainid) {
     try {
         const aiappThis = await aiapp.getAIApp(id, org, brainid, true);
         for (const db of aiappThis.ingestiondbs) {
@@ -145,8 +154,6 @@ async function renamefile(from, to, new_referencelink, id, org, brainid) {
     }
 }
 
-const getDBID = (_id, org, brainid) => `${(org||UNKNOWN_ORG).toLowerCase()}/${brainid}`;
+exports.getDBID = (_id, org, brainid) => `${(org||UNKNOWN_ORG).toLowerCase()}/${brainid}`;
 
-const getDocID = pathIn => crypto.createHash("md5").update(path.resolve(pathIn)).digest("hex");
-
-module.exports = {ingestfile, uningestfile, renamefile, flush, getDBID, getDocID};
+exports.getDocID = pathIn => crypto.createHash("md5").update(path.resolve(pathIn)).digest("hex");

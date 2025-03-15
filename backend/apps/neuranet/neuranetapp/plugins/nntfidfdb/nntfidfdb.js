@@ -9,6 +9,9 @@ const aitfidfdb = require(`${__dirname}/aitfidfdb.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
 
+/** Inits the plugin, must be called */
+exports.init = function() {aitfidfdb.init()};
+
 /** The DB plugin name */
 exports.name = "TF.IDF DB"; 
 

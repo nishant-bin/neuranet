@@ -11,8 +11,6 @@ const serverutils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiutils = require(`${NEURANET_CONSTANTS.LIBDIR}/aiutils.js`);
 const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
-const fileindexer = require(`${NEURANET_CONSTANTS.LIBDIR}/fileindexer.js`);
-
 const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
 
 const APP_CACHE = {}, FLOWSECTION_CACHE = {}, DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode;
@@ -193,6 +191,7 @@ exports.initNewAIAppForOrg = async function(aiappid, label, id, org) {
                 NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP, aiappid).replace(
                     `label: ${NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP_LABEL}`, `label: ${label}`); 
             const fileBuffer = Buffer.from(fileContents, "utf8");
+            const fileindexer = require(`${NEURANET_CONSTANTS.LIBDIR}/fileindexer.js`); // moving this to the top causes circular dependency between aidbfs (which needs aiapp) and fileindexer.js (which needs aidbfs)
             result = await fileindexer.addFileToCMSRepository(id, org,  // app dir is CMS managed so this is needed
                 fileBuffer, relativePath, `AI app file for ${aiappid}`, brainhandler.createExtraInfo(
                     id, org, aiappid, undefined, NEURANET_CONSTANTS.AIAPPMODES.EDIT), true);    // no ai event is true as we don't add this file to the AI

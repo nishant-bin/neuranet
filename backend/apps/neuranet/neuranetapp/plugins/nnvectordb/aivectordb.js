@@ -62,8 +62,8 @@ const dbs = {}, VECTOR_INDEX_NAME = "vector", TEXT_INDEX_NAME = "text", METADATA
     EMPTY_VECTOR_OBJECT = {vector:[], hash: undefined, length: 0}, 
     EMPTY_METADATA_OBJECT = {vector_objects: [], metadata: undefined}, TEMP_MEMORY = {};
 
-let blackboard_initialized = false;
-if (!blackboard_initialized) {_initBlackboardHooks(); blackboard_initialized = true;}
+/** Inits the module */
+exports.init = function() {_initBlackboardHooks()};
 
 /**
  * Inits the vector DB whose path is given.
@@ -72,8 +72,6 @@ if (!blackboard_initialized) {_initBlackboardHooks(); blackboard_initialized = t
  * @throws Exception on errors 
  */
 exports.initAsync = async (db_path_in, metadata_docid_key) => {
-    if (!blackboard_initialized) throw ("TF.IDF blackboard hooks not initialized, severe error!");
-
     dbs[_get_db_hash(db_path_in)] = {...(serverutils.clone(DB_OBJECT_TEMPLATE)), path: db_path_in};
     dbs[_get_db_hash(db_path_in)][METADATA_DOCID_KEY_PROPERTY_NAME] = metadata_docid_key;
 

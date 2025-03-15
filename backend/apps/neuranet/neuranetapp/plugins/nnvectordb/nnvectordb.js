@@ -13,6 +13,9 @@ const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
 
 const MODEL_DEFAULT = "embedding-openai";
 
+/** Inits the plugin, must be called */
+exports.init = function() {aivectordb.init()};
+
 /** The DB plugin name */
 exports.name = "Vector DB"; 
 

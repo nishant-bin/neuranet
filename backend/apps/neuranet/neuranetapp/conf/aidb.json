@@ -2,15 +2,10 @@
     "autosave": true,
     "autosave_frequency": 36000000,
     "distributed": true,
-    "cluster_timeout": 10000,
-    "aiss_config": {
-        "host": "svc-775e2543-ff18-40e4-8c11-957dfbb96f37-dml.aws-oregon-3.svc.singlestore.com",
-        "port": 3306,
-        "user": "admin",
-        "password": "Roodra@123"
-    },
+    "cluster_timeout": 800,
     "aiss_vectordb": "demovectordb",
     "aiss_tfidfdb": "demotfidfdb",
+    "aidbs_to_init": ["nntfidfdb", "nnvectordb"],
     "aitfidfdb_module": "",
     "aivectordb_module": ""
 }
