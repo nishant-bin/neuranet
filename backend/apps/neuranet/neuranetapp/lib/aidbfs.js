@@ -27,14 +27,13 @@ const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const quota = require(`${NEURANET_CONSTANTS.LIBDIR}/quota.js`);
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const conf = require(`${NEURANET_CONSTANTS.CONFDIR}/aidb.json`);
-const pluginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/pluginhandler.js`);
 
 const REASONS = {INTERNAL: "internal", OK: "ok", VALIDATION:"badrequest", LIMIT: "limit"}, UNKNOWN_ORG = "unknownorg";
 
 /** Inits the module, must be called in the app init */
 exports.initSync = function() {
     if (conf.aidbs_to_init) for (const db of conf.aidbs_to_init) {
-        const dbThis = pluginhandler.getPlugin(db);
+        const dbThis = NEURANET_CONSTANTS.getPlugin(db);
         dbThis.init();
     }
 }
@@ -69,7 +68,7 @@ exports.ingestfile = async function(pathIn, referencelink, id, org, brainid, lan
     // ingest into the DBs configured
     const dbsIngested = [];
     for (const db of aiappThis.ingestiondbs) {
-        const dbThis = pluginhandler.getPlugin(db);
+        const dbThis = NEURANET_CONSTANTS.getPlugin(db);
         LOG.info(`Starting text extraction and ${dbThis.name} ingestion of file ${pathIn}.`);
         try { 
             await dbThis.createStream(id, org, brainid, await _getExtractedTextStream(), metadataFinal, lang); 
@@ -100,7 +99,7 @@ exports.ingestfile = async function(pathIn, referencelink, id, org, brainid, lan
 exports.flush = async function(id, org, brainid) {
     const aiappThis = await aiapp.getAIApp(id, org, brainid, true);
     for (const db of aiappThis.ingestiondbs) {
-        const dbThis = pluginhandler.getPlugin(db);
+        const dbThis = NEURANET_CONSTANTS.getPlugin(db);
         await dbThis.flush(id, org, brainid); 
     }
 }
@@ -117,7 +116,7 @@ exports.uningestfile = async function(pathIn, id, org, brainid) {
     const aiappThis = await aiapp.getAIApp(id, org, brainid, true);
     try {
         for (const db of aiappThis.ingestiondbs) {
-            const dbThis = pluginhandler.getPlugin(db);
+            const dbThis = NEURANET_CONSTANTS.getPlugin(db);
             await dbThis.uningestfile(pathIn, id, org, brainid); 
         }
         return {reason: REASONS.OK, ...CONSTANTS.TRUE_RESULT};
@@ -142,7 +141,7 @@ exports.renamefile = async function(from, to, new_referencelink, id, org, braini
     try {
         const aiappThis = await aiapp.getAIApp(id, org, brainid, true);
         for (const db of aiappThis.ingestiondbs) {
-            const dbThis = pluginhandler.getPlugin(db);
+            const dbThis = NEURANET_CONSTANTS.getPlugin(db);
             await dbThis.renamefile(from, to, new_referencelink, id, org, brainid); 
         }
         LOG.info(`Rename of file from ${from} to ${to} for ID ${id} and org ${org} succeeded.`)

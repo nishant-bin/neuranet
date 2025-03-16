@@ -25,6 +25,11 @@ exports.initSync = _ => {
     brainhandler.initSync();
     aidbfs.initSync();
     textextractor.initAsync();  // yes this is async so there is a slim chance by the first call it is still loading
+
+    const clusterSize = NEURANET_CONSTANTS.CONF.cluster_size ||     // if conf has cluster size use it, else try from distributed memory, else use local core count 
+        (DISTRIBUTED_MEMORY.get(NEURANET_CONSTANTS.CLUSTERCOUNT_KEY) ?
+            DISTRIBUTED_MEMORY.get(NEURANET_CONSTANTS.CLUSTERCOUNT_KEY) + 1 : undefined) || CLUSTER_MEMORY.configured_cluster_count;
+    DISTRIBUTED_MEMORY.set(NEURANET_CONSTANTS.CLUSTERCOUNT_KEY, clusterSize);
 }
 
 function _readConfSync() {

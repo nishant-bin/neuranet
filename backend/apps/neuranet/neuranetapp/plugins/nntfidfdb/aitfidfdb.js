@@ -551,9 +551,10 @@ function _getDistributedResultFromFunction(db, module_name, function_name, param
     bboptions[blackboard.NOT_LOCAL_ONLY] = true;
 
     LOG.info(`TF.IDF sending internal function call ${module_name} -> ${function_name}`);
+    const clustercount = DISTRIBUTED_MEMORY.get(NEURANET_CONSTANTS.CLUSTERCOUNT_KEY);
     return new Promise(resolve => blackboard.getReply(TFIDFDB_INTERNAL_FUNCTION_CALL_TOPIC, 
         {creation_data: _createDBCreationData(db), module_name, function_name, params}, 
-        conf.cluster_timeout, bboptions, replies=>resolve(_unmarshallReplies(replies))));
+        conf.cluster_timeout, bboptions, replies=>resolve(_unmarshallReplies(replies)), clustercount-1));
 }
 
 const _unmarshallReplies = replies => {

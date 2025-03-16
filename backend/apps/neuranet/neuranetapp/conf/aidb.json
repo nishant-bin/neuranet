@@ -3,9 +3,5 @@
     "autosave_frequency": 36000000,
     "distributed": true,
     "cluster_timeout": 800,
-    "aiss_vectordb": "demovectordb",
-    "aiss_tfidfdb": "demotfidfdb",
-    "aidbs_to_init": ["nntfidfdb", "nnvectordb"],
-    "aitfidfdb_module": "",
-    "aivectordb_module": ""
+    "aidbs_to_init": ["nntfidfdb", "nnvectordb"]
 }

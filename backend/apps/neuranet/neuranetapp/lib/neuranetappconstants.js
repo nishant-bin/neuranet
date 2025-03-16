@@ -33,6 +33,8 @@ exports.NEURANET_LANGID = "aidb_langid";
 
 exports.GENERATED_FILES_FOLDER = "_neuranet_generated";
 
+exports.CLUSTERCOUNT_KEY = "_neuranet_cluster_count";
+
 exports.getPlugin = name => require(`${exports.LIBDIR}/pluginhandler.js`).getPlugin(name);
 
 exports.NEURANETEVENT = "__org_monkshu_neuranet_event";

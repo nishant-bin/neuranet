@@ -21,7 +21,6 @@
  */
 
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
-const pluginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/pluginhandler.js`);
 
 /**
  * Runs the LLM. 
@@ -43,6 +42,6 @@ const pluginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/pluginhandler.js`);
  * 					                 to the exact document
  */
 exports.answer = params => {
-	const docchat = pluginhandler.getPlugin("llmdocchat");
+	const docchat = NEURANET_CONSTANTS.getPlugin("llmdocchat");
 	return docchat.answer(params);
 }

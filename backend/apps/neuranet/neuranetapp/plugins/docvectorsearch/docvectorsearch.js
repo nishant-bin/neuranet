@@ -17,7 +17,6 @@
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const embedding = require(`${NEURANET_CONSTANTS.LIBDIR}/embedding.js`);
-const pluginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/pluginhandler.js`);
 const llmflowrunner = require(`${NEURANET_CONSTANTS.LIBDIR}/llmflowrunner.js`);
 
 const REASONS = llmflowrunner.REASONS;
@@ -59,7 +58,7 @@ exports.search = async function(params, _llmstepDefinition) {
 	const tfidfSearchOptions = {punish_verysmall_documents: params.punish_verysmall_documents||false, 
 		ignore_coord: params.ignore_coord, max_coord_boost: params.max_coord_boost, bm25: params.bm25||false};
 
-	const nntfidfdbPlugin = pluginhandler.getPlugin("nntfidfdb");
+	const nntfidfdbPlugin = NEURANET_CONSTANTS.getPlugin("nntfidfdb");
     const tfidfDBs = []; for (const brainidThis of brainids) tfidfDBs.push(...await nntfidfdbPlugin.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainidThis));
 	if (!tfidfDBs.length) {	// no TF.IDF DB worked or found
 		const errMsg = `Can't instantiate any TF.IDF DBs user ID ${id}. Giving up.`;
@@ -90,7 +89,7 @@ exports.search = async function(params, _llmstepDefinition) {
 		LOG.error(err); params.return_error(err, REASONS.INTERNAL); return;
 	}
 
-	const nntvectordbPlugin = pluginhandler.getPlugin("nntvectordb");
+	const nntvectordbPlugin = NEURANET_CONSTANTS.getPlugin("nntvectordb");
 	let vectordbs = []; for (const brainidThis of brainids) {
 		try {
 			vectordbs.push(...await nntvectordbPlugin.getVectorDBsForIDAndOrgAndBrainID(id, org, brainidThis, embeddingsGenerator, 

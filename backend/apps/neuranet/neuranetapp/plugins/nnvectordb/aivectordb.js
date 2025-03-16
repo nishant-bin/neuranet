@@ -543,8 +543,9 @@ function _getDistributedResultFromFunction(db, function_name, params, is_functio
     const msg = { dbinitparams: _createDBInitParams(db), function_params: [...params, false], 
         function_name, is_function_private, send_reply: needreply };
     const bboptions = {}; bboptions[blackboard.NOT_LOCAL_ONLY] = true;
+    const clustercount = DISTRIBUTED_MEMORY.get(NEURANET_CONSTANTS.CLUSTERCOUNT_KEY);
     return new Promise(resolve => blackboard.getReply(VECTORDB_FUNCTION_CALL_TOPIC, 
-        msg, conf.cluster_timeout, bboptions, replies=>resolve(replies)));
+        msg, conf.cluster_timeout, bboptions, replies=>resolve(replies), clustercount-1));
 }
 
 const _createDBInitParams = dbToUse => {return {dbpath: dbToUse.path, metadata_docid_key: dbToUse[METADATA_DOCID_KEY_PROPERTY_NAME]}};

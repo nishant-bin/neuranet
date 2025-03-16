@@ -11,6 +11,7 @@
 "db_server_host": "sqlite://{{{hostname}}}",
 "default_ai_cost_quota": 0.6,
 "fastcache_timeout": 10000,
+"cluster_size": 2,
 
 "ai_models": {
     "chat-openai": {

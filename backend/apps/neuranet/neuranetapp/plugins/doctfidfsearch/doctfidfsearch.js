@@ -17,7 +17,6 @@ const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const fileindexer = require(`${NEURANET_CONSTANTS.LIBDIR}/fileindexer.js`);
 const textsplitter = require(`${NEURANET_CONSTANTS.LIBDIR}/textsplitter.js`);
 const brainhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/brainhandler.js`);
-const pluginhandler = require(`${NEURANET_CONSTANTS.LIBDIR}/pluginhandler.js`);
 const llmflowrunner = require(`${NEURANET_CONSTANTS.LIBDIR}/llmflowrunner.js`);
 const langdetector = require(`${NEURANET_CONSTANTS.THIRDPARTYDIR}/langdetector.js`);
 
@@ -56,7 +55,7 @@ exports.search = async function(params, _llmstepDefinition) {
 	const tfidfSearchOptions = {punish_verysmall_documents: params.punish_verysmall_documents||false, 
 		ignore_coord: params.ignore_coord, max_coord_boost: params.max_coord_boost, bm25: params.bm25||false};
 
-	const nntfidfdbPlugin = pluginhandler.getPlugin("nntfidfdb");
+	const nntfidfdbPlugin = NEURANET_CONSTANTS.getPlugin("nntfidfdb");
     const tfidfDBs = []; for (const brainidThis of brainids) tfidfDBs.push(...await nntfidfdbPlugin.getTFIDFDBsForIDAndOrgAndBrainID(id, org, brainidThis));
 	if (!tfidfDBs.length) {	// no TF.IDF DB worked or found
 		const errMsg = `Can't instantiate any TF.IDF DBs user ID ${id}. Giving up.`;
