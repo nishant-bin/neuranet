@@ -1,0 +1,9 @@
+const wordcut = require("wordcut");
+
+exports.getSegmenter = _ => { return {
+    segment: (text) => {
+        wordcut.init();
+        const segmented = wordcut.cut(text);
+        return segmented.split("|");
+    }
+} }
