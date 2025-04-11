@@ -11,7 +11,7 @@
 
 
     "CREATE TABLE IF NOT EXISTS orgsettings(org varchar not null primary key, settings varchar not null)",
-    "REPLACE INTO orgsettings (org, settings) VALUES ('_org_neuranet_defaultorg_', '{\"pregen\": true, \"defaultapp\": \"default\"}')",
+    "REPLACE INTO orgsettings (org, settings) VALUES ('_org_neuranet_defaultorg_', '{\"defaultapp\": \"default\"}')",
 
 
     "CREATE TABLE IF NOT EXISTS usage(timestamp TIMESTAMP DEFAULT (strftime('%s', 'now')), id varchar not null, usage integer not null, model varchar not null)"

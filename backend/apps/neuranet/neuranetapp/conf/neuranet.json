@@ -12,6 +12,7 @@
 "default_ai_cost_quota": 0.6,
 "fastcache_timeout": 10000,
 "cluster_size": 2,
+"python_path": "{{{APPROOT}}}/3p/python.sh",
 
 "ai_models": {
     "chat-openai": {
@@ -24,8 +25,8 @@
             "model": "gpt-4o-mini", "temperature": 0.7, "stream": false, "max_tokens": 128000, 
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1
         },
-        "ai_key": "...",
-        "x_api_key" :"...",
+        "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
+        "x_api_key" :"6c1fcadd-dcf0-40b9-ac90-fa4d24c08b46",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
         "response_finishreason": "data.choices[0].finish_reason",
@@ -58,8 +59,8 @@
             "input":"${__ORG_NEURANET_PROMPT__}",
             "max_tokens": 8191
         },
-        "ai_key": "...",
-        "x_api_key" :"...",
+        "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
+        "x_api_key" :"6c1fcadd-dcf0-40b9-ac90-fa4d24c08b46",
         "split_separators": {"en":[".","\n"," "], "zh":["。","\n"," ","."], "ja":["。","\n"," ","."], "*":["。",".","\n"," "]},
         "split_joiners": {"*":["\n\n"]},
         "overlap": 0,

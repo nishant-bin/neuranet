@@ -87,7 +87,12 @@ div#maincontent {
 }
 div#maincontainer {
     flex-direction: column;
+    {{#show_ai_training}}
     height: calc(200% + 3.2em);
+    {{/show_ai_training}}
+    {{^show_ai_training}}
+    height: calc(100vh - 5em);
+    {{/show_ai_training}}
     overflow-y: auto;
     overflow-x: hidden;
 }
@@ -176,10 +181,4 @@ span#collapser {display: none; ismobile: true}
 {{^events}}{{i18n.EnterpriseAssist_NoEvents}}{{/events}}
 </div>
 <%={{ }}=%> -->
-</template>
-
-<template id="airesponsetemplate">
-    <span id="airesponsetext">{{{airesponse}}}</span>
-    <span id="aireferences">{{i18n.References}}</span>
-    {{#references}}<span id="aireferencestext">{{.}}</span>{{/references}}
 </template>

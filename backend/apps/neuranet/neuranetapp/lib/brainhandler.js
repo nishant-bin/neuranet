@@ -1,5 +1,6 @@
 /**
- * Handles federated brains for Neuranet.
+ * Handles extrainfo objects and AI app's associated with them - part of 
+ * the bridge between Neuranet and XBin CMS.
  * 
  * (C) 2023 TekMonks. All rights reserved.
  * License: See the enclosed LICENSE file.
@@ -8,12 +9,14 @@
 const path = require("path");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
-const dblayer = require(`${NEURANET_CONSTANTS.LIBDIR}/dblayer.js`);
 const cms = require(`${LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS.LIB_DIR}/cms.js`);
 
+/**
+ * Register with cms to modify paths for Neuranet AI apps.
+ */
 exports.initSync = _ => {
     cms.addCMSPathModifier(async (cmsroot, id, org, extraInfo) => { // we remove user ID from the path
-        const brainIDForUser = await exports.getAppID(id, org, extraInfo);
+        const brainIDForUser = await aiapp.getAppID(id, org, extraInfo);
 
         if (extraInfo?.mode != NEURANET_CONSTANTS.AIAPPMODES.EDIT) {
             const modifiedRootWithNoUserID = path.resolve(cmsroot.replace(encodeURIComponent(id), ""));
@@ -22,30 +25,37 @@ exports.initSync = _ => {
     });
 }
 
-exports.isThisDefaultOrgsDefaultApp = (_id, _org, aiappid) => aiappid == NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP;
-
-exports.getAppID = async function(id, org, extraInfo) {
-    // everything is ok so use what is requested
-    if (extraInfo && (extraInfo.id == id) && (extraInfo.org == org) && (extraInfo.aiappid)) return extraInfo.aiappid;    
-
-    // if this org has a default app then use that if missing
-    if (org) {
-        const orgSettings = await dblayer.getOrgSettings(org);
-        if (orgSettings.defaultapp) return orgSettings.defaultapp; 
-    } 
-
-    // finally failover to default org's default AI app
-    return NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP; 
-}
-
+/**
+ * Returns metadata coded into extraInfo object
+ * @param {object} extraInfo The extraInfo object.
+ * @returns The metadata coded into extraInfo object or an empty object if none found.
+ */
 exports.getMetadata = extraInfo => extraInfo.metadata||{};
 
-exports.getDefaultAppIDForOrg = async function (org) {
-    const orgSettings = await dblayer.getOrgSettings(org);
-    return orgSettings.defaultapp || NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP;
-}
-
+/**
+ * Returns true if the AI app is being edited for this call
+ * @param {object} extraInfo The extraInfo object.
+ * @returns true if the AI app is being edited for this call
+ */
 exports.isAIAppBeingEdited = extraInfo => extraInfo.mode == NEURANET_CONSTANTS.AIAPPMODES.EDIT;
 
+/**
+ * Created an extraInfo object
+ * @param {string} id The user ID
+ * @param {string} org The org
+ * @param {string} aiappid The AI app ID
+ * @param {string} metadata The metadata associated with this call
+ * @param {string} mode The mode
+ * @returns The created extraInfo object
+ */
 exports.createExtraInfo = (id, org, aiappid, metadata, mode) => {return {id, org, metadata, aiappid, mode:
     mode == NEURANET_CONSTANTS.AIAPPMODES.EDIT ? mode : NEURANET_CONSTANTS.AIAPPMODES.TRAIN}};
+
+/**
+ * Unmarshalls an extraInfo object and returns, id, org, aiappid, metadata and modes associated with it
+ * @param {object} extraInfo The extraInfo object
+ * @returns id, org, aiappid, metadata and modes associated with it
+ */
+exports.unmarshallExtraInfo = extraInfo => extraInfo ? 
+    {id: extraInfo.id, org: extraInfo.org, aiappid: extraInfo.aiappid, metadata: extraInfo.metadata, 
+        mode: extraInfo.mode} : {};

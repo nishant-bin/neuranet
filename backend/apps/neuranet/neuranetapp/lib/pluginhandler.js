@@ -1,5 +1,6 @@
 /**
- * Handles all Neuranet plugins.
+ * Handles all Neuranet plugins. This is a blocking function potentially,
+ * the first time per process as require is blocking.
  * 
  * (C) 2023 Tekmonks Corp. All rights reserved.
  * License: See the enclosed LICENSE file.

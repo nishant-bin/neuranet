@@ -84,7 +84,7 @@ exports.getAIApp = async function(id, org, aiappid, forcecache) {
 
         // dynamic app support will allow for partitioned DBs with app IDs but using default YAML as the app definition
         LOG.warn(`Using dynamic app for app ID ${aiappid} for org ${org}, as static app for this ID not found.`);
-        const aiappidDefaultForOrg = await brainhandler.getDefaultAppIDForOrg(org), 
+        const aiappidDefaultForOrg = await exports.getDefaultAppIDForOrg(org), 
             appFileDefaultForOrg = exports.getAppFile(id, org, aiappidDefaultForOrg),
             appDefaultYamlForOrg = await fspromises.readFile(appFileDefaultForOrg, "utf8");
         const appDefaultForOrg = yaml.parse(appDefaultYamlForOrg); appDefaultForOrg.id = aiappid;
@@ -97,7 +97,7 @@ exports.getAIApp = async function(id, org, aiappid, forcecache) {
  * @return {object} The default AI app object
  */
 exports.getDefaultAIApp = async _ => {
-    const aiappidDefault = brainhandler.getDefaultAppIDForOrg(org), 
+    const aiappidDefault = exports.getDefaultAppIDForOrg(org), 
         appFileDefault = exports.getAppFile(NEURANET_CONSTANTS.DEFAULT_ID, NEURANET_CONSTANTS.DEFAULT_ORG, aiappidDefault),
         appDefaultYaml = await fspromises.readFile(appFileDefault, "utf8");
     const app = yaml.parse(appDefaultYaml);
@@ -144,7 +144,7 @@ exports.getCommandModule = async function(id, org, aiappid, command) {
  * @param {string} aiappid The AI app ID
  * @returns AI application directory.
  */
-exports.getAppDir = (id, org, aiappid) => brainhandler.isThisDefaultOrgsDefaultApp(id, org, aiappid) ?
+exports.getAppDir = (id, org, aiappid) => exports.isThisDefaultOrgsDefaultApp(id, org, aiappid) ?
     `${NEURANET_CONSTANTS.AIAPPDIR}/${NEURANET_CONSTANTS.DEFAULT_ORG}/${aiappid}` : `${NEURANET_CONSTANTS.AIAPPDIR}/${org}/${aiappid}`;
     
 /**
@@ -196,8 +196,13 @@ exports.initNewAIAppForOrg = async function(aiappid, label, id, org) {
                 fileBuffer, relativePath, `AI app file for ${aiappid}`, brainhandler.createExtraInfo(
                     id, org, aiappid, undefined, NEURANET_CONSTANTS.AIAPPMODES.EDIT), true);    // no ai event is true as we don't add this file to the AI
         });
-        if (result) result = await dblayer.addOrUpdateAIAppForOrg(org, aiappid, exports.AIAPP_STATUS.UNPUBLISHED);
-        else {
+        if (result) {
+            const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);   // avoid cyclic requires
+            const aidbRoot = `${NEURANET_CONSTANTS.AIDBPATH}/${aidbfs.getDBID(id, org, aiappid)}`;
+            const appdbFolderPath = `${aidbRoot}/${aiappid}`;  // create ai app's DB dir for Ai DBs
+            await serverutils.createDirectory(appdbFolderPath);
+            result = await dblayer.addOrUpdateAIAppForOrg(org, aiappid, exports.AIAPP_STATUS.UNPUBLISHED);
+        } else {
             LOG.error(`DB update for AI app ${aiappid} for org ${org} failed.`);
             try {await utils.rmrf(newAppDir);} catch (err) {LOG.error(`Error ${err} cleaning up ${newAppDir} for org ${org}.`);}
         }
@@ -219,15 +224,16 @@ exports.initNewAIAppForOrg = async function(aiappid, label, id, org) {
 exports.deleteAIAppForOrg = async function (aiappid, id, org) {
     const appDir = exports.getAppDir(id, org, aiappid);
     aiappid = aiappid.toLowerCase(); org = org.toLowerCase();
-    const archiveDirPath = `${NEURANET_CONSTANTS.DBDIR}/ai_db/archive`;
-    const sourceFolderPath = `${NEURANET_CONSTANTS.DBDIR}/ai_db/${org}/${aiappid}`;
-    const zipFilePath = `${archiveDirPath}/${aiappid}.zip`;
+    const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);   // avoid cyclic requires
+    const aidbRoot = `${NEURANET_CONSTANTS.AIDBPATH}/${aidbfs.getDBID(id, org, aiappid)}`;
+    const appdbArchiveDirPath = `${aidbRoot}/archive`, appdbFolderPath = `${aidbRoot}/${aiappid}`;  // save uploaded data
+    const zipFilePath = `${appdbArchiveDirPath}/${aiappid}.zip`;
     let result; 
     try {
-        await serverutils.createDirectory(archiveDirPath);
-        await serverutils.zipFolder(sourceFolderPath, zipFilePath);
-        await serverutils.rmrf(sourceFolderPath);   
-        result = await serverutils.rmrf(appDir);
+        await serverutils.createDirectory(appdbArchiveDirPath);
+        await serverutils.zipFolder(appdbFolderPath, zipFilePath);
+        await serverutils.rmrf(appdbFolderPath);    // delete trained DBs
+        result = await serverutils.rmrf(appDir);    // delete app itself
     } catch (err) {
         LOG.error(`Error deleting AI app for org ${org}: ${err.message}`);
         return false;
@@ -239,8 +245,6 @@ exports.deleteAIAppForOrg = async function (aiappid, id, org) {
         return await dblayer.deleteAIAppforOrg(org, aiappid);
     }
 }
-
-
 
 /**
  * Publishes (but doesn't add) the given AI app for the given org.
@@ -262,6 +266,60 @@ exports.publishAIAppForOrg = async function(aiappid, org) {
 exports.unpublishAIAppForOrg = async function(aiappid, org) {
     aiappid = aiappid.toLowerCase(); org = org.toLowerCase();  
     return await dblayer.addOrUpdateAIAppForOrg(org, aiappid, exports.AIAPP_STATUS.UNPUBLISHED);
+}
+
+/**
+ * Returns the default app ID for an org
+ * @param {string} org The org whose default AI app ID is needed
+ * @returns The default app ID for an org
+ */
+exports.getDefaultAppIDForOrg = async function (org) {
+    const orgSettings = await dblayer.getOrgSettings(org);
+    return orgSettings.defaultapp || NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP;
+}
+
+/**
+ * Sets the default app ID for an org
+ * @param {string} org The org whose default AI app ID is to be set
+ * @param {string} aiappid The new default app ID
+ * @returns true on success and false or undefined on errors
+ */
+exports.setDefaultAppIDForOrg = async function (org, aiappid) {
+    const orgSettings = await dblayer.getOrgSettings(org);
+    orgSettings.defaultapp = aiappid;
+    return dblayer.setOrgSettings(org, orgSettings);
+}
+
+/**
+ * Returns true if the given id, org and aiappid belong instead to the default org and default app
+ * @param {string} _id The ID (not used)
+ * @param {string} _org The org (not used)
+ * @param {string} aiappid The app ID to be tested 
+ * @returns true if the given id, org and aiappid belong instead to the default org and default app
+ */
+exports.isThisDefaultOrgsDefaultApp = (_id, _org, aiappid) => aiappid == NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP;
+
+/**
+ * Returns the app ID to use for a given request.
+ * @param {string} id The ID 
+ * @param {string} org The org 
+ * @param {*} extraInfo The associated extraInfo object
+ * @returns The app ID to use for a given request.
+ */
+exports.getAppID = async function(idIn, orgIn, extraInfo) {
+    const {id, org, aiappid} = brainhandler.unmarshallExtraInfo(extraInfo);
+
+    // everything is ok so use what is requested
+    if (extraInfo && (id == idIn) && (org == orgIn) && (aiappid)) return aiappid;    
+
+    // if this org has a default app then use that if missing
+    if (orgIn) {
+        const orgSettings = await dblayer.getOrgSettings(orgIn);
+        if (orgSettings.defaultapp) return orgSettings.defaultapp; 
+    } 
+
+    // finally failover to default org's default AI app
+    return NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP; 
 }
 
 /**

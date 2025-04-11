@@ -34,7 +34,7 @@ exports.initSync = _ => {
 
 function _readConfSync() {
     const confjson = mustache.render(fs.readFileSync(`${NEURANET_CONSTANTS.CONFDIR}/neuranet.json`, "utf8"), 
-        {...NEURANET_CONSTANTS, hostname: LOGINAPP_CONSTANTS.HOSTNAME}).replace(/\\/g, "\\\\");   // escape windows paths
+        {...NEURANET_CONSTANTS, hostname: LOGINAPP_CONSTANTS.HOSTNAME, APPROOT: NEURANET_CONSTANTS.APPROOT}).replace(/\\/g, "\\\\");   // escape windows paths
     NEURANET_CONSTANTS.CONF = JSON.parse(confjson);
     global.NEURANET_CONSTANTS = NEURANET_CONSTANTS;
 }

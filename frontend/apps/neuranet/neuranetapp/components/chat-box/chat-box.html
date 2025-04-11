@@ -33,12 +33,11 @@ div#body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    align-items: center;
 }
 
 div#chat {
     width: 100%;
-    border: 1px solid #03B3FF;
-    border-radius: 0.5em;
     box-sizing: border-box;
     height: calc(100% - 7em);
     margin-bottom: 1.5em;
@@ -94,7 +93,9 @@ div#message {
     overflow: auto;
     position: relative;
     border: 1px solid #03B3FF;
-    border-radius: 0.5em;
+    border-radius: 1em;
+    max-width: 48em !important;
+    width: 100%;
 }
 div#message div#disabled {
     width: 100%;
@@ -252,19 +253,20 @@ span#airesponse table thead:last-child tr:last-child th:first-child, span#airesp
     border-radius: 0 0 0 0.5em;
 }
 </style>
-{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_START}}}
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_PORTRAIT_START}}}
 	div#start {flex-direction: column;}
     div#body {padding: 0em 0.5em 1em 0.5em;}
     span#mainimage {max-height: 50%}
     span#mainspan {font-size: x-large; font-weight: 200;}
     div#chat {height: 85%;}
     div#message {height: calc(15% - 2em);}
-{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_END}}}
+    span#airesponse {max-width: unset;}
+{{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_PORTRAIT_END}}}
 
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_LANDSCAPE_START}}}
-	div#chat {height: 60% !important;}
+    div#body {padding: 0em 1em 1em 1em;}
 	img#mainimage {padding: 1em !important;}
-	span#mainspan {font-size: smaller !important;}
+	span#mainspan {font-size: 1.5em !important;}
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_LANDSCAPE_END}}}
 
 <div id="body">

@@ -23,7 +23,7 @@ function initView(data) {
         ...(window.monkshu_env.apps[APP_CONSTANTS.EMBEDDED_APP_NAME]||{}), enterprise_assist_main: main}; 
     data.VIEW_PATH = data.viewpath;
     VIEW_PATH = data.viewpath;
-    data.show_ai_training = isAdmin;
+    data.show_ai_training = data.activeaiapp.interface.show_training_in_chat && isAdmin;
     data.collapse_ai_training = true;
     data.extrainfo = {id: session.get(APP_CONSTANTS.USERID).toString(), 
         org: session.get(APP_CONSTANTS.USERORG).toString(), aiappid: data.activeaiapp.id, mode: "trainaiapp"};

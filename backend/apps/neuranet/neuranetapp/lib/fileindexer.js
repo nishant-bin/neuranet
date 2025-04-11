@@ -19,6 +19,7 @@ const path = require("path");
 const crypto = require("crypto");
 const mustache = require("mustache");
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
+const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 const blackboard = require(`${CONSTANTS.LIBDIR}/blackboard.js`);
 const aidbfs = require(`${NEURANET_CONSTANTS.LIBDIR}/aidbfs.js`);
 const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
@@ -226,7 +227,7 @@ async function _searchForFilePlugin(fileindexerForFile) {
 }
 
 async function _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang) {
-    const aiappid = await brainhandler.getAppID(id, org, extraInfo);
+    const aiappid = await aiapp.getAppID(id, org, extraInfo);
     return {
         filepath: pathIn, id, org, lang, minimum_success_percent: DEFAULT_MINIMIMUM_SUCCESS_PERCENT, 
         cmspath, aiappid, extrainfo: extraInfo,
