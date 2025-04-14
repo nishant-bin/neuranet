@@ -33,8 +33,8 @@ async function send(containedElement) {
     const userMessageArea = shadowRoot.querySelector("textarea#messagearea"), userPrompt = userMessageArea.value.trim();
     if (userPrompt == "") return;    // empty prompt, ignore
 
-    const divDisabled = shadowRoot.querySelector("div#message div#disabled"), buttonSendImg = shadowRoot.querySelector("img#send");
-    divDisabled.style.display = "block"; buttonSendImg.src = `${COMPONENT_PATH}/img/spinner.svg`; userMessageArea.readOnly = true;
+    const disMessage = shadowRoot.querySelector("div#message"), buttonSendImg = shadowRoot.querySelector("img#send");
+    disMessage.classList.add("disabled"); buttonSendImg.src = `${COMPONENT_PATH}/img/spinner.svg`; userMessageArea.readOnly = true;
     const oldInsertion = _insertAIResponse(shadowRoot, userMessageArea, userPrompt, undefined, undefined, false);
     const onRequest = host.getAttribute("onrequest"), api_chat = host.getAttribute("chatapi");
     const requestProcessor = util.createAsyncFunction(`return await ${onRequest};`), 
@@ -49,7 +49,7 @@ async function send(containedElement) {
         buttonSendImg.onclick = ''; buttonSendImg.src = `${COMPONENT_PATH}/img/senddisabled.svg`;
     } else { // enable sending more messages
         buttonSendImg.src = `${COMPONENT_PATH}/img/send.svg`;
-        divDisabled.style.display = "none";
+        disMessage.classList.remove("disabled")
         userMessageArea.readOnly = false;
     }   
 }

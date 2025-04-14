@@ -25,8 +25,6 @@ div#maincontainer {
     flex-direction: row;
 }
 
-chat-box#enterpriseassistant {width: 60%}
-
 span#filecontainerheader { 
     height: 2em;
     background-color: #03B3FF;
@@ -44,8 +42,8 @@ div#filecontainer {
     border-radius: 0.5em;
     overflow: hidden;
     box-sizing: border-box;
-    display: flex;
     flex-flow: column;
+    display: none;
 }
 
 span#filecontainerheader{
@@ -79,6 +77,14 @@ file-manager#fm {
     height: calc(100% - 3em);
 }
 </style>
+<!-- needed to avoid CSS errors -->
+{{{APP_CONSTANTS.CSS_STYLE_START}}} 
+chat-box#enterpriseassistant {
+    {{#show_ai_training}}width: 60%{{/show_ai_training}}
+    {{^show_ai_training}}width: 100%{{/show_ai_training}}
+}
+{{{APP_CONSTANTS.CSS_STYLE_END}}}
+
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_START}}}
 div#maincontent {
     overflow-y: auto;
@@ -106,7 +112,7 @@ div#filecontainer {
     margin: 4em 0.5em 2em 0.5em;
     flex-grow: 0;
 }
-span#collapser {display: none; ismobile: true}
+span#collapser {display: none;}
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_END}}}
 
 <div id="maincontainer">
@@ -148,14 +154,13 @@ span#collapser {display: none; ismobile: true}
 
 <script defer>
     window.onload=_=>{ 
-        if ("{{{show_ai_training}}}".toLowerCase() == "false") {
-            LOG.info("Told to not show AI training"); 
-            document.querySelector("div#filecontainer").style.display = "none";  
-            document.querySelector("chat-box#enterpriseassistant").style.width = "100%";
-            return;
+        if ("{{{show_ai_training}}}".toLowerCase() == "true") {
+            LOG.info("Told to show AI training"); 
+            document.querySelector("div#filecontainer").style.display = "flex"; 
+            document.querySelector("div#maincontent").scrollTop = 0
         }
         if ("{{{collapse_ai_training}}}".toLowerCase() == "true" && (document.querySelector("span#collapser").offsetWidth != 0)) 
-            document.querySelector("span#collapser").click();  
+            document.querySelector("span#collapser").click();
     }
 </script>
 
