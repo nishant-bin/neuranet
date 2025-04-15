@@ -8,7 +8,7 @@
 ::-webkit-scrollbar-track {
     -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
     box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3) !important;
-    margin: 2em;
+    margin: 7em;
     border-radius: 1em !important;
 }
 
@@ -43,12 +43,13 @@ div#chat {
     display: flex;
     flex-direction: row;
     margin-bottom: -1.5em;
+    max-width: 55em;
 }
 div#chatscroller {
     overflow-x: hidden;
     width: 100%;
     overflow: hidden;
-    padding-right: 0.5em;
+    scrollbar-gutter: stable;
 }
 div#chatscroller:hover {overflow-y: overlay; padding-right: 0em;}
 div#chatmainarea {
@@ -56,8 +57,8 @@ div#chatmainarea {
     flex-direction: column;
     width: 100%;
     height: 100%;
-    padding-right: 0.5em;
     box-sizing: border-box;
+    padding-right: 0.5em;
 }
 div#start {
     display: flex;
@@ -85,9 +86,14 @@ span#mainspan {
     overflow: hidden;
 }
 
+div#messageareabackgroundcolor { /* The text content which overflows behind the message area gets a minor blur */
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    background: #ffffff7d;
+}
 div#message {
     display: flex;
-    bottom: calc(6em - 100%);   /* due to chat div being absolute above, which is needed to obey training rules */
     flex-direction: column;
     justify-content: space-between;
     flex-grow: 1;
@@ -100,6 +106,8 @@ div#message {
     max-height: 6em;
     height: 6em;
     background-color: white;
+}
+div#message:hover, div#message:focus-within {
     box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.05), 0 6px 20px 0 rgba(0, 0, 0, 0.0);
 }
 div#message.disabled {
@@ -204,15 +212,23 @@ img#waitspin {
 }
 span#aicontentholder {margin: 0.5em 0em;}
 span#userprompt, span#airesponse {
-    padding: 1em;
-    box-sizing: border-box;
     min-height: 3.5em;
     color: #005C84;
     overflow: hidden;
     text-overflow: ellipsis;
 }
-span#userprompt {background-color: #C8EDFF; max-width: calc(100% - 9em); border-radius: 1em;}
-span#airesponse {line-height: 1.8em; flex-grow: 1;}
+span#userprompt {
+    background-color: #C8EDFF; 
+    max-width: calc(100% - 9em); 
+    border-radius: 1em;
+    padding: 1em;
+    box-sizing: border-box;
+}
+span#airesponse {
+    line-height: 1.8em; 
+    flex-grow: 1; 
+    text-align: justify;
+}
 span#airesponse.content {width: calc(100% - 10em);}
 span#airesponse table { 
     border: 1px solid #005C84;
@@ -253,6 +269,7 @@ span#airesponse table thead:last-child tr:last-child th:first-child, span#airesp
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_PORTRAIT_START}}}
 	div#start {flex-direction: column;}
     div#body {padding: 0.5em 0.5em 1em 0.5em;}
+    div#chat {max-width: unset;}
     span#mainimage {max-height: 50%}
     span#mainspan {font-size: x-large; font-weight: 200;}
     span#airesponse {max-width: unset;}
@@ -260,6 +277,7 @@ span#airesponse table thead:last-child tr:last-child th:first-child, span#airesp
 
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_LANDSCAPE_START}}}
     div#body {padding: 0em 1em 1em 1em;}
+    div#chat {max-width: unset;}
 	img#mainimage {padding: 1em !important;}
 	span#mainspan {font-size: 1.5em !important;}
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_LANDSCAPE_END}}}
@@ -277,6 +295,7 @@ span#airesponse table thead:last-child tr:last-child th:first-child, span#airesp
     </div>
 </div>
 
+<div id="messageareabackgroundcolor">
 <div id="message">
     <textarea id="messagearea" onkeyup="
         const multiline = this.parentNode.querySelector('input#multiline').checked;
@@ -288,6 +307,7 @@ span#airesponse table thead:last-child tr:last-child th:first-child, span#airesp
         {{#ATTACHMENT_ALLOWED}}<img id="attach" onclick="monkshu_env.components['chat-box'].attach(this)" src="{{{COMPONENT_PATH}}}/img/attach.svg">{{/ATTACHMENT_ALLOWED}}
         <img id="send" onclick="monkshu_env.components['chat-box'].send(this)" src="{{{COMPONENT_PATH}}}/img/send.svg">
     </span>
+</div>
 </div>
 
 <template id="chatresponse_insertion_template">

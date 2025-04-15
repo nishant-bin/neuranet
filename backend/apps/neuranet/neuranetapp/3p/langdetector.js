@@ -5,7 +5,7 @@
  * (C) 2023 Tekmonks. All rights reserved.
  */
 
-const {detect} = require("tinyld");
+const {detect} = require("tinyld/heavy");
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const conf = require(`${NEURANET_CONSTANTS.CONFDIR}/lang.json`);
 const textsplitter = require(`${NEURANET_CONSTANTS.LIBDIR}/textsplitter.js`);
