@@ -1,0 +1,45 @@
+{
+"error": null,
+"data": {
+    "id": "chatcmpl-71iQFQ0BFfoL9sxABC0NyyszhQHDq",
+    "object": "chat.completion",
+    "created": 1680643443,
+    "model": "gpt-3.5-turbo-0301",
+    "usage": {
+        "prompt_tokens": 25,
+        "completion_tokens": 21,
+        "total_tokens": 46
+    },
+    "choices": [
+        {
+            "message": {
+                "role": "assistant",
+                "content": "To calculate the average daily sales from the provided data in the Excel sheet, we need to follow these steps:\n\n1. **Identify the Total Sales Amount**: Sum the total cost of all orders.\n2. **Count the Unique Days**: Determine the number of unique days on which orders were made.\n3. **Calculate the Average Daily Sales**: Divide the total sales amount by the number of unique days.\n\n### Step 1: Total Sales Amount\nFrom the data in the sheet, we can extract the total costs for each order. Here are the total costs:\n\n- O001: ₹1000\n- O002: ₹1000\n- O003: ₹1200\n- O004: ₹1500\n- O005: ₹600\n- O006: ₹1200\n- O007: ₹500\n- O008: ₹1050\n- O009: ₹1800\n- O010: ₹1800\n- O011: ₹1200\n- O012: ₹1000\n- O013: ₹1800\n- O014: ₹1000\n- O015: ₹600\n- O016: ₹800\n- O017: ₹1800\n- O018: ₹1350\n- O019: ₹2000\n- O020: ₹750\n- O021: ₹1200\n- O022: ₹3000\n- O023: ₹1500\n- O024: ₹1000\n- O025: ₹1400\n- O026: ₹1440\n\n**Total Sales Calculation**:\n\\[\n1000 + 1000 + 1200 + 1500 + 600 + 1200 + 500 + 1050 + 1800 + 1800 + 1200 + 1000 + 1800 + 1000 + 600 + 800 + 1800 + 1350 + 2000 + 750 + 1200 + 3000 + 1500 + 1000 + 1400 + 1440 = ₹ 26,990\n\\]\n\n### Step 2: Count Unique Days\nLooking at the \"Date of Order\" column, the unique dates are:\n- 26/03/2025\n- 27/03/2025\n- 28/03/2025\n- 29/03/2025\n- 30/03/2025\n- 31/03/2025\n- 01/04/2025\n- 02/04/2025\n- 03/04/2025\n- 04/04/2025\n- 05/04/2025\n- 06/04/2025\n- 07/04/2025\n- 08/04/2025\n- 09/04/2025\n- 10/04/2025\n- 11/04/2025\n- 12/04/2025\n- 13/04/2025\n- 14/04/2025\n- 15/04/2025\n\nThere are **21 unique days** of orders.\n\n### Step 3: Calculate Average Daily Sales\nNow, we can calculate the average daily sales:\n\\[\n\\text{Average Daily Sales} = \\frac{\\text{Total Sales}}{\\text{Number of Unique Days}} = \\frac{₹ 26,990}{21} \\approx ₹ 1,285.67\n\\]\n\n### Final Answer\nThe average daily sales in the sheet is approximately **₹ 1,285.67**."
+            },
+            "finish_reason": "stop",
+            "index": 0
+        }
+    ]
+},
+"status": 200,
+"resHeaders": {
+    "date": "Tue, 04 Apr 2023 21:24:04 GMT",
+    "content-type": "application/json",
+    "access-control-allow-origin": "*",
+    "cache-control": "no-cache, must-revalidate",
+    "openai-model": "gpt-3.5-turbo-0301",
+    "openai-organization": "tekmonks",
+    "openai-processing-ms": "1022",
+    "openai-version": "2020-10-01",
+    "strict-transport-security": "max-age=15724800; includeSubDomains",
+    "x-ratelimit-limit-requests": "3500",
+    "x-ratelimit-remaining-requests": "3499",
+    "x-ratelimit-reset-requests": "17ms",
+    "x-request-id": "f43d561ae3baafda50a6f589ded7cf7e",
+    "cf-cache-status": "DYNAMIC",
+    "server": "cloudflare",
+    "cf-ray": "7b2c9db1fa6be334-DEL",
+    "alt-svc": "h3=\":443\"; ma=86400, h3-29=\":443\"; ma=86400",
+    "status": 200
+}
+}

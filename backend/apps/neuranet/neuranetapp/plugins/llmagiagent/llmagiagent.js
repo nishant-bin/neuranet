@@ -4,23 +4,6 @@
  * answer if LLM gave the answer or run code to produce the answer if LLM gave the code.
  * Can however loop if code doesn't compile or work (max retries).
  * 
- * Request params
- * 	id - the user ID
- *  org - the user org
- *  session - Array of [{"role":"user||assistant", "content":"[chat content]"}]
- *  maintain_session - If set to false, then session is not maintained
- *  session_id - The session ID for a previous session if this is a continuation else null
- *  aiappid - The calling ai app
- *  question - The question asked
- *  documents - The list of documents to use as reference for answering
- *  files - Files to use as reference for answering
- *  matchers_for_reference_links - Reference link parsers
- *  prompt - The prompt for the initial question
- *  prompt_code_exec_failed - The code step's exec failed, prompt for regenerating it
- *  prompt_code_compile_failed - The code step's compile failed, prompt for regenerating it
- *  prompt_code_retry_exceeded - The code step's compile or exec failed, prompt for informing of the failure
- *  code_max_retries - How many times to retry generating the code, if it fails exec or compiles
- * 
  * Response object
  *  result - true or false
  *  reason - set to one of the reasons if result is false
@@ -38,28 +21,59 @@ const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const REASONS = {OK: "ok", VALIDATION:"badrequest"}, MAX_RETRIES = 3;
 const KEYWORD_TO_LINE_WORDS_RATIO = 6, LINES_OF_CODE_TO_TOTAL_LINE_RATIO = 0.9;
 
-exports.chat = async params => {
+/**
+ * Runs the LLM. 
+ * 
+ * @param {Object} params Request params documented below
+ * 	                          id - The user ID
+ *                            org - User's Org
+ *                            session_id - The session ID for a previous session if this is a continuation
+ *                            question - The question asked
+ * 							  files - Attached files to the question
+ * 							  aiappid - The AI app ID
+ * 							  auto_summary - Set to true to reduce session size but can cause response errors
+ * 							  model - The chat model to use, with overrides
+ * 							  documents - Documents to use for the chat
+ * 							  matchers_for_reference_links - The matchers for reference links
+ * 							  prompt - The prompt for the initial question
+ *  						  prompt_code_exec_failed - The code step's exec failed, prompt for regenerating it
+ *  						  prompt_code_compile_failed - The code step's compile failed, prompt for regenerating it
+ *  						  prompt_code_retry_exceeded - The code step's compile or exec failed, prompt for informing of the failure
+ *  						  code_max_retries - How many times to retry generating the code, if it fails exec or compiles
+ *                            <anything else> - Used to expand the prompt, including user's queries
+ * 
+ * @returns {Object} The Response is an object
+ *  	                 result - true or false
+ *  	                 reason - set to one of the reasons if result is false
+ *  	                 response - the AI response, as a plain text
+ *  	                 session_id - the session ID which can be used to ask backend to maintain sessions
+ *  	                 metadatas - the response document metadatas. typically metadata.referencelink points
+ * 					                 to the exact document
+ */
+exports.answer = async params => {
 	if (!validateRequest(params)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
 
 	LOG.debug(`Got AGI agent request from ID ${params.id}. Incoming request is ${JSON.stringify(params)}`);
 	const docchat = NEURANET_CONSTANTS.getPlugin("llmdocchat");	
 
 	let stepAnswer = await docchat.answer(params), retries = 0; 
+	if (params.has_error()) return;	// error in processing chat response
 
 	let extractedPythonCode = false;
 	const _retry = async (prompt, error) => {
 		retries++; stepAnswer = await docchat.answer({...params, prompt, currentCode: extractedPythonCode, error}); 
-		extractedPythonCode = _extractPythonCode(stepAnswer);
+		if (!params.has_error()) extractedPythonCode = _extractPythonCode(stepAnswer);
 	};
 
 	extractedPythonCode = _extractPythonCode(stepAnswer);
-	while (extractedPythonCode && retries < params.code_max_retries||MAX_RETRIES) {
+	while (extractedPythonCode && (retries < params.code_max_retries||MAX_RETRIES)) {
 		const compileResult = await _compiles(extractedPythonCode);
 		if (compileResult.result) {
 			const execResult = await _execCode(extractedPythonCode, params);
 			if (execResult.result) {stepAnswer.response = execResult.stdout; break;}
 			else await _retry(params.prompt_code_exec_failed, execResult.stderr);
 		} else await _retry(params.prompt_code_compile_failed, compileResult.stderr);
+		if (params.has_error()) return;	// error in processing chat response
 	}
 	if (retries >= 3) stepAnswer = await _doFailedResponse(stepAnswer, params);
 	
@@ -67,8 +81,8 @@ exports.chat = async params => {
 }
 
 async function _doFailedResponse(stepAnswer, params) {
-	const stepAnswer = await docchat.answer({...params, prompt: params.prompt_code_retry_exceeded, currentCode: stepAnswer.response, error});
-	return stepAnswer;
+	const failedAnswer = await docchat.answer({...params, prompt: params.prompt_code_retry_exceeded, currentCode: stepAnswer.response, error});
+	return failedAnswer;
 }
 
 async function _compiles(code) {
@@ -139,5 +153,4 @@ function _extractPythonCode(text) {
 	if (pythonCodeLikeLines >= threshold) return code; else return false;
 }
 
-const validateRequest = params => (params && params.id && params.org && params.session && 
-	Array.isArray(params.session) && (params.session.length >= 1) && params.question && params.aiappid);
+const validateRequest = params => (params && params.id && params.org && params.question && params.aiappid);

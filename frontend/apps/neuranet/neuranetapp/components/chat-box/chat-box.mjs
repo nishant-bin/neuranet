@@ -4,9 +4,11 @@
  * (C) 2023 TekMonks. All rights reserved.
  * License: See enclosed LICENSE file.
  * 
- * Provides a standard chatbox component.
+ * Provides a standard chatbox component. Can take Latex'ed Markdown
+ * sent out by LLMs and format it to HTML.
  */
 
+import katex from "./3p/katex-0.16.min.mjs";
 import {util} from "/framework/js/util.mjs";
 import {marked} from "./3p/marked.esm.min.js";
 import {router} from "/framework/js/router.mjs";
@@ -99,7 +101,7 @@ function _insertAIResponse(shadowRoot, userMessageArea, userPrompt, aiResponse, 
     insertion.querySelector("span#userprompt").innerHTML = userPrompt;
     const elementAIResponse = insertion.querySelector("span#airesponse");
     if (aiResponse) {
-        const htmlContent = _markdownToHTML(aiResponse);
+        const htmlContent = _latexedMarkdownToHTML(aiResponse);
         elementAIResponse.innerHTML = htmlContent + insertionTemplate.querySelector("span#controls").outerHTML;
         elementAIResponse.dataset.content = `<!doctype html>\n${htmlContent}\n</html>`;
         elementAIResponse.dataset.content_mime = "text/html";
@@ -116,9 +118,15 @@ function _insertAIResponse(shadowRoot, userMessageArea, userPrompt, aiResponse, 
     return insertion;
 }
 
-function _markdownToHTML(text) {
+function _latexedMarkdownToHTML(text) {
     try {
-        const html = marked.parse(text);
+        const latexBoundariedText = text.replace(/\\\[([\s\S]*?)\\\]/g, '<div class=\"maths\">$1</div>');
+        let html = marked.parse(latexBoundariedText);
+        const regex = /<div class=\"maths\">([\s\S]*?)<\/div>/g;
+        let match; while ((match = regex.exec(html)) !== null) {
+            const mathMLText = katex.renderToString(match[1].trim(), {displayMode: true, output: "mathml", throwOnError: false, strict: false});
+            html = html.replace(match[0], mathMLText);
+        }
         return html;
     } catch (err) {
         LOG.error(`Markdown conversion error: ${err}, returning original text`);

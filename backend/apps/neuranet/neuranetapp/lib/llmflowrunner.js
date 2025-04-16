@@ -51,7 +51,9 @@ exports.answer = async function(query, id, org, aiappid, request, flow_section=e
 
         const [command, command_function] = llmflowCommandDefinition.command.split(".");
         const llmflowModule = await aiapp.getCommandModule(id, org, aiappid, command);
-        const callParams = {id, org, query, aiappid, request, return_error: function(){working_memory.return_error(...arguments, working_memory)}}; 
+        const callParams = {id, org, query, aiappid, request, 
+            return_error: function(){working_memory.return_error(...arguments, working_memory)},
+            has_error: function(){return working_memory.__error}}; 
         for (const [key, value] of Object.entries(llmflowCommandDefinition.in)) // expand params to get call params
             callParams[exports.extractRawKeyName(key)] = await _expandLLMFlowParam(key, value, working_memory);
 
