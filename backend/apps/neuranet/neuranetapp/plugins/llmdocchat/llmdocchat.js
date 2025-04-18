@@ -60,7 +60,7 @@ exports.answer = async (params) => {
 	const aiappThis = await aiapp.getAIApp(id, org, brainid, true);
     if ((!aiappThis.disable_quota_checks) && (!(await quota.checkQuota(id, org, brainid)))) {
 		const errMsg = `Disallowing the doc chat call, as the user ${id} of org ${org} is over their quota.`;
-		LOG.error(errMsg); params.return_error(errMsg); return;
+		LOG.error(errMsg); params.return_error(errMsg, REASONS.INTERNAL); return;
 	}
 
 	const chatsession = llmchat.getUsersChatSession(id, session_id).chatsession;

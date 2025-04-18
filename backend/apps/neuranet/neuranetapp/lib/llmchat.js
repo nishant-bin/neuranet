@@ -29,7 +29,8 @@ const REASONS = {INTERNAL: "internal", BAD_MODEL: "badmodel", OK: "ok", VALIDATI
 	MODEL_DEFAULT = "chat-openai", CHAT_SESSION_UPDATE_TIMESTAMP_KEY = "__last_update",
 	CHAT_SESSION_MEMORY_KEY_PREFIX = "__org_monkshu_neuranet_chatsession", 
 	PROMPT_FILE_WITH_AUTO_SUMMARY = "chat_prompt_auto_summary.txt", PROMPT_FILE_NO_SUMMARY = "chat_prompt_no_summmary.txt",
-	DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode, DEFAULT_MAX_MEMORY_TOKENS = 1000;
+	DEBUG_MODE = NEURANET_CONSTANTS.CONF.debug_mode, DEFAULT_MAX_MEMORY_TOKENS = 1000, 
+	DEFAULT_SYSTEM_MESSAGE = "You are a helpful assistant";
 
 exports.chat = async params => {
 	if (!validateRequest(params)) {LOG.error("Validation failure."); return {reason: REASONS.VALIDATION, ...CONSTANTS.FALSE_RESULT};}
@@ -61,7 +62,8 @@ exports.chat = async params => {
 	finalSessionObject[finalSessionObject.length-1].last = true;
 	
 	const promptFile = `${NEURANET_CONSTANTS.TRAININGPROMPTSDIR}/${params.auto_chat_summary_enabled?PROMPT_FILE_WITH_AUTO_SUMMARY:PROMPT_FILE_NO_SUMMARY}`;
-	const response = await aiLibrary.process({session: finalSessionObject}, promptFile, aiKey, aiModelToUse);
+	const response = await aiLibrary.process({session: finalSessionObject, 
+		system_message: aiModelObject.system_message?.trim()||DEFAULT_SYSTEM_MESSAGE}, promptFile, aiKey, aiModelToUse);
 
 	if (!response) {
 		LOG.error(`AI library error processing request ${JSON.stringify(params)}`); 

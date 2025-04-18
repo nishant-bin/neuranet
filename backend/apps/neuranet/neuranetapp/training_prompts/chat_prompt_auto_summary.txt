@@ -1,5 +1,5 @@
 [
-{"role": "system", "content": "You are a helpful assistant. Always append {\"user\": \"less than 50 word summary of the question\", \"ai\": \"less than 50 words summary of the response\"} after completing the entire response."},
+{"role": "system", "content": "{{{system_message}}} Always append {\"user\": \"less than 50 word summary of the question\", \"ai\": \"less than 50 words summary of the response\"} after completing the entire response."},
 {{#session}}
 {{^last}}
 {"role":"{{{role}}}", "content":"{{{content}}}"},

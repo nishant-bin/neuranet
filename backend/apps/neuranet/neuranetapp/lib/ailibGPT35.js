@@ -31,13 +31,15 @@ const PROMPT_VAR = "${__ORG_NEURANET_PROMPT__}", SAMPLE_MODULE_PREFIX = "module(
  * @param {string} promptOrPromptFile The prompt or a file which contains the prompt, as a Mustache template
  * @param {string} apiKey The API key for the API call
  * @param {string|object} model The model object or name of the model to load
- * @param {boolean} dontInflatePrompt If true, then the prompt is not inflated using the data
+ * @param {boolean} dontInflatePrompt If true, then the prompt is not inflated using the data. This must be true if 
+ *                                    promptOrPromptFile is a prompt and not a path to a file, and false otherwise.
  * @param {boolean} forceNonVerboseLog Force non verbose logging
  * @returns {object} null on errors or an object of format {airesponse: messageContent, metric_cost: LLM_metric_cost}
  */
 exports.process = async function(data, promptOrPromptFile, apiKey, model, dontInflatePrompt, forceNonVerboseLog=false) {
-    const prompt = dontInflatePrompt ? promptOrPromptFile : mustache.render(await aiutils.getPrompt(promptOrPromptFile), data).replace(/\r\n/gm,"\n");   // create the prompt
     const modelObject = typeof model === "object" ? model : await aiutils.getAIModel(model); 
+    const prompt = dontInflatePrompt ? promptOrPromptFile : 
+        mustache.render(await aiutils.getPrompt(promptOrPromptFile), data).replace(/\r\n/gm,"\n");   // create the prompt
     if (!modelObject) { LOG.error(`Bad model object - ${modelObject}.`); return null; }
     const verboseLogging = (!forceNonVerboseLog) && NEURANET_CONSTANTS.CONF.verbose_log;
 
@@ -50,18 +52,19 @@ exports.process = async function(data, promptOrPromptFile, apiKey, model, dontIn
     } 
     if (modelObject.request.max_tokens) delete modelObject.request.max_tokens;  // retaining this causes many errors in OpenAI as the tokencount is always approximate, while this value - if provided - must be absolutely accurate
 
-    let promptObject;
+    let promptObject; const _logPromptParseError = (prompt, err) => LOG.error(`Bad prompt or parsing error: ${err}. The raw prompt was ${prompt}`);
     if (!modelObject.request_contentpath)
     {   
         const promptMustacheStr = JSON.stringify(modelObject.request).replace(PROMPT_VAR, "{{{prompt}}}"), 
             promptJSONStr = JSON.stringify(prompt),
             promptInjectedStr = mustache.render(promptMustacheStr, {prompt: promptJSONStr.substring(1,promptJSONStr.length-1)});
         if (verboseLogging) LOG.info(`Pre JSON parsing, the raw prompt object is: ${promptJSONStr}`);
-        promptObject = JSON.parse(promptInjectedStr);
+        try {promptObject = JSON.parse(promptInjectedStr)} catch (err) {_logPromptParseError(promptInjectedStr, err); return null;}
     } else {
         promptObject = {...modelObject.request};
         if (verboseLogging) LOG.info(`Pre JSON parsing, the raw prompt is: ${prompt}`);
-        utils.setObjProperty(promptObject, modelObject.request_contentpath, JSON.parse(prompt));
+        try { utils.setObjProperty(promptObject, modelObject.request_contentpath, JSON.parse(prompt)) }
+        catch (err) {_logPromptParseError(prompt, err); return null;}
     }
 
     LOG.info(`Calling AI engine for request ${JSON.stringify(data)} and prompt ${JSON.stringify(prompt)}`);

@@ -14,11 +14,13 @@
  */
 
 const os = require("os");
+const path = require("path");
 const fspromises = require("fs").promises;
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const llmflowrunner = require(`${NEURANET_CONSTANTS.LIBDIR}/llmflowrunner.js`);
 
-const REASONS = {OK: "ok", VALIDATION:"badrequest"}, MAX_RETRIES = 3;
+const REASONS = llmflowrunner.REASONS, MAX_RETRIES = 3;
 const KEYWORD_TO_LINE_WORDS_RATIO = 6, LINES_OF_CODE_TO_TOTAL_LINE_RATIO = 0.9;
 
 /**
@@ -57,15 +59,16 @@ exports.answer = async params => {
 	const docchat = NEURANET_CONSTANTS.getPlugin("llmdocchat");	
 
 	let stepAnswer = await docchat.answer(params), retries = 0; 
-	if (params.has_error()) return;	// error in processing chat response
+	if (params.has_error() || (!stepAnswer.result)) 
+		return params.has_error()?undefined:{result: false, reason: REASONS.INTERNAL};	// error in processing chat response
 
 	let extractedPythonCode = false;
 	const _retry = async (prompt, error) => {
 		retries++; stepAnswer = await docchat.answer({...params, prompt, currentCode: extractedPythonCode, error}); 
-		if (!params.has_error()) extractedPythonCode = _extractPythonCode(stepAnswer);
+		if (!params.has_error()) extractedPythonCode = _extractPythonCode(stepAnswer.response);
 	};
 
-	extractedPythonCode = _extractPythonCode(stepAnswer);
+	extractedPythonCode = _extractPythonCode(stepAnswer.response);
 	while (extractedPythonCode && (retries < params.code_max_retries||MAX_RETRIES)) {
 		const compileResult = await _compiles(extractedPythonCode);
 		if (compileResult.result) {
@@ -73,7 +76,8 @@ exports.answer = async params => {
 			if (execResult.result) {stepAnswer.response = execResult.stdout; break;}
 			else await _retry(params.prompt_code_exec_failed, execResult.stderr);
 		} else await _retry(params.prompt_code_compile_failed, compileResult.stderr);
-		if (params.has_error()) return;	// error in processing chat response
+		if (params.has_error() || (!stepAnswer.result)) 
+			return params.has_error()?undefined:{result: false, reason: REASONS.INTERNAL};	// error in processing chat response
 	}
 	if (retries >= 3) stepAnswer = await _doFailedResponse(stepAnswer, params);
 	
@@ -88,21 +92,29 @@ async function _doFailedResponse(stepAnswer, params) {
 async function _compiles(code) {
 	if (!code) return false;
 	const tmpPyFile = utils.getTempFile("py"); await fspromises.writeFile(tmpPyFile, code, "utf8");
-	const result = await utils.exec(NEURANET_CONSTANTS.CONF.python_path, ["-c",
-		`import py_compile; py_compile.compile('${tmpPyFile}')`]);
+	const result = await utils.exec(NEURANET_CONSTANTS.CONF.python_path, ["-m", "py_compile", tmpPyFile]);
 	return result;
 }
 
 async function _execCode(code, params) {
-	const codeToExec = code;
+	let codeToExec = code, tmpPaths = [];
 	if (params.files) for (const file of params.files) {
-			const tmpPath = os.tmpdir() + "/" + file.filename;
-			await fspromises.writeFile(tmpPath, Buffer.from(file.bytes64, "base64"));
-			codeToExec = codeToExec.replaceAll(/params.tmp_dir_name\/*?/, tmpPath);
+		const tmpPath = os.tmpdir() + "/" + path.basename(file.filename).split(".").slice(0, -1).join(".") + "." + Date.now() + path.extname(file.filename);
+		await fspromises.writeFile(tmpPath, Buffer.from(file.bytes64, "base64"));
+		const regExpToReplace = new RegExp(`${params.tmp_dir_name}/*?${file.filename}`, "g");
+		codeToExec = codeToExec.replaceAll(regExpToReplace, tmpPath);
+		tmpPaths.push(tmpPath);
 	}
 	const tmpPyFile = utils.getTempFile("py"); await fspromises.writeFile(tmpPyFile, codeToExec, "utf8");
 
-	return await utils.exec(NEURANET_CONSTANTS.CONF.python_path, tmpPyFile);
+	const result = await utils.exec(NEURANET_CONSTANTS.CONF.python_path, tmpPyFile);
+
+	/*
+	try {fspromises.rm(tmpPyFile); for (const tmpPath of tmpPaths) fspromises.rm(tmpPath);} 
+	catch(err) {LOG.warn(`Unable to delete user temporary chat files ${tmpPaths.join(" ")} and/or ${tmpPyFile}`);}
+	*/
+	
+	return result;
 }
 
 function _extractPythonCode(text) {

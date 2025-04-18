@@ -66,7 +66,7 @@ async function attach(containedElement) {
 
     const {name, data} = await util.uploadAFile(accepts, "binary", 
         host.getAttribute("maxattachsize")||DEFAULT_MAX_ATTACH_SIZE, host.getAttribute("maxattachsizeerror")||DEFAULT_MAX_ATTACH_SIZE_ERROR);
-    const bytes64 = await util.bufferToBase64(data), fileid = name.replaceAll(".","_")+"_"+Date.now();
+    const bytes64 = await util.bufferToBase64(data), fileid = name.replaceAll(/[.\s]/g,"_")+"_"+Date.now();;
     const fileObject = {filename: name, bytes64, fileid}; 
     memory.FILES_ATTACHED.push(fileObject);
 
