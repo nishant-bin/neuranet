@@ -15,3 +15,5 @@ npm install papaparse
 npm install gpt-tokenizer
 npm install yaml
 npm install wordcut
+npm install nodemailer
+npm install nodemailer-mailgun-transport
