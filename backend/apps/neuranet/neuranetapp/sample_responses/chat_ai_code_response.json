@@ -1,0 +1,45 @@
+{
+"error": null,
+"data": {
+    "id": "chatcmpl-71iQFQ0BFfoL9sxABC0NyyszhQHDq",
+    "object": "chat.completion",
+    "created": 1680643443,
+    "model": "gpt-3.5-turbo-0301",
+    "usage": {
+        "prompt_tokens": 25,
+        "completion_tokens": 21,
+        "total_tokens": 46
+    },
+    "choices": [
+        {
+            "message": {
+                "role": "assistant",
+                "content": "import pandas as pd\n\n# Load the Excel file\nfile_path = '/tempdir/Sample - Army Canteen.xlsx'\ndf = pd.read_excel(file_path)\n\n# Convert 'Total Cost (₹)' to numeric, removing the currency symbol and commas if any\ndf['Total Cost (₹)'] = df['Total Cost (₹)'].replace({'₹': '', ',': ''}, regex=True).astype(float)\n\n# Group by date and calculate total sales per day\ndaily_sales = df.groupby('Date of Order')['Total Cost (₹)'].sum()\n\n# Calculate the average daily sales\naverage_daily_sales = daily_sales.mean()\n\nprint(f\"The average daily sales is: ₹{average_daily_sales:.2f}\")"
+            },
+            "finish_reason": "stop",
+            "index": 0
+        }
+    ]
+},
+"status": 200,
+"resHeaders": {
+    "date": "Tue, 04 Apr 2023 21:24:04 GMT",
+    "content-type": "application/json",
+    "access-control-allow-origin": "*",
+    "cache-control": "no-cache, must-revalidate",
+    "openai-model": "gpt-3.5-turbo-0301",
+    "openai-organization": "tekmonks",
+    "openai-processing-ms": "1022",
+    "openai-version": "2020-10-01",
+    "strict-transport-security": "max-age=15724800; includeSubDomains",
+    "x-ratelimit-limit-requests": "3500",
+    "x-ratelimit-remaining-requests": "3499",
+    "x-ratelimit-reset-requests": "17ms",
+    "x-request-id": "f43d561ae3baafda50a6f589ded7cf7e",
+    "cf-cache-status": "DYNAMIC",
+    "server": "cloudflare",
+    "cf-ray": "7b2c9db1fa6be334-DEL",
+    "alt-svc": "h3=\":443\"; ma=86400, h3-29=\":443\"; ma=86400",
+    "status": 200
+}
+}

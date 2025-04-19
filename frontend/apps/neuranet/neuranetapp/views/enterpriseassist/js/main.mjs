@@ -51,7 +51,7 @@ async function getNotifications() {
     return renderedEvents;
 }
 
-async function processAssistantResponse(result, _chatboxid, _aiappid) {
+async function processAssistantResponse(chatbox, result, chatboxid, _aiappid) {
     if (!result) return {error: (await i18n.get("EnterpriseAssist_AIError")), ok: false}
     if (result.session_id) chatsessionID = result.session_id;  // save session ID so that backend can maintain session
     if ((!result.result) && (result.reason == "limit")) return {error: await i18n.get("ErrorConvertingAIQuotaLimit"), ok: false};
@@ -65,8 +65,13 @@ async function processAssistantResponse(result, _chatboxid, _aiappid) {
 
     const references=[]; for (const metadata of result.metadatas) if (!references.includes(
         decodeURIComponent(metadata.referencelink))) references.push(decodeURIComponent(metadata.referencelink));
-    const resultFinal = (await router.getMustache()).render(await i18n.get("EnterpriseAssist_ResponseTemplate"), 
+    let resultFinal = (await router.getMustache()).render(await i18n.get("EnterpriseAssist_ResponseTemplate"), 
         {response: result.response, references});
+    if (result.jsonResponse && result.jsonResponse.analysis_code) {
+        const collapsibleSection = chatbox.getCollapsibleSection(chatboxid, await i18n.get("EnterpriseAssistAnalysisLabel"), 
+            `\`\`\`${result.jsonResponse.code_language.toLowerCase()}\n${result.jsonResponse.analysis_code}\n\`\`\`\n`);
+        resultFinal = collapsibleSection + resultFinal;
+    }
 
     return {ok: true, response: resultFinal};
 }

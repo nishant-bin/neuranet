@@ -280,7 +280,24 @@ span#airesponse pre {
     padding: 1em;
     border-radius: 0.5em;
     line-height: 1.5em;
+    overflow: auto;
 }
+
+div.collapsiblecontainer {
+    background-color: #f4f1f1;
+    padding: 0.2em 0.4em 0.4em 0.4em;
+    border-radius: 0.5em;
+}
+div.collapsiblebutton, div.showingbutton {
+    font-size: smaller;
+    align-items: center;
+    height: 2em;
+    cursor: pointer;
+}
+div.collapsiblebutton::after {content: "  ⇲"; font-size: 1.5em;}
+div.showingbutton::after {content: "  ⇱"; font-size: 1.5em;}
+
+div.collapsiblecontent {max-height: 0; overflow: hidden; transition: max-height 0.2s ease-out;}
 </style>
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_PORTRAIT_START}}}
 	div#start {flex-direction: column;}
@@ -337,14 +354,18 @@ span#airesponse pre {
     </div>
     <span id="controls">
         <img class="controls" src="{{{COMPONENT_PATH}}}/img/copy.svg" 
-            onclick="$$.copyTextToClipboard(this.parentNode.parentNode.dataset.content, this.parentNode.parentNode.dataset.content_mime); 
+            onclick="
+                const spanAIResponse1 = this.parentNode.parentNode;
+                $$.copyTextToClipboard(spanAIResponse1.dataset.content, spanAIResponse1.dataset.content_mime); 
                 this.src='{{{COMPONENT_PATH}}}/img/tick.svg'; 
                 setTimeout(_=>this.src='{{{COMPONENT_PATH}}}/img/copy.svg', 800)">
         <img class="controls" src="{{{COMPONENT_PATH}}}/img/save.svg" 
-            onclick="window.monkshu_env.frameworklibs.util.downloadFile(
-                this.parentNode.parentNode.dataset.content, 
-                'text/markdown; charset=UTF-8', 
-                `chat_${new Date(Date.now()).toLocaleString().replaceAll(' ', '_').replaceAll(',', '')}.html`)">
+            onclick="
+                const spanAIResponse2 = this.parentNode.parentNode;
+                window.monkshu_env.frameworklibs.util.downloadFile(
+                    spanAIResponse2.dataset.content, 
+                    spanAIResponse2.dataset.content_mime, 
+                    `chat_${new Date(Date.now()).toLocaleString().replaceAll(' ', '_').replaceAll(',', '')}.html`)">
     </span>
 </template>
 
@@ -357,6 +378,21 @@ span#airesponse pre {
         <img id="cross" src="{{{COMPONENT_PATH}}}/img/cross.svg" 
             onclick="monkshu_env.components['chat-box'].detach(this, '&#123;&#123;&#123;fileid&#125;&#125;&#125;')">
     </span>
+</template>
+
+<template id="collapsible_content_template"> <!-- Marked will break parsing if it detects 4 spaces, so the template below is very particular -->
+<div class="collapsiblecontainer">
+<div class="collapsiblebutton" onclick="
+  this.classList.toggle('showingbutton');
+  const contentDiv = this.nextElementSibling;
+  if (this.classList.contains('showingbutton')) contentDiv.style.maxHeight = contentDiv.scrollHeight+'px';
+  else contentDiv.style.maxHeight = '0px';
+">&#123;&#123;&#123;title&#125;&#125;&#125;</div>
+<div class="collapsiblecontent">
+
+&#123;&#123;&#123;content&#125;&#125;&#125;
+</div>
+</div>
 </template>
 
 </div>

@@ -17,11 +17,13 @@ import {monkshu_component} from "/framework/js/monkshu_component.mjs";
 
 const COMPONENT_PATH = util.getModulePath(import.meta), DEFAULT_MAX_ATTACH_SIZE = 4194304, 
     DEFAULT_MAX_ATTACH_SIZE_ERROR = "File size is larger than allowed size";
+let MUSTACHE;
 
 async function elementConnected(host) {
     const ATTACHMENT_ALLOWED = host.getAttribute("attach")?.toLowerCase() == "true";
 	chat_box.setDataByHost(host, {COMPONENT_PATH, ATTACHMENT_ALLOWED: ATTACHMENT_ALLOWED?"true":undefined});
     const memory = chat_box.getMemoryByHost(host); memory.FILES_ATTACHED = [];
+    MUSTACHE = await router.getMustache();
 }
 
 async function elementRendered(host) {
@@ -40,11 +42,11 @@ async function send(containedElement) {
     const oldInsertion = _insertAIResponse(shadowRoot, userMessageArea, userPrompt, undefined, undefined, false);
     const onRequest = host.getAttribute("onrequest"), api_chat = host.getAttribute("chatapi");
     const requestProcessor = util.createAsyncFunction(`return await ${onRequest};`), 
-        request = await requestProcessor({prompt: userPrompt, files: _getMemory(containedElement).FILES_ATTACHED});
+        request = await requestProcessor({chatbox: this, prompt: userPrompt, files: _getMemory(containedElement).FILES_ATTACHED});
     const result = await apiman.rest(`${api_chat}`, "POST", request, true);
 
     const onResult = host.getAttribute("onresult"), resultProcessor = util.createAsyncFunction(`return await ${onResult};`), 
-        processedResult = await resultProcessor({result});
+        processedResult = await resultProcessor({chatbox: this, result});
     _insertAIResponse(shadowRoot, userMessageArea, userPrompt, processedResult[processedResult.ok?"response":"error"], oldInsertion, true);
 
     if (!processedResult.ok) {  // sending more messages is now disabled as this chat is dead due to error
@@ -72,7 +74,7 @@ async function attach(containedElement) {
 
     const shadowRoot = chat_box.getShadowRootByContainedElement(containedElement);
     const insertionHTML = shadowRoot.querySelector("template#fileattachment_insertion_template").innerHTML.trim();   // clone
-    const renderedHTML = (await router.getMustache()).render(insertionHTML, fileObject);
+    const renderedHTML = MUSTACHE.render(insertionHTML, fileObject);
     const tempNode = document.createElement("template"); tempNode.innerHTML = renderedHTML;
     const newNode = tempNode.content.cloneNode(true);
     const insertionNode = shadowRoot.querySelector("span#attachedfiles");
@@ -86,6 +88,13 @@ async function detach(containedElement, fileid) {
     const insertionNode = shadowRoot.querySelector("span#attachedfiles");
     const nodeToDelete = insertionNode.querySelector(`span#${fileid}`);
     if (nodeToDelete) insertionNode.removeChild(nodeToDelete);
+}
+
+function getCollapsibleSection(hostid, title, content) {
+    const shadowRoot = chat_box.getShadowRootByHostId(hostid);
+    const insertionTemplate = shadowRoot.querySelector("template#collapsible_content_template").innerHTML;   
+    const rendered = MUSTACHE.render(insertionTemplate, {title, content});
+    return rendered;
 }
 
 function _detachAllFiles(shadowRoot, clearAttachedFileMemory) {
@@ -136,5 +145,5 @@ function _latexedMarkdownToHTML(text) {
 
 const _getMemory = containedElement => chat_box.getMemoryByContainedElement(containedElement);
  
-export const chat_box = {trueWebComponentMode: true, elementConnected, elementRendered, send, attach, detach}
+export const chat_box = {trueWebComponentMode: true, elementConnected, elementRendered, send, attach, detach, getCollapsibleSection}
 monkshu_component.register("chat-box", `${COMPONENT_PATH}/chat-box.html`, chat_box);

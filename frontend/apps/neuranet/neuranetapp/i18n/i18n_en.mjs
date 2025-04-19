@@ -39,6 +39,7 @@ export const i18n = {
 "EnterpriseAssist_Done": "Done",
 "EnterpriseAssist_Processing": "Reading",
 "EnterpriseAssist_NoEvents": "No Events.",
+"EnterpriseAssistAnalysisLabel": "Analysis",
 "EnterpriseAssist_KnowledgeBase": "AI Training",
 "EnterpriseAssist_ErrorNoKnowledge": "Sorry I have no knowledge of this topic.",
 "EnterpriseAssist_AIError": "AI error in processing. Please reload the page to start a new assistant request.",

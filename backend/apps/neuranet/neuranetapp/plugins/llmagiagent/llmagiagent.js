@@ -18,10 +18,11 @@ const path = require("path");
 const fspromises = require("fs").promises;
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
+const simplellm = require(`${NEURANET_CONSTANTS.LIBDIR}/simplellm.js`);
 const llmflowrunner = require(`${NEURANET_CONSTANTS.LIBDIR}/llmflowrunner.js`);
 
 const REASONS = llmflowrunner.REASONS, MAX_RETRIES = 3;
-const KEYWORD_TO_LINE_WORDS_RATIO = 6, LINES_OF_CODE_TO_TOTAL_LINE_RATIO = 0.9;
+const KEYWORD_TO_LINE_WORDS_RATIO = 6, LINES_OF_CODE_TO_TOTAL_LINE_RATIO = 0.7;
 
 /**
  * Runs the LLM. 
@@ -65,34 +66,37 @@ exports.answer = async params => {
 	let extractedPythonCode = false;
 	const _retry = async (prompt, error) => {
 		retries++; stepAnswer = await docchat.answer({...params, prompt, currentCode: extractedPythonCode, error}); 
-		if (!params.has_error()) extractedPythonCode = _extractPythonCode(stepAnswer.response);
+		if (!params.has_error()) extractedPythonCode = _extractPythonCode(params, stepAnswer.response);
 	};
 
-	extractedPythonCode = _extractPythonCode(stepAnswer.response);
-	while (extractedPythonCode && (retries < params.code_max_retries||MAX_RETRIES)) {
+	extractedPythonCode = _extractPythonCode(params, stepAnswer.response);
+	while (extractedPythonCode && (retries < (params.code_max_retries||MAX_RETRIES))) {
 		const compileResult = await _compiles(extractedPythonCode);
 		if (compileResult.result) {
 			const execResult = await _execCode(extractedPythonCode, params);
-			if (execResult.result) {stepAnswer.response = execResult.stdout; break;}
-			else await _retry(params.prompt_code_exec_failed, execResult.stderr);
+			if (execResult.result) {
+				stepAnswer.response = execResult.stdout; 
+				stepAnswer.jsonResponse = {analysis_code: extractedPythonCode, response: execResult.stdout, code_language: "Python"}; break;
+			} else await _retry(params.prompt_code_exec_failed, execResult.stderr);
 		} else await _retry(params.prompt_code_compile_failed, compileResult.stderr);
 		if (params.has_error() || (!stepAnswer.result)) 
 			return params.has_error()?undefined:{result: false, reason: REASONS.INTERNAL};	// error in processing chat response
 	}
-	if (retries >= 3) stepAnswer = await _doFailedResponse(stepAnswer, params);
+	if (retries >= 3) stepAnswer = await _doFailedResponse(params, stepAnswer);
 	
 	return stepAnswer;
 }
 
-async function _doFailedResponse(stepAnswer, params) {
-	const failedAnswer = await docchat.answer({...params, prompt: params.prompt_code_retry_exceeded, currentCode: stepAnswer.response, error});
-	return failedAnswer;
+async function _doFailedResponse(params, stepAnswer) {
+	const llmerrorMessage = await simplellm.prompt_answer(params.prompt_code_retry_exceeded, 
+		params.id, params.org, params.aiappid, {question: params.question}, params["model-simplellm"].name);
+	return {...stepAnswer, response: llmerrorMessage, jsonResponse: undefined};
 }
 
 async function _compiles(code) {
 	if (!code) return false;
 	const tmpPyFile = utils.getTempFile("py"); await fspromises.writeFile(tmpPyFile, code, "utf8");
-	const result = await utils.exec(NEURANET_CONSTANTS.CONF.python_path, ["-m", "py_compile", tmpPyFile]);
+	const result = await utils.exec(NEURANET_CONSTANTS.CONF.python_path, ["-m", "py_compile", tmpPyFile], "utf8");
 	return result;
 }
 
@@ -107,7 +111,7 @@ async function _execCode(code, params) {
 	}
 	const tmpPyFile = utils.getTempFile("py"); await fspromises.writeFile(tmpPyFile, codeToExec, "utf8");
 
-	const result = await utils.exec(NEURANET_CONSTANTS.CONF.python_path, tmpPyFile);
+	const result = await utils.exec(NEURANET_CONSTANTS.CONF.python_path, tmpPyFile, "utf8");
 
 	/*
 	try {fspromises.rm(tmpPyFile); for (const tmpPath of tmpPaths) fspromises.rm(tmpPath);} 
@@ -117,7 +121,7 @@ async function _execCode(code, params) {
 	return result;
 }
 
-function _extractPythonCode(text) {
+function _extractPythonCode(params, text) {
 	if ((!text) || (typeof text !== "string") || (text.trim() == '')) return false;
 
 	// Normalize line endings and trim
@@ -141,27 +145,28 @@ function _extractPythonCode(text) {
 		'isinstance', 'issubclass', 'iter', 'len', 'list', 'locals', 'map', 'max', 'memoryview', 
 		'min', 'next', 'object', 'oct', 'open', 'ord', 'pow', 'print', 'property', 'quit', 'range', 
 		'repr', 'reversed', 'round', 'set', 'setattr', 'slice', 'sorted', 'staticmethod', 'str', 'sum', 
-		'super', 'tuple', 'type', 'vars', 'zip', 'int', 'float', 'complex']; 
+		'super', 'tuple', 'type', 'vars', 'zip']; 
 
 	let code='', pythonCodeLikeLines = 0, expressionChecker1 = new RegExp(".+\\s*=\\s*.+"),
-		expressionChecker2 = new RegExp(".+\\..+\\(.+\\)");	// Count keyword matches
+		expressionChecker2 = new RegExp(".+\\..+\\(.*\\)");	// Count keyword matches
 	for (const line of lines) {
 		let thisLineAdded = false;
 		if (expressionChecker1.test(line)) {thisLineAdded = true; code += `${line}\n`; pythonCodeLikeLines++;}	// possible assignment or calculation expression
-		if (expressionChecker2.test(line)) {if (!thisLineAdded) {thisLineAdded = true; code += `${line}\n`;}; pythonCodeLikeLines++;}	// possible object expression
+		if (expressionChecker2.test(line) && (!thisLineAdded)) {thisLineAdded = true; code += `${line}\n`; pythonCodeLikeLines++;}	// possible object expression
 
 		const keywordsToWordsInLineThreshold = Math.floor(line.split(/\s+/).length/KEYWORD_TO_LINE_WORDS_RATIO);
 		let keywordsFoundInTheLine = 0; 
-		for (const kw of pythonKeywords) {
-			const regex = new RegExp(`\\b${kw}\\b`);
-			if (regex.test(line.trim())) keywordsFoundInTheLine++;
-			if (keywordsFoundInTheLine > keywordsToWordsInLineThreshold) {
-				pythonCodeLikeLines++; if (!thisLineAdded) {thisLineAdded = true; code += `${line}\n`;} 
+		if (!thisLineAdded) for (const kw of pythonKeywords) {
+			const regex1 = new RegExp(`\\b${kw}\\b`), regex2 = new RegExp(`\\b${kw}\\(.+\\)`)
+			if (regex1.test(line.trim())) keywordsFoundInTheLine++;
+			if ((keywordsFoundInTheLine > keywordsToWordsInLineThreshold) && (!thisLineAdded)) {
+				pythonCodeLikeLines++; thisLineAdded = true; code += `${line}\n`;
 			}
+      if ((!thisLineAdded) && regex2.test(line.trim())) {pythonCodeLikeLines++; thisLineAdded = true; code += `${line}\n`;};
 		}
 	}
 
-	const threshold = Math.floor(lines.length*LINES_OF_CODE_TO_TOTAL_LINE_RATIO);	// 90% of lines match python code is the threshold (quite high but we overcount lines if they have multiple keywords, so probably ok)
+	const threshold = Math.floor(lines.length*(params.line_to_code_ratio||LINES_OF_CODE_TO_TOTAL_LINE_RATIO));	
 	if (pythonCodeLikeLines >= threshold) return code; else return false;
 }
 
