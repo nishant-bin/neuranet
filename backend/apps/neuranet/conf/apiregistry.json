@@ -3,26 +3,8 @@
     "/apps/{{app}}/getremotelog" : "{{server_lib}}/log.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&reloadOnDebug=false&logpath={{server}}/../apps/{{app}}/logs/remotelog.ndjson&remotelog=true",
 
 
-    "/apps/{{app}}/login" : "/loginappframework/apis/login.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=false&addsToken=sub:{{{role}}},tokenflag:{{{tokenflag}}},id:{{{id}}},org:{{{org}}}",
-    "/apps/{{app}}/resetuser" : "/loginappframework/apis/resetuser.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=false",
-    "/apps/{{app}}/register" : "/loginappframework/apis/register.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=false&addsToken=sub:{{{role}}},tokenflag:{{{tokenflag}}},id:{{{id}}},org:{{{org}}}",
-    "/apps/{{app}}/adduserbyadmin" : "/loginappframework/apis/adduserbyadmin.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=admin&checkClaims=org",
-    "/apps/{{app}}/deleteuser" : "/loginappframework/apis/deleteuser.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=admin&checkClaims=org",
-    "/apps/{{app}}/updateuser" : "/loginappframework/apis/updateuser.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&addsToken=sub:{{{role}}},tokenflag:{{{tokenflag}}},id:{{{id}}},org:{{{org}}}&checkClaims=id,org",
-    "/apps/{{app}}/updateuserbyadmin" : "/loginappframework/apis/updateuser.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=admin&checkClaims=org",
-    "/apps/{{app}}/changepassword" : "/loginappframework/apis/changepassword.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
-    "/apps/{{app}}/validatetotp" : "/loginappframework/apis/validatetotp.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true",
-    "/apps/{{app}}/gettotpsec" : "/loginappframework/apis/gettotpsec.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id",
-    "/apps/{{app}}/getprofile" : "/loginappframework/apis/getprofile.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=false&addsToken=sub:{{{role}}},tokenflag:{{{result}}},id:{{{id}}},org:{{{org}}}",
-    "/apps/{{app}}/getorg" : "/loginappframework/apis/getorg.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=org,id",
-    "/apps/{{app}}/getorgusers" : "/loginappframework/apis/getorgusers.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=admin&checkClaims=id,org",
-    "/apps/{{app}}/approveuser" : "/loginappframework/apis/approveuser.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=admin&checkClaims=org",
-    "/apps/{{app}}/getorgsmatching" : "/loginappframework/apis/getorgsmatching.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=false",
-    "/apps/{{app}}/verifyemail" : "/loginappframework/apis/verifyemail.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=false",
-    "/apps/{{app}}/addorupdateorg" : "/loginappframework/apis/addorupdateorg.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=admin&checkClaims=org&addsToken=sub:{{{role}}},tokenflag:{{{result}}},id:{{{id}}},org:{{{org}}}",
-    "/apps/{{app}}/orgkeys" : "/loginappframework/apis/orgkeys.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=admin&checkClaims=org",
-
-
+    "/apps/{{app}}/login" : "/loginappframework/apis/login.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=false&addsToken=sub:{{{role}}},tokenflag:{{{tokenflag}}},id:{{{id}}},org:{{{org}}}",
+    
     "/apps/{{app}}/events" : "/neuranetapp/apis/events.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id,org",
     "/apps/{{app}}/getorgaiapps" : "/neuranetapp/apis/getorgaiapps.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=org",
     "/apps/{{app}}/operateaiapp" : "/neuranetapp/apis/operateaiapp.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=true&checkClaims=id,org",
@@ -30,7 +12,7 @@
     "/apps/{{app}}/indexdoc" : "/neuranetapp/apis/indexdoc.js?customSecurity=loginapp_key_checker&loginapp_key_checker_enforce_for_jwt=id,org",
     "/apps/{{app}}/unindexdoc" : "/neuranetapp/apis/unindexdoc.js?customSecurity=loginapp_key_checker&loginapp_key_checker_enforce_for_jwt=id,org",
 
-
+    
     "/apps/{{app}}/getfiles" : "/xbinapp/apis/getfiles.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&needsToken=user,admin",
     "/apps/{{app}}/uploadfile" : "/xbinapp/apis/uploadfile.js?keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389&reloadOnDebug=false",
     "/apps/{{app}}/deletefile" : "/xbinapp/apis/deletefile.js?get=true&keys=fheiwu98237hjief8923ydewjidw834284hwqdnejwr79389",

@@ -3,11 +3,8 @@
  */
 const crypto = require("crypto");
 const cms = require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`);
-const userid = require(`${LOGINAPP_CONSTANTS.LIB_DIR}/userid.js`);
 const db = require(`${XBIN_CONSTANTS.LIB_DIR}/xbindb.js`).getDB();
 const uploadfile = require(`${XBIN_CONSTANTS.API_DIR}/uploadfile.js`);
-
-exports.init = _ => userid.addIDDeletionListener(deleteSharesForID);
 
 exports.doService = async (jsonReq, _, headers) => {
 	if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return CONSTANTS.FALSE_RESULT;}

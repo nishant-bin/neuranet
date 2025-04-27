@@ -5,7 +5,7 @@
  */
 
 const path = require("path");
-const APPROOT = path.resolve(`${LOGINAPP_CONSTANTS.APP_ROOT}/${LOGINAPP_CONSTANTS.EMBEDDED_APP_NAME}`);
+const APPROOT = path.resolve(`${LOGINAPP_CONSTANTS.APP_ROOT}/neuranetapp`);
 const BACKEND_ROOT = path.resolve(LOGINAPP_CONSTANTS.APP_ROOT);
 
 exports.APPROOT = path.resolve(APPROOT);

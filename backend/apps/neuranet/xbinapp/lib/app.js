@@ -12,7 +12,4 @@ exports.initSync = _appName => {
         {...XBIN_CONSTANTS, hostname: LOGINAPP_CONSTANTS.HOSTNAME}).replace(/\\/g, "\\\\");   // escape windows paths
     XBIN_CONSTANTS.CONF = JSON.parse(xbinson);
     global.XBIN_CONSTANTS = XBIN_CONSTANTS; // setup constants
-
-    require(`${XBIN_CONSTANTS.LIB_DIR}/cms.js`).init();    // init cms which inits our ID change listeners
-    require(`${XBIN_CONSTANTS.API_DIR}/sharefile.js`).init();    // init the file sharing subsystem
 }

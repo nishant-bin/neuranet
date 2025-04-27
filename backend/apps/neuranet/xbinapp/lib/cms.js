@@ -5,27 +5,10 @@
 const fs = require("fs");
 const path = require("path");
 const fspromises = fs.promises;
-const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
-const updateuser = require(`${LOGINAPP_CONSTANTS.API_DIR}/updateuser.js`);
 const loginappAPIKeyChecker = require(`${LOGINAPP_CONSTANTS.LIB_DIR}/loginappAPIKeyChecker.js`);
 
 const DEFAULT_MAX_PATH_LENGTH = 50, CMSPATH_MODIFIERS = [], SAFE_CMS_PATHS = [];
-
-exports.init = _ => {
-	updateuser.addIDChangeListener(async (oldID, newID, org) => {	// ID changes listener
-		const oldPath = _getPathForIDAndOrg(oldID, org), newPath = _getPathForIDAndOrg(newID, org);
-		try {
-			if (!await utils.rmrf(newPath)) throw `Can't access or delete path ${newPath}`;	// remove existing newPath folder, if it exists, as this ID is taking it over
-			await fspromises.rename(oldPath, newPath); 
-			LOG.info(`Renamed home folder for ID ${oldID} who is changing their ID to new ID ${newID} from ${oldPath} to ${newPath}.`); return true;
-		} catch (err) {
-			LOG.error(`Error renaming home folder for ID ${oldID} who is changing their ID to new ID ${newID}. Error is ${err}.`);
-			return false;
-		}
-	})
-
-}
 
 /**
  * @param {object} headersOrLoginIDAndOrg HTTP request headers or {xbin_id, xbin_org} object

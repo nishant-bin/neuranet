@@ -7,7 +7,6 @@
 
 const utils = require(`${CONSTANTS.LIBDIR}/utils.js`);
 const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
-const userid = require(`${LOGINAPP_CONSTANTS.LIB_DIR}/userid.js`);
 
 const CHECKER_NAME = "loginapp_key_checker";
 
@@ -39,7 +38,7 @@ async function checkSecurity(apiregentry, _url, req, headers, _servObject, reaso
 
 async function isAPIKeySecure(headers, org) {
 	const incomingKey = APIREGISTRY.getExtension("apikeychecker").getIncomingAPIKey(headers);
-	const orgKeys = await userid.getKeysForOrg(org);
+	const orgKeys = await login.getKeysForOrg(org);
     if (!orgKeys) return false; // no org key found in db
 	return orgKeys.includes(incomingKey);
 }

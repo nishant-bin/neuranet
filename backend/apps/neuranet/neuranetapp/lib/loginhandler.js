@@ -4,22 +4,17 @@
  */
 
 const login = require(`${LOGINAPP_CONSTANTS.API_DIR}/login.js`);
-const register = require(`${LOGINAPP_CONSTANTS.API_DIR}/register.js`);
-const updateuser = require(`${LOGINAPP_CONSTANTS.API_DIR}/updateuser.js`);
 
 const NEURANET_CONSTANTS = LOGINAPP_CONSTANTS.ENV.NEURANETAPP_CONSTANTS;
 const aiapp = require(`${NEURANET_CONSTANTS.LIBDIR}/aiapp.js`);
 
 exports.initSync = _ => {
     login.addLoginListener(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`, "viewInjector");
-    register.addNewUserListener(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`, "viewInjector");
-    updateuser.addUpdateUserListener(`${NEURANET_CONSTANTS.LIBDIR}/loginhandler.js`, "viewInjector");
-
 }
 
 exports.viewInjector = async function(result) {
-    if (result.tokenflag) try {     // add in all AI apps the user has access to
-        try {
+    if (result.tokenflag) {     
+        try {   // add in all AI apps the user has access to or emtpy apps in case of DB errors
             const aiapps = (await aiapp.getAllAIAppsForOrg(result.id, result.org, true))||[], aiappsForUser = [];
             if (aiapps.length == 0) aiapps.push({id: NEURANET_CONSTANTS.DEFAULT_ORG_DEFAULT_AIAPP});   // use default app if none found
             for (const aiappThis of aiapps) {
@@ -36,5 +31,5 @@ exports.viewInjector = async function(result) {
             result.apps = [];
         }
         return true;
-    } catch (err) {return false;}
+    } return false;
 }
