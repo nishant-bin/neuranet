@@ -18,7 +18,7 @@ let loginappMain;
 
 const main = async (data, mainLoginAppModule) => {
     window.monkshu_env.apps[APP_CONSTANTS.APP_NAME] = {neuranetapp};
-    loginappMain = mainLoginAppModule; loginappMain.addGoHomeListener(gohome);
+    loginappMain = mainLoginAppModule; loginappMain.addGoHomeListener(_ => session.remove(APP_CONSTANTS.FORCE_LOAD_VIEW));
     APP_CONSTANTS.VIEWS_PATH = util.resolveURL(`${APP_CONSTANTS.APP_PATH}/views`);
     await _createdata(data); 
     data.maincontent = data.viewcontent;     // this is the main entry point
@@ -69,7 +69,7 @@ async function _createdata(data) {
     data.viewcontent = await router.loadHTML(viewURL, {...data, views}); 
 }
 
-const gohome = _ => session.remove(APP_CONSTANTS.FORCE_LOAD_VIEW);
+const closeview = _ => loginappMain.gohome();
 
 async function openView(appid) {
     session.set(APP_CONSTANTS.FORCE_LOAD_VIEW, appid);
@@ -82,4 +82,4 @@ async function openView(appid) {
 function onlogout() {session.remove(APP_CONSTANTS.FORCE_LOAD_VIEW);}
 
 
-export const neuranetapp = {main, openView, gohome, onlogout, refreshAIApps};
+export const neuranetapp = {main, openView, closeview, onlogout, refreshAIApps};

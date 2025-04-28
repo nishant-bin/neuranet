@@ -6,10 +6,17 @@ body {
 	width: 100%;
 	height: 100%;
 	display: flex;
-	flex-direction: row;
+	flex-direction: column;
 	justify-content: space-between;
+}
+
+div#loginmain {
+	display: flex;
+	flex-direction: row;
+	row-gap: 1em;
 	align-items: center;
-	min-height: 640px;
+	justify-content: space-around;
+	height: 100%;
 }
 
 a:link {text-decoration:none; color:black;}    /* unvisited link */
@@ -18,7 +25,6 @@ a:hover {text-decoration:underline;}   /* mouse over link */
 a:active {text-decoration:underline;}  /* selected link */
 
 div#advtextbox{
-	margin-left: 4em;
 	color: #4c4c4c;
 	text-align: center;
 	width: 40%;
@@ -26,8 +32,6 @@ div#advtextbox{
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	max-width: 25em;
-	padding: 0em 2em 0em 0em;
 	box-sizing: border-box;
 }
 div#advtextbox img#logo {width: 100%;}
@@ -48,7 +52,6 @@ div#lgbox {
 	background-color: #ffffff;
 	border-radius: 2em;
 	padding: 2em 4em;
-	margin-right: 6em;
 	cursor: default;
 	transition: all 0.3s ease-out;
 }
@@ -65,12 +68,10 @@ div#lgbox span.error {color: #b54646}
 div#lgbox img {height: 4em; width: 100%;}
 
 .langbox {
-	position: absolute;
-	top: max(560px, calc(100vh - 40px));
-	right: 40px;
 	color: 4c4c4c;
 	text-align: center;
 	cursor: default;
+	margin-bottom: 1em;
 }
 .langsel {
 	cursor: pointer;
@@ -78,13 +79,8 @@ div#lgbox img {height: 4em; width: 100%;}
 }
 </style>
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_PORTRAIT_START}}}
-	body {flex-direction: column; justify-content: space-around; }
-	div#lgbox {margin-right: 0;}
-	div#advtextbox {margin-left: 0; padding:0; width: 80%;}
-	div#advtextbox h2 {font-size: smaller; margin: 0;}
-	div#advtextbox h1 {font-size: larger; margin: 1em 0em 0.5em 0em;}
-	div#advtextbox span.button {margin-top: 2em;}
-	.langbox {position: unset;}
+	div#loginmain {flex-direction: column; justify-content: unset; margin-bottom: 1em;}
+	div#advtextbox {margin-top: 20%; margin-bottom: 2em;}
 {{{APP_CONSTANTS.MOBILE_MEDIA_QUERY_PORTRAIT_END}}}
 
 <!doctype html>
@@ -103,6 +99,7 @@ div#lgbox img {height: 4em; width: 100%;}
 </head>
 
 <body>
+<div id="loginmain">
 <div id="advtextbox">
 	<img id="logo" src="./img/neuranetloginlogo.png">
 	<h1>{{i18n.logintagline}}</h1>
@@ -117,6 +114,7 @@ div#lgbox img {height: 4em; width: 100%;}
 	<img src="./img/tkmlogodark.svg">
 	{{#url._error}}<span class="error">{{i18n.LoginFailed}}</span>{{/url._error}}
 	<span>{{i18n.LoginMsg}}</span>
+</div>
 </div>
 
 <div class="langbox">

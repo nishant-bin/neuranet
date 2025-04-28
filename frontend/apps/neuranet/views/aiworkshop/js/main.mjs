@@ -30,14 +30,14 @@ async function initView(data, neuranetappIn) {
 
 async function aiappSelected(divAIApp, aiappid) {
     const fileManager = document.querySelector("file-manager#fmaiapp"); divAIApp.classList.toggle('selected'); 
-    const titleDiv = document.querySelector("div#header");
+    const titleSpan = document.querySelector("span#title");
     
 
     if (!divAIApp.classList.contains('selected')) {  // was deselected, nothing open
         fileManager.classList.remove("visible"); selectedAIAppID = undefined; 
-        titleDiv.innerHTML = await i18n.get("AIWorkshop_Title");
+        titleSpan.innerHTML = await i18n.get("AIWorkshop_Title");
     } else {
-        titleDiv.innerHTML = `${await i18n.get("AIWorkshop_Title")} - ${(await router.getMustache()).render(
+        titleSpan.innerHTML = `${await i18n.get("AIWorkshop_Title")} - ${(await router.getMustache()).render(
             await i18n.get("AIWorkshop_Subtitle_EditApp"), {aiappid})}`;
         for (const divAIApp of document.querySelectorAll("div.aiappicon")) divAIApp.classList.remove("selected");
         divAIApp.classList.add('selected'); // coming here means it was selected
@@ -56,7 +56,7 @@ async function aiappSelected(divAIApp, aiappid) {
 
 async function newAIApp() {
     const appName = await _prompt(await i18n.get("AIWorkshop_AIAppNamePrompt"));
-    if (!appName) return;   // nothing to do
+    if (!(appName?.trim())) return;   // nothing to do
     if (allAIApps.some(value => value.id.toLowerCase() == appName.toLowerCase())) {    // app already exists, don't overwrite
         _showError(await i18n.get("AIWorkshop_AIAppAlreadyExists"));
         return;
@@ -100,8 +100,8 @@ async function trainAIApp() {
     if (!selectedAIAppID) return;  // nothing selected
 
     const fileManager = document.querySelector("file-manager#fmaiapp"); 
-    const titleDiv = document.querySelector("div#header");
-    titleDiv.innerHTML = `${await i18n.get("AIWorkshop_Title")} - ${(await router.getMustache()).render(
+    const titleSpan = document.querySelector("span#title");
+    titleSpan.innerHTML = `${await i18n.get("AIWorkshop_Title")} - ${(await router.getMustache()).render(
         await i18n.get("AIWorkshop_Subtitle_TrainApp"), {aiappid: selectedAIAppID})}`;
 
     // now point the file selector's CMS root to this app
@@ -111,6 +111,8 @@ async function trainAIApp() {
     fileManager.setAttribute("extrainfo", extrainfo_base64_json);
     monkshu_env.components["file-manager"].reload("fmaiapp");
 }
+
+const close = _ => neuranetapp.closeview();
 
 async function _prompt(prompt) {
     const answer = await monkshu_env.components["dialog-box"].showDialog(
@@ -122,4 +124,4 @@ async function _prompt(prompt) {
 const _showMessage = (message) => monkshu_env.components["dialog-box"].showMessage(message, DIALOG_ID);
 const _showError = (error) => _showMessage(error);
 
-export const main = {initView, aiappSelected, newAIApp, deleteAIApp, publishAIApp, unpublishAIApp, trainAIApp};
+export const main = {initView, aiappSelected, newAIApp, deleteAIApp, publishAIApp, unpublishAIApp, trainAIApp, close};

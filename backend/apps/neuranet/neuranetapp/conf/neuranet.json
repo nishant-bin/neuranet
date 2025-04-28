@@ -26,8 +26,8 @@
             "presence_penalty": 0, "frequency_penalty": 0,  "top_p": 1, "store": false, 
             "response_format": {"type": "text"}
         },
-        "ai_key": "[add ai key here]",
-        "x_api_key" :"[add api key here]",
+        "ai_key": "937916dc3805054a2f657c2af513a4bf954678950d2df8b6a0d5c7a7539a63e838a6125aeb83831ce4b04d12bc3344555c7f609a9119c99b43f6505e5342d7a0a476a5bb70816144600f9bdfa4c86835e99dd813a35afe8a9b383c101ac71b38f5b99889bd7e1774d76068268ae3fbbca0d272fed7d2431840df5515654eb14c6686d1972f3e7dad864730cde8ddcde1ec6bc63abe300d10d3bde55ebce247b12fa6881a95c97edfae34aa44 82577als2141rwq294938wasj3029ldwpz",
+        "x_api_key" :"6c1fcadd-dcf0-40b9-ac90-fa4d24c08b46",
         "request_contentpath": "messages",
         "response_contentpath": "data.choices[0].message.content",
         "response_finishreason": "data.choices[0].finish_reason",
@@ -60,8 +60,8 @@
             "input":"${__ORG_NEURANET_PROMPT__}",
             "max_tokens": 8191
         },
-        "ai_key": "[add ai key here]",
-        "x_api_key" :"[add api key here]",
+        "ai_key": "937916dc3805054a2f657c2af513a4bf954678950d2df8b6a0d5c7a7539a63e838a6125aeb83831ce4b04d12bc3344555c7f609a9119c99b43f6505e5342d7a0a476a5bb70816144600f9bdfa4c86835e99dd813a35afe8a9b383c101ac71b38f5b99889bd7e1774d76068268ae3fbbca0d272fed7d2431840df5515654eb14c6686d1972f3e7dad864730cde8ddcde1ec6bc63abe300d10d3bde55ebce247b12fa6881a95c97edfae34aa44 82577als2141rwq294938wasj3029ldwpz",
+        "x_api_key" :"6c1fcadd-dcf0-40b9-ac90-fa4d24c08b46",
         "split_separators": {"en":[".","\n"," "], "zh":["。","\n"," ","."], "ja":["。","\n"," ","."], "*":["。",".","\n"," "]},
         "split_joiners": {"*":["\n\n"]},
         "overlap": 0,
