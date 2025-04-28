@@ -60,8 +60,8 @@
             "input":"${__ORG_NEURANET_PROMPT__}",
             "max_tokens": 8191
         },
-        "ai_key": "3d4900d278e13fb8f799d4f10aad58c1aa30bb075a83f477b84da5f48bc0921af74df99d74fa6fd5bd950d7e0982c85c4701b0079d197c7493c708",
-        "x_api_key" :"6c1fcadd-dcf0-40b9-ac90-fa4d24c08b46",
+        "ai_key": "[add ai key here]",
+        "x_api_key" :"[add api key here]",
         "split_separators": {"en":[".","\n"," "], "zh":["。","\n"," ","."], "ja":["。","\n"," ","."], "*":["。",".","\n"," "]},
         "split_joiners": {"*":["\n\n"]},
         "overlap": 0,
