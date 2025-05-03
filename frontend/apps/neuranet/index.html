@@ -15,11 +15,8 @@ License: See enclosed license.txt file.
 
 	<title>Neuranet</title>
 
-	<!-- Use webpack -->
-	<script type="text/javascript" src="/framework/js/$$.js"></script>
-
-	<!-- And off we go ... -->
-	<script type="text/javascript">$$.boot(new URL("./", window.location), new URL("./conf", window.location));</script>
+	<!-- Boot and go -->
+	<script type="module" src="./js/index.mjs"></script>
 
 	<style>
 		html, body {
@@ -66,7 +63,7 @@ License: See enclosed license.txt file.
 		const ERROR_SPINNER_WAIT_TIMEOUT = 15000;	// 10 seconds before error spinner shows up
 		document.addEventListener("DOMContentLoaded", _=>setTimeout(_=> {
 			const imgElement = document.querySelector("img#__org_monkshu_indexpage_spinner");
-			if (imgElement) {imgElement.src = "./img/errorloading.svg"; $$.setSlowNetwork(true);}
+			if (imgElement) {imgElement.src = "./img/errorloading.svg"; if (window.$$) $$.setSlowNetwork(true);}
 			const imgElement2 = document.querySelector("img#neuranet_loading");
 			if (imgElement2) imgElement2.src = "./img/errorneuranetloading.svg";
 		}, ERROR_SPINNER_WAIT_TIMEOUT));
