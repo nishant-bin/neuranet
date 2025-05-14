@@ -17,8 +17,8 @@
 "ai_models": {
     "chat-openai": {
         "name": "chat-openai",
-        "driver":{"module":"ailibGPT35.js", "host":"api.openai.com", "port":443, 
-            "path":"/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
+        "driver":{"module":"ailibGPT35.js", "host":"apiboss.org", "port":9090, 
+            "path":"/tekmonks.com/v1/chat/completions", "backoffwait": 120, "backoffexponent": 2, 
             "api_overloaded_max_retries": 5, "api_wait_timeout": 60000, "max_requests_per_second":50, 
             "http_retry_codes": ["*"]}, 
         "request":{ 
