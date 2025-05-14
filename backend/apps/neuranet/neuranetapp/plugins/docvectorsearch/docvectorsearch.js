@@ -89,7 +89,7 @@ exports.search = async function(params, _llmstepDefinition) {
 		LOG.error(err); params.return_error(err, REASONS.INTERNAL); return;
 	}
 
-	const nntvectordbPlugin = NEURANET_CONSTANTS.getPlugin("nntvectordb");
+	const nntvectordbPlugin = NEURANET_CONSTANTS.getPlugin("nnvectordb");
 	let vectordbs = []; for (const brainidThis of brainids) {
 		try {
 			vectordbs.push(...await nntvectordbPlugin.getVectorDBsForIDAndOrgAndBrainID(id, org, brainidThis, embeddingsGenerator, 
