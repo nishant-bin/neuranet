@@ -17,7 +17,8 @@ const MODULE_PATH = util.getModulePathFromURL(import.meta.url), AI_WORKSHOP_VIEW
 let loginappMain;
 
 const main = async (data, mainLoginAppModule) => {
-    window.monkshu_env.apps[APP_CONSTANTS.APP_NAME] = {neuranetapp};
+    window.monkshu_env.apps[APP_CONSTANTS.APP_NAME] = {
+        ...(window.monkshu_env.apps[APP_CONSTANTS.APP_NAME]||{}), neuranetapp};
     loginappMain = mainLoginAppModule; loginappMain.addGoHomeListener(_ => session.remove(APP_CONSTANTS.FORCE_LOAD_VIEW));
     APP_CONSTANTS.VIEWS_PATH = util.resolveURL(`${APP_CONSTANTS.APP_PATH}/views`);
     await _createdata(data); 
