@@ -46,7 +46,7 @@ const REASONS = llmflowrunner.REASONS;
  * 			was used to ingest the documents.
  */
 exports.search = async function(params, _llmstepDefinition) {
-	const id = params.id, org = params.org, query = params.query, aiModelObjectForSearch = {...params},
+	const id = params.id, org = params.org.toLowerCase(), query = params.query, aiModelObjectForSearch = {...params},
 		brainids = params.bridges ? (Array.isArray(params.bridges)?params.bridges:[params.bridges]) : [params.aiappid], 
 		primary_brain = params.aiappid, 
 		metadata_filter_function = params.metadata_filter_function ? new Function("metadata", params.metadata_filter_function) : undefined,

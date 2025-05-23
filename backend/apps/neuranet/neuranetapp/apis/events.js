@@ -28,7 +28,7 @@ exports.initSync = _ => blackboard.subscribe(NEURANET_CONSTANTS.NEURANETEVENT, m
 exports.doService = async jsonReq => {
     if (!validateRequest(jsonReq)) {LOG.error("Validation failure."); return CONSTANTS.FALSE_RESULT;}
 
-    const usermemory = _getUserMemory(jsonReq.id, jsonReq.org);
+    const usermemory = _getUserMemory(jsonReq.id, jsonReq.org.toLowerCase());
     return {events: (usermemory||{}), ...CONSTANTS.TRUE_RESULT};
 }
 

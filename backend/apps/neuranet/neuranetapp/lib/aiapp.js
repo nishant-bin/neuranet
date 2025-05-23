@@ -310,7 +310,7 @@ exports.getAppID = async function(idIn, orgIn, extraInfo) {
     const {id, org, aiappid} = brainhandler.unmarshallExtraInfo(extraInfo);
 
     // everything is ok so use what is requested
-    if (extraInfo && (id == idIn) && (org == orgIn) && (aiappid)) return aiappid;    
+    if (extraInfo && (id == idIn) && (org.toLowerCase() == orgIn) && (aiappid)) return aiappid;    
 
     // if this org has a default app then use that if missing
     if (orgIn) {

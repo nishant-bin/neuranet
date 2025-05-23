@@ -181,6 +181,7 @@ async function _handleFileEvent(message) {
 }
 
 async function _ingestfile(pathIn, id, org, lang, extraInfo) {
+    org= org.toLowerCase();
     const cmspath = await cms.getCMSRootRelativePath({xbin_id: id, xbin_org: org}, pathIn, extraInfo);
     const indexer = await _getFileIndexer(pathIn, id, org, cmspath, extraInfo, lang), 
         filePluginResult = await _searchForFilePlugin(indexer);

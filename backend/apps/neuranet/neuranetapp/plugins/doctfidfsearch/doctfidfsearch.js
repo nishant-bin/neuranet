@@ -47,7 +47,7 @@ const REASONS = llmflowrunner.REASONS, TEMP_MEM_TFIDF_ID = "_com_tekmonks_neuran
  * 			was used to ingest the documents.
  */
 exports.search = async function(params, _llmstepDefinition) {
-	const id = params.id, org = params.org, query = params.query, primaryAIAppID = params.aiappid,
+	const id = params.id, org = params.org.toLowerCase(), query = params.query, primaryAIAppID = params.aiappid,
 		brainids = params.bridges ? (Array.isArray(params.bridges)?params.bridges:[params.bridges]) : [params.aiappid];
 	const autoCorrectQuery = params.autocorrect_query !== undefined ? params.autocorrect_query : true;
 	const topK_tfidf = params.topK * 10, topK_final = params.topK;

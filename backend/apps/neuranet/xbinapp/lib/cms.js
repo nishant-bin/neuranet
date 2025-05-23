@@ -70,7 +70,7 @@ exports.getID = headersOrLoginIDAndOrg => headersOrLoginIDAndOrg.xbin_id || logi
  * @param {object} headersOrLoginIDAndOrg HTTP request headers or {xbin_id, xbin_org} object
  * @returns User ORG
  */
-exports.getOrg = headersOrLoginIDAndOrg => headersOrLoginIDAndOrg.xbin_org || login.getOrg(headersOrLoginIDAndOrg);
+exports.getOrg = headersOrLoginIDAndOrg => (headersOrLoginIDAndOrg.xbin_org || login.getOrg(headersOrLoginIDAndOrg)).toLowerCase();
 
 /**
  * Ensures the path is secure for the given user to operate on.

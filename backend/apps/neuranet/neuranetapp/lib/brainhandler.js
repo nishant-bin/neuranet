@@ -16,6 +16,7 @@ const cms = require(`${LOGINAPP_CONSTANTS.ENV.XBIN_CONSTANTS.LIB_DIR}/cms.js`);
  */
 exports.initSync = _ => {
     cms.addCMSPathModifier(async (cmsroot, id, org, extraInfo) => { // we remove user ID from the path
+        org = org.toLowerCase();
         const brainIDForUser = await aiapp.getAppID(id, org, extraInfo);
 
         if (extraInfo?.mode != NEURANET_CONSTANTS.AIAPPMODES.EDIT) {
